@@ -2,4 +2,9 @@
   <%- partial('_partial/articleflow', {item: item, index: index}) %>
 <% }); %>
 
-<%- partial('_partial/pagination') %>
+<% if (page.next) { %>
+<nav id="pagination" class="more-posts">
+    <a href="<%- config.root %><%- page.next_link %>" class="alignright next"><%= __('more_posts') %></a>
+    <div class="clearfix"></div>
+</nav>
+<% } %>

@@ -1,7 +1,11 @@
 article
   background #fff
   margin-bottom 10px
-  width: 45%
+
+  &:nth-child(odd)
+    float right
+  &:nth-child(even)
+    float left
 
   .post-content
     .control
@@ -57,9 +61,11 @@ article
           text-decoration none
 
   .entry
+    height 180px
     padding 10px 15px
     text-align justify
     line-height 1.6
+    overflow-y hidden
     p, blockquote, ul, ol, dl, table, iframe, h3, h4, h5, h6, .video-container
       margin-top 15px
 
@@ -170,6 +176,7 @@ article
       font-size 1.5em
 
   footer
+    height 50px
     margin-top 15px
     padding-top 10px
     border-top 1px solid color-border
@@ -232,6 +239,9 @@ article
     padding 10px 15px
 
   @media (min-width: 640px)
+    float none
+    width 100%
+
     &.title-article
       overflow hidden
       .entry
@@ -243,3 +253,9 @@ article
           float left
           width 30%
         border-top none
+
+  @media (min-width: 960px)
+    width: 475px
+    &.title-article
+      float none
+      width 100%
