@@ -1,12 +1,27 @@
-<article class="<%= item.layout %> <% if (index==0) { %>title-article<% } %>">
+<article class="<%= item.layout %> 
+<% if (is_archive()) { %>
+archive
+<% } else if (page==1) { %>
+    <% if (index==0){ %> title-article 
+    <% } else if (index%2==1) { %> left
+    <% } else { %> right <% } %>
+<% } else { %>
+    <% if (index%2==1) { %> right
+    <% } else { %> left <% } %>
+<% } %>
+">
   <div class="post-content">
     <header>
       <%- partial('post/title') %>
       <time datetime="<%= item.date.toDate().toISOString() %>"><%= item.date.format(config.date_format) %></time>
     </header>
     <div class="entry">
+      <% if(item.excerpt) { %>
+      <%- item.excerpt %>
+      <% } else { %>
       <%- item.content %>
-      <div class = more>
+      <% } %>
+      <div class='more'>
         <a href="<%- config.root %><%- item.path %>#more" class="more-link">Read more</a>
       </div>
     </div>

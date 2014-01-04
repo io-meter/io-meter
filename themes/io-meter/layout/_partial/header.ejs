@@ -1,5 +1,8 @@
-<div id="header">
-  <h1><a href="<%- config.root %>">
-  <img src="/img/logo.png" alt="<%= config.title %>" /></a></h1>
-  <h2><% if (config.subtitle){ %><%= config.subtitle %><% } %></h2>
+<div id="header" <% if (!(is_home() && page.current==1)) { %>class="simple"<% } %> >
+<%- partial('_partial/nav') %>
+  <h1 class="main"><a href="<%- config.root %>">
+  <img src="/img/logo.png" alt="<%= config.title %>" id="logo" /></a></h1>
+  <h2 class="main"><% if (config.subtitle){ %><%= config.subtitle %><% } %></h2>
+  <h1 class="alt"><a href="<%- config.root %>"><%= config.title %></a></h1>
+  <div class="clearfix"></div>
 </div>

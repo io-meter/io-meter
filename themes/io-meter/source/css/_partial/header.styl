@@ -1,6 +1,19 @@
 #header
   font-family font-serif
   background-repeat no-repeat
+  .alt
+    display none
+    text-transform uppercase
+    a
+      color color-title-back
+
+  &.simple
+    height 150px
+    background-image none
+    .alt 
+      display block
+    .main
+      display none
 
   @media screen
     height 560px
@@ -8,13 +21,23 @@
     background-image url(/img/ballon.png)
     background-position right bottom
   @media (max-width: 960px) 
-    height 200px
-    margin-top 10px
-    background-size 100% auto
+    height 150px
+    background-image none
+    .alt 
+      display block
+    .main
+      display none
+
+
 
   #main-nav
     font-family font-title
     line-height 2.5em
+    a 
+      color color-title-back
+      border-bottom 2px solid #aaa
+      &:hover
+        border-bottom 2px solid #666
     ul
       list-style none
       li

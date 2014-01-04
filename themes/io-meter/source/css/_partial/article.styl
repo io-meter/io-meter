@@ -1,11 +1,7 @@
 article
   background #fff
   margin-bottom 10px
-
-  &:nth-child(odd)
-    float right
-  &:nth-child(even)
-    float left
+  box-shadow 1px 2px 3px color-border
 
   .post-content
     .control
@@ -61,7 +57,7 @@ article
           text-decoration none
 
   .entry
-    height 180px
+    height 150px
     padding 10px 15px
     text-align justify
     line-height 1.6
@@ -242,6 +238,10 @@ article
     float none
     width 100%
 
+    &.right
+      float right
+    &.left
+      float left
     &.title-article
       overflow hidden
       .entry
@@ -259,3 +259,7 @@ article
     &.title-article
       float none
       width 100%
+
+  &.archive
+    @extends article.title-article
+    margin-bottom 10px
