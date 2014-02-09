@@ -7,12 +7,12 @@ title: IO-meter
 subtitle: Programic Creativity
 description:
 author: Chase Zhang
-email:
+email: yun.er.run@gmail.com
 language:
 
 # URL
 ## If your site is put in a subdirectory, set url as 'http://yoursite.com/child' and root as '/child/'
-url: http://yoursite.com
+url: http://io-meter.com
 root: /
 permalink: :year/:month/:day/:title/
 tag_dir: tags
@@ -69,7 +69,7 @@ per_page: 9
 pagination_dir: page
 
 # Disqus
-disqus_shortname:
+disqus_shortname: iometer
 
 # Extensions
 ## Plugins: https://github.com/tommy351/hexo/wiki/Plugins
@@ -80,7 +80,7 @@ exclude_generator:
 # Deployment
 ## Docs: http://zespia.tw/hexo/docs/deploy.html
 deploy:
-  type:
+  type: rsync
 
 markdown:
   gfm: false

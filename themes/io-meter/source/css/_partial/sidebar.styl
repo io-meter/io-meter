@@ -1,10 +1,8 @@
 #sidebar
-  width 270px
   line-height 1.8em
-  @media screen and (max-width: 900px)
-    float none
-    width 100%
   .widget
+    width 100%
+    float none
     background #fff
     box-shadow 1px 2px 3px #ddd
     margin-bottom 30px
@@ -24,6 +22,18 @@
       ul, ol, dl
         list-style disc
         margin-left 20px
+
+
+  .widget
+    width 313px
+    float left
+    margin-right 10px
+    &:last-child
+      margin-right 0
+    @media screen and (max-width: 960px)
+      width 100%
+      float none
+      margin-right 0
 
   .search
     margin-bottom 30px
