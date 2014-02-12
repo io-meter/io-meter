@@ -21,7 +21,5 @@ addthis:
 
 fancybox: true
 
-google_analytics:
-rss:
 
 comment_provider: disqus

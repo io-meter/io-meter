@@ -3,6 +3,7 @@
   "version": "2.3.0",
   "private": true,
   "dependencies": {
-    "hexo-renderer-sass": "0.0.3"
+    "hexo-renderer-sass": "0.0.3",
+    "hexo-generator-feed": "~0.1.0"
   }
 }

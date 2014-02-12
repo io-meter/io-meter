@@ -84,3 +84,9 @@ deploy:
 
 markdown:
   gfm: false
+
+feed:
+    type: atom
+    path: atom.xml
+    limit: 30
+
