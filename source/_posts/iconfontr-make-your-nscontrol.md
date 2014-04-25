@@ -96,7 +96,7 @@ Index 其实也是到色彩组合在 Control 中出现顺序。
 
 这里更详细的介绍一下在 Cocoa 中的图形绘制技术。首先我们知道`NSControl`其实是`NSView`
 的子类，所以绘制`NSControl`本质上就是绘制`NSView`。要自定义`NSControl`的绘制操作，需要重载`drawRect:(NSRect)dirtyRect`
-方法，这里的`dirtyRect:`不一定是 View 的 Frame，而是系统认为需要重绘的区域。
+方法，这里的`dirtyRect`不一定是 View 的 Frame，而是系统认为需要重绘的区域。
 应该避免完全在这个区域外的绘制工作以提高性能。
 
 绘制所用的 API 其实有两套，一套是 Objective-C 风格的 Cocoa API，一套是 C 风格的 CoreGraphic API。
@@ -150,8 +150,8 @@ NSBezierPath *box = [NSBezierPath bezierPathWithRect:NSMakeRect(0, 0, 100, 200)]
 接下来需要注意的绘制图形的坐标系统。如果有 Windows 或者 Qt 等图形库的使用经验，
 可能知道对于他们来说，窗口和视图的坐标系统是以左上角为原点，Y 轴的指向朝下。
 Cocoa 与之不同，他的坐标系是和一般的几何坐标系一致的：原点在左下角，Y 轴正向朝上(其实 Cocoa
-的坐标系统在也有 API 不统一的问题，比如在 iOS 开发中 UIKit 的坐标就是是原点左上，CoreGraphic
-在右下，还好 OSX 在最新的 API 下已经统一为左下了)。
+的坐标系统也存在 API 不统一的问题，比如在 iOS 开发中 UIKit 的坐标就是是原点左上
+还好 OSX 在最新的 API 下已经统一为左下了)。
 
 我们之前提到过，在绘制的时候存在一个全局的 currentContext。同样，使用`NSAffineTransform`
 进行坐标变换的时候也是针对这个 currentContext 进行的。需要注意的是，`NSAffineTransform` 
@@ -186,10 +186,11 @@ NSAffineTransform *transform = [NSAffineTransform transform];
 ## 鼠标点击的处理
 
 接下来要处理鼠标点击，这里的需求是鼠标左键应用前景和背景色、右键点击互换前景色和背景色。
-之前已经提到过，处理鼠标点击可以重载`mouseUp:`和`rightMouseUp:`函数。
+
+之前的文章已经提到过，处理鼠标点击可以重载`mouseUp:`和`rightMouseUp:`函数。
 接下来还有一项重要的任务就是确定用户点击的到底是哪个颜色组合。
 
-简单来说，就是要通过用户点击的位置来计算用户选择的 Index，计算 Index 并不复杂，
+简单来说，就是要通过用户点击的位置来计算用户选择的 Index。计算 Index 并不复杂，
 因为在绘制的时候我们实际上是计算过一次选色点所在的位置，按照相同的原理计算一下偏移位置就可以了。
 这里要强调的是鼠标点击位置的获取。
 
@@ -227,7 +228,7 @@ NSPoint locationInView = [theView convertPoint:locationInWindow fromView:nil];
 - (IBAction)changeColor:(id)sender;
 ```
 
-这时在 Interface Builder 中绑定好方法后运行，却会发现并没有效果。
+这时在 Interface Builder 中绑定好后运行，却会发现并没有起到效果。
 其实是因为`NSControl`默认认为自己内部有一个`NSActionCell`的，它的`action`以及`target`
 属性也是映射到自己的`NSActionCell`上的。这里我们并没有添加`NSActionCell`
 因此这两个属性将总是`nil`。
