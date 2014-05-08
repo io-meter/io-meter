@@ -1,7 +1,7 @@
 title: 写个 Icon Font Viewer: 终
 date: 2014-05-04 15:49:49
 tags: [Bezier Path, SVG, image, export, icon fontr, osx, xcode]
-category: [Iconfontr] 
+category: [iconfontr] 
 ---
 
 终于到了 Icon Fontr 最重要的一部分了。这一次要把已经读入为`NSBezierPath`
