@@ -10,7 +10,7 @@ category: iconfontr
 
 <!-- more -->
 
-首先新建一个 UIControl 子类吧，这里起名叫`IFColorPicker`，在`IFColorPicker.h`
+首先新建一个 NSControl 子类吧，这里起名叫`IFColorPicker`，在`IFColorPicker.h`
 里，我们先作如下定义：
 
 ```objectivec
