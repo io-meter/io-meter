@@ -10,21 +10,35 @@ color-title-front = color-link
 color-title-hover = #FFCCCC
 
 // Font
-font-default = "Coda", "Helvetica Neue", "Helvetica", Arial, sans-serif
-font-serif = "Coda", "Georgia", serif
+font-default = "Exo", "Helvetica Neue", "Helvetica", Arial, sans-serif
+font-serif = "Exo", "Georgia", serif
 font-mono = Monaco, Menlo, Consolas, Courier New, monospace
-font-title = "Coda", Helvetica Neue, Helvetica, Arial, sans-serif
-
-@import url('http://fonts.googleapis.com/css?family=Coda')
+font-title = "Exo", Helvetica Neue, Helvetica, Arial, sans-serif
 
 font-icon = FontAwesome
 font-icon-path = 'font/fontawesome-webfont'
+font-path = 'font/Exo-Regular'
+font-path-bold = 'font/Exo-SemiBold'
 
 @font-face {
   font-family 'FontAwesome'
   font-style normal
   font-weight normal
   src url(font-icon-path.eot?#iefix) format('embedded-opentype'), url(font-icon-path.woff) format('woff'), url(font-icon-path.ttf) format('truetype'), url(font-icon-path.svg#FontAwesomeRegular) format('svg')
+}
+
+@font-face {
+  font-family 'Exo'
+  font-style normal
+  font-weight normal
+  src url(font-path.otf?#iefix) format('opentype') 
+}
+
+@font-face {
+  font-family 'Exo'
+  font-style bold
+  font-weight bold
+  src url(font-path-bold.otf?#iefix) format('opentype') 
 }
 
 // Width
