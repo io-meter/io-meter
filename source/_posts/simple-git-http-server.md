@@ -6,7 +6,7 @@ category: web
 
 在 Github 上可以使用 HTTP 协议 fetch 和 push 仓库中的代码，
 其实想要写一个简单的 Git HTTP Server 是相当容易的。
-这篇总结了使用 Go 语言实现这样一个 Server 的过程和相关知识。
+这篇文章总结了使用 Go 语言实现这样一个 Server 的过程和相关知识。
 
 <!-- more -->
 
