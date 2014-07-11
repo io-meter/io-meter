@@ -20,39 +20,38 @@ category: web
 3. `POST /:working_path/git-<command>` 用于在远程仓库执行指令，进行数据交流。Git 的 push
 和 fetch 都要依赖这个请求来完成
 
-首先定义一个 gitRoot 路径，所有的远程仓库在服务端都存放在这下面。譬如：
+在开始之前，我们首先定义一个 gitRoot 路径，所有的远程仓库在服务端都存放在这下面。譬如：
 
 ```go
 var gitRoot = path.Join(os.TempDir(), "git_repo")
 ```
 
 此外，为了方便路由，我选用了一个相当轻量级的 Go Web 库 [Goji](http://goji.io/)。
-首先我们要安装这个依赖:
+用下面的命令安装这个依赖:
 
 ```shell
 go get github.com/zenazn/goji
 ```
 
-做完准备工作后，就要开始实现 Server 了。接下来由从最简单的第一类请求讲起：
+做完准备工作就要开始实现 Server 了。接下来由从最简单的第一类请求讲起：
 
 # 处理静态文件请求
 
-静态文件请求，也就是前面所说的第一类请求，Git 会直接通过这类请求来方位远程仓库的数据文件，
-譬如`HEAD`、`refs`等。客户端的 Git 主要通过这种方式来获取一些 Git 中的指针文件等 Git 自己产生的文件，
-一般来说并不会直接请求我们放在仓库里的代码等数据文件。类似`git clone`和`git fetch`这样的操作，
-一般会交给第二类请求。
+静态文件请求，也就是前面所说的第一类请求，Git 会直接通过这类请求来访问远程仓库的数据文件，
+譬如`HEAD`、`refs`等。客户端的 Git 主要通过这种方式来获取一些 Git 自己产生的文件的详细内容，
+一般来说并不会直接请求仓库里的代码等文件。类似`git clone`和`git fetch`这样的操作会交给第二类请求。
 
 在 Go 中使用`http`库实现处理静态文件请求是非常方便的。我们定义一个名为`generic`的函数用来处理相关请求：
 ```go
 func generic(c web.C, w http.ResponseWriter, r *http.Request) {
-	reponame := c.URLParams["reponame"]
-	repopath := path.Join(gitRoot, reponame)
-	filepath := path.Join(gitRoot, r.URL.String())
-	if strings.HasPrefix(filepath, repopath) {
-		http.ServeFile(w, r, filepath)
-	} else {
-		w.WriteHeader(404)
-	}
+    reponame := c.URLParams["reponame"]
+    repopath := path.Join(gitRoot, reponame)
+    filepath := path.Join(gitRoot, r.URL.String())
+    if strings.HasPrefix(filepath, repopath) {
+        http.ServeFile(w, r, filepath)
+    } else {
+        w.WriteHeader(404)
+    }
 }
 ```
 这里使用了`filepath := path.Join(gitRoot, r.URL.String())`这行代码来计算远程仓库在文件系统上的真实位置，
@@ -61,12 +60,12 @@ func generic(c web.C, w http.ResponseWriter, r *http.Request) {
 
 ```go
 func main() {
-	// access file contents
-	goji.Get("/:reponame/*", generic)
-	goji.Head("/:reponame/*", generic)
+    // access file contents
+    goji.Get("/:reponame/*", generic)
+    goji.Head("/:reponame/*", generic)
 
-	// start serving
-	goji.Serve()
+    // start serving
+    goji.Serve()
 }
 ```
 
@@ -79,7 +78,7 @@ func main() {
 
 接下来是稍微复杂一点的`info/refs`请求。本地的 Git 一般会在`git fetch`的时候进行这样的请求。
 这个请求主要用来返回仓库的 References 数据，包括 Branch、Tags 等。跟上面讲过的第一类请求不同，
-这个请求需要服务端将远程仓库所有的相关数据总结整理成特定的格式返回给客户端。
+这个请求需要服务端将相关数据总结整理成特定的格式返回给客户端，从而节省请求次数。
 
 根据用户操作类型的不同，Git 还会附加一个 URL 参数`service`。`service`一般的取值包括
 `git-upload-pack`、`git-receive-pack`等。分别是客户端`fetch`和`push`时的状态。
@@ -88,11 +87,11 @@ func main() {
 如果是对 Git 非常熟悉的同学可能会知道`upload-pack`和`receive-pack`本身就是 Git 可以使用的命令。
 这两个命令都可以接受一个`--advertise-refs`参数。
 
-那么，这个`--advertise-refs`是什么意思呢？根据 Git [这里](http://git-scm.com/book/en/Git-Internals-Transfer-Protocols)
-的文档，这个命令可以使 Git 列出仓库所拥有的 References 以及那些客户端希望抓取到的 References。
-而这些 References 就是所谓的`advertise-refs`。
+根据 Git 的[文档](http://git-scm.com/book/en/Git-Internals-Transfer-Protocols)
+`--advertise-refs`可以使 Git 列出仓库所拥有的 References 以及那些客户端希望抓取到的 References。
+而这些数据就被称为 Advertise Refs。
 
-此外，我们可以使用`--stateless-rpc`参数。这个参数使强制 Git 使用无状态的
+此外我们还可以使用`--stateless-rpc`参数。这个参数使强制 Git 使用无状态的
 [RPC](http://zh.wikipedia.org/wiki/%E9%81%A0%E7%A8%8B%E9%81%8E%E7%A8%8B%E8%AA%BF%E7%94%A8)。
 简单来说，可以让 Git 返回的 References 列表中，代表每个 Reference 的字段长度恰好和一个数据包的长度相同，
 这样每个 Reference 都可以被放在单独一个数据包上传输，不依赖于前面的数据包(也就是实现了所谓的“无状态”)。
@@ -108,32 +107,32 @@ func main() {
 这里还使用了 Go 语言标准库中的`exec`包。
 ```go
 func inforefs(c web.C, w http.ResponseWriter, r *http.Request) {
-	reponame := c.URLParams["reponame"]
-	repopath := path.Join(gitRoot, reponame)
-	service := r.FormValue("service")
-	if len(service) > 0 {
-		w.Header().Add("Content-type", fmt.Sprintf("application/x-%s-advertisement", service))
-		gitLocalCmd := exec.Command(
-			"git",
-			string(service[4:]),
-			"--stateless-rpc",
-			"--advertise-refs",
-			repopath)
-		out, err := gitLocalCmd.CombinedOutput()
-		if err != nil {
-			w.WriteHeader(500)
-			fmt.Fprintln(w, "Internal Server Error")
-			w.Write(out)
-		} else {
-			serverAdvert := fmt.Sprintf("# service=%s", service)
-			length := len(serverAdvert) + 4
-			fmt.Fprintf(w, "%04x%s0000", length, serverAdvert)
-			w.Write(out)
-		}
-	} else {
-		fmt.Fprintln(w, "Invalid request")
-		w.WriteHeader(400)
-	}
+    reponame := c.URLParams["reponame"]
+    repopath := path.Join(gitRoot, reponame)
+    service := r.FormValue("service")
+    if len(service) > 0 {
+        w.Header().Add("Content-type", fmt.Sprintf("application/x-%s-advertisement", service))
+        gitLocalCmd := exec.Command(
+            "git",
+            string(service[4:]),
+            "--stateless-rpc",
+            "--advertise-refs",
+            repopath)
+        out, err := gitLocalCmd.CombinedOutput()
+        if err != nil {
+            w.WriteHeader(500)
+            fmt.Fprintln(w, "Internal Server Error")
+            w.Write(out)
+        } else {
+            serverAdvert := fmt.Sprintf("# service=%s", service)
+            length := len(serverAdvert) + 4
+            fmt.Fprintf(w, "%04x%s0000", length, serverAdvert)
+            w.Write(out)
+        }
+    } else {
+        fmt.Fprintln(w, "Invalid request")
+        w.WriteHeader(400)
+    }
 }
 ```
 
@@ -154,41 +153,43 @@ func inforefs(c web.C, w http.ResponseWriter, r *http.Request) {
 为了获取所执行的命令的输入输出流，我们需要调用`exec.Command`类提供的`StdinPipe()`和`StdoutPipe()`方法。
 串流转发的功能只需要方便地使用`io.Copy`方法即可。`io.Copy`方法默认将会以每次 32KB 的块大小读出数据然后写入到目标文件中。
 
-总所周知，基本的 HTTP 是一种半双工的通讯协议，数据的发送和接收是不能交错进行的。所以我们也只能先把 HTTP 
+众所周知，基本的 HTTP 是一种半双工的通讯协议，数据的发送和接收是不能交错进行的。所以我们也只能先把 HTTP 
 请求的内容串流给 Git 命令的 stdin，完成后再从 stdout 里读取数据发送回客户端。
 
 最后执行完`receive-pack`命令，还要执行`git update-server-info`命令来更新服务端仓库的信息。
+Response 的 MIME 是`application/x-git-<command>-result`。
 
-具体的实现即如下面的代码所示:
+具体实现如下:
+
 ```go
 func rpc(c web.C, w http.ResponseWriter, r *http.Request) {
-	reponame := c.URLParams["reponame"]
-	repopath := path.Join(gitRoot, reponame)
-	command := c.URLParams["command"]
-	if len(command) > 0 {
+    reponame := c.URLParams["reponame"]
+    repopath := path.Join(gitRoot, reponame)
+    command := c.URLParams["command"]
+    if len(command) > 0 {
 
-		w.Header().Add("Content-type", fmt.Sprintf("application/x-git-%s-result", command))
-		w.WriteHeader(200)
+        w.Header().Add("Content-type", fmt.Sprintf("application/x-git-%s-result", command))
+        w.WriteHeader(200)
 
-		gitCmd := exec.Command("git", command, "--stateless-rpc", repopath)
+        gitCmd := exec.Command("git", command, "--stateless-rpc", repopath)
 
-		cmdIn, _ := gitCmd.StdinPipe()
-		cmdOut, _ := gitCmd.StdoutPipe()
-		body := r.Body
+        cmdIn, _ := gitCmd.StdinPipe()
+        cmdOut, _ := gitCmd.StdoutPipe()
+        body := r.Body
 
-		gitCmd.Start()
+        gitCmd.Start()
 
-		io.Copy(cmdIn, body)
-		io.Copy(w, cmdOut)
+        io.Copy(cmdIn, body)
+        io.Copy(w, cmdOut)
 
-		if command == "receive-pack" {
-			updateCmd := exec.Command("git", "--git-dir", repopath, "update-server-info")
-			updateCmd.Start()
-		}
-	} else {
-		w.WriteHeader(400)
-		fmt.Fprintln(w, "Invalid Request")
-	}
+        if command == "receive-pack" {
+            updateCmd := exec.Command("git", "--git-dir", repopath, "update-server-info")
+            updateCmd.Start()
+        }
+    } else {
+        w.WriteHeader(400)
+        fmt.Fprintln(w, "Invalid Request")
+    }
 }
 ```
 
@@ -205,45 +206,49 @@ func rpc(c web.C, w http.ResponseWriter, r *http.Request) {
 
 ```go
     // get repo info/refs
-	goji.Get("/:reponame/info/refs", inforefs)
-	goji.Head("/:reponame/info/refs", inforefs)
+    goji.Get("/:reponame/info/refs", inforefs)
+    goji.Head("/:reponame/info/refs", inforefs)
 
-	// RPC request on repo
-	goji.Post(regexp.MustCompile("^/(?P<reponame>[^/]+)/git-(?P<command>[^/]+)$"), rpc)
+    // RPC request on repo
+    goji.Post(regexp.MustCompile("^/(?P<reponame>[^/]+)/git-(?P<command>[^/]+)$"), rpc)
 
-	// access file contents
-	goji.Get("/:reponame/*", generic)
-	goji.Head("/:reponame/*", generic)
+    // access file contents
+    goji.Get("/:reponame/*", generic)
+    goji.Head("/:reponame/*", generic)
 ```
 
 值得注意的是，只有 RPC 请求因需要写入文件而允许使用 POST 方法，另外两种请求都是 GET 或 HEAD 方法。
 
 # Security
 
-为了限制对仓库的访问，我们还可以使用 HTTP 的 `Basic Auth` 方法对用户进行认证。
+为了限制对仓库的访问，我们还可以使用 HTTP 的 [Basic Auth](http://en.wikipedia.org/wiki/Basic_access_authentication)
+协议对进行用户认证。
 
 首先，对于未认证的请求，需要返回 Code 为 `401 Unauthorized` 的 HTTP Response，
-同时要在 Response 的 Header 上加上如下格式的字段。其中`realm`用来指定服务器的名称或者 UID，
-Git 会根据 realm 的值的不同，来选择使用缓存的用户名/密码。如果没有缓存过密码，Git 就会请求用户输入。
+并在 Response 的 Header 上加上如下格式的字段。
+
 ```plain
 WWW-Authenticate: Basic realm="[your realm]"
 ```
 
-如果用户输入了密码，在 HTTP 请求的 Header 中，下面格式的一个字段，其中`[username:password]`
-的内容使用`base64`编码，使用前需先解码：
+其中`realm`用来指定服务器的名称或者 UID，Git 会根据 realm 的值的不同，
+使用本地缓存的不同用户名/密码组合。如果没有对应密码，Git 就会请求用户输入。
+
+如果用户输入了密码，在 HTTP 请求的 Header 中将会出现下面格式的一个字段，其中`[username:password]`
+的内容使用`base64`编码，需先解码：
 
 ```plain
 Authenticate: Basic [username:password]
 ```
 
 可以将上述 Authenticate 的逻辑通过 Goji 提供的 Middleware 机制实现，这样可以使对所有请求都会要求认证。
-实现细节不再赘述，详情可以参见[这里](https://gist.github.com/shanzi/1aa571f8f3b8f4608d60#file-gittp-go-L173)
+实现细节不再赘述，可以参见[我实现的版本](https://gist.github.com/shanzi/1aa571f8f3b8f4608d60#file-gittp-go-L173)。
 
 # 总结
 
-为了方便使用，我还给我事先的小 Server 添加了创建和删除远程仓库的代码，具体实现已经全部放在
-[Gist](https://gist.github.com/shanzi/1aa571f8f3b8f4608d60)上了。当服务器开始运行之后，可以简单的使用 curl
-来在服务器上创建空白仓库以及删除已有仓库。
+为了方便使用，我还为 Server 添加了创建和删除远程仓库的代码，具体实现已经全部放在
+[Gist](https://gist.github.com/shanzi/1aa571f8f3b8f4608d60)上。当服务器开始运行之后，可以简单的使用 curl 
+命令在服务器上创建空白仓库以及删除已有仓库。
 ```bash
 # create remote repo
 curl -u username:password -X PUT http://localhost:8000/new_repo
@@ -253,12 +258,11 @@ curl -u username:password -X DELETE http://localhost:8000/exists_repo
 
 
 我们目前实现的版本得益于 Git 本身和 Go 语言的强大，总行数还不超过 250 行，
-请访问[这里](https://gist.github.com/shanzi/1aa571f8f3b8f4608d60)查看完整版本。
+请[查看完整代码](https://gist.github.com/shanzi/1aa571f8f3b8f4608d60)。
 
 不过我们还没有考虑到 Git 对 GZip的支持。尤其对于第一类对静态文件的请求，
 支持 GZip 将能够显著提高传输效率。这个需求使用 Go 语言自带的`compass/gzip`包可以很方便的实现。
-在此就略去不提了。
 
-最后，就来看一下成果吧！
+最后来看一下成果吧！
 
 ![](/img/posts/git-simple-server-result.png)
