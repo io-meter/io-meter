@@ -16,7 +16,7 @@ twitter:
   tweet_count: 5
 
 addthis:
-  enable: true
+  enable: false
   pubid: ra-52e93dfc1e377605
 
 fancybox: true
