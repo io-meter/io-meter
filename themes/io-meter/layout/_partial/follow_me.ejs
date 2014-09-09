@@ -1,0 +1,27 @@
+<% if (theme.follow_me){ %>
+<div class="follow-me">
+  <h3 class="title"><%= __('follow_me') %></h3>
+  <div class="links">
+    <% if(theme.follow_me.twitter) { %>
+    <a href="https://twitter.com/<%= theme.follow_me.twitter %>">
+        <i class="twitter"></i>
+    </a>
+    <% } %>
+    <% if(theme.follow_me.github) { %>
+    <a href="https://github.com/<%= theme.follow_me.github %>">
+        <i class="github"></i>
+    </a>
+    <% } %>
+    <% if(theme.follow_me.gplus) { %>
+    <a href="https://plus.google.com/+<%= theme.follow_me.gplus%>">
+        <i class="gplus"></i>
+    </a>
+    <% } %>
+    <% if(theme.follow_me.facebook) { %>
+    <a href="https://www.facebook.com/<%= theme.follow_me.facebook %>">
+        <i class="facebook"></i>
+    </a>
+    <% } %>
+    </div>
+</div>
+<% } %>

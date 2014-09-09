@@ -10,16 +10,12 @@ widgets:
 
 excerpt_link: Read More
 
-twitter:
-  username: ant_sz
-  show_replies: false
-  tweet_count: 5
-
-addthis:
-  enable: false
-  pubid: ra-52e93dfc1e377605
-
 fancybox: true
 
+follow_me:
+  twitter: ant_sz
+  github: shanzi
+  gplus: ChaseZhang
+  facebook: yunerrun
 
 comment_provider: disqus

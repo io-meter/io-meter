@@ -214,6 +214,43 @@ article
         top 3px
         left 2px
 
+    .recent-posts, .follow-me
+      margin: 1em 0
+      padding: 1em 0
+      border-top: solid 1px #eee
+      ul
+        padding-left 0
+        margin-top 1em
+        list-style none
+        li
+          padding 5px 0
+
+    .recent-posts
+      li a
+        color color-link
+      li:before
+        font-family 'FontAwesome'
+        content '\f0da'
+
+    .follow-me
+      .links
+        margin 20px 0
+      i
+        display: inline-block
+        width: 30px
+        height: 30px
+        font-size 28px
+        font-family 'FontAwesome'
+        font-style normal
+      i.twitter:before
+        content '\f099'
+      i.github:before
+        content '\f09b'
+      i.gplus:before
+        content '\f0d5'
+      i.facebook:before
+        content '\f082'
+
     .addthis
       margin-top 15px
       iframe
@@ -226,7 +263,7 @@ article
     margin 0
     padding 10px 15px
 
-  @media (min-width: 640px)
+  @media (min-width: 875px)
     float none
     width 100%
 
@@ -243,7 +280,7 @@ article
           margin 5px 0
        footer 
           float left
-          width 25%
+          width 28%
         border-top none
 
   @media (min-width: 960px)
