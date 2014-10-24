@@ -147,10 +147,15 @@ iOS 开发者对 Storyboard 应该很熟悉了，那么 OSX 的 Storyboard 的�
 
 ![Binding Popover](/img/posts/binding-popover.png)
 
-OK，Popover 就完成了。此时从我们的主 View 会有一条线连接到我们 Popover 的 View 上，
+OK，Popover 就完成了，效果如下图。这种方法可以说比原来方便很多。
+
+![Popover](/img/posts/popover.png)
+
+此时从我们的主 View 会有一条线连接到我们 Popover 的 View 上，
 这个就是新生成的 Segue，选中它还可以进一步设置 Popover 的效果，也可以选择其他的弹出方式。
 
 ![Segue](/img/posts/segue-osx.png)
+
 
 # 总结
 
