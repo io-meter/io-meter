@@ -1,8 +1,11 @@
 <!DOCTYPE HTML>
 <html>
 
-<%- partial('_partial/head') %>
 
+<% if (page.layout == 'myicons') { %>
+<%- body %>
+<% } else { %>
+<%- partial('_partial/head') %>
 <body>
 <div id="banner">
     <div class="wrapper">
@@ -20,4 +23,5 @@
 </div>
 <%- partial('_partial/after_footer') %>
 </body>
+<% } %>
 </html>
