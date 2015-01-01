@@ -297,6 +297,8 @@ void main() {
 
 `shade`函数就是用合成多个贴图的函数，具体代码可以参见 GitHub
 上的[这个文件](https://github.com/shanzi/sketch-rendering/blob/master/coffee/hatch_material.coffee)。
+可以注意到，我其实使用了之前 bake 出来的明暗来作为素描线条深浅的参考因素，
+这样就可以表现出明暗和阴影了。
 
 ## 最后的合成
 
