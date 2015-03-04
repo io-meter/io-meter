@@ -1,0 +1,622 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>使用 WebGL 实现素描效果的渲染 | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="这次来介绍一下我最近刚完成的一个小玩意儿：通过 WebGL 在网页上显示一个素描风格的场景。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="使用 WebGL 实现素描效果的渲染"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content="undefined"/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2014/12/31/sketch-rendering/" target="_blank">使用 WebGL 实现素描效果的渲染</a></h1>
+
+
+      
+        <time datetime="2014-12-31T07:48:27.000Z">Dec 31 2014</time>
+      
+    </header>
+    <div class="entry">
+      <p>这次来介绍一下我最近刚完成的一个小玩意儿：通过 WebGL 在网页上显示一个素描风格的场景。</p>
+<a id="more"></a>
+
+<p>欢迎先使用支持 WebGL 的浏览器浏览一下本文对应的 <a href="http://chasezhang.me/sketch-rendering/" target="_blank">Live Demo</a>。
+本文的代码以及场景文件也以 BSD 的协议在 Github 上发布了 (<a href="https://github.com/shanzi/sketch-rendering" target="_blank">这里</a>)。</p>
+<p>开始之前先说点题外话，在过去的两个月里，我还开发了一个用来管理矢量图标并生成图标字体的工具：
+<a href="http://io-meter.com/myicons">MyIcons</a>。这是一个 Web-based 的工具，很方便部署到 Heroku，有需要的朋友欢迎围观和体验！
+我也会在之后的博文中逐步给出这个工具有关问题的解说。</p>
+<h2>一点点综述</h2>
+<p>这次的素描渲染 Demo 是基于 Three.js 的，跟之前的文章 <a href="http://io-meter.com/2014/04/05/let-rocket-fly/">Let Rocket Fly</a>
+不同，这次要涉及到 Shader 的编写，因此复杂度也要比原来高很多。</p>
+<p>实现一个这样的渲染效果，主要的步骤包括：</p>
+<ol>
+<li>准备模型和场景</li>
+<li>通过 WebGL (Three.js) 导入场景</li>
+<li>实现 Shader 以表现接近素描的效果</li>
+</ol>
+<p>在最重要的第 3 步中，我们要实现的主要有两个效果：</p>
+<ol>
+<li>模型边缘的描边 (不同于单纯的线框)</li>
+<li>模型表面类似于素描的线条效果</li>
+</ol>
+<p>为了实现这样的效果，我们实际并不能直接在单一的 3D 的空间上完成的，而需要另外准备一个二维场景用于合成。
+总体的渲染与合成流程如下：</p>
+<p><img src="/img/posts/sketch-rendering-pipeline.png" alt="Pipeline"></p>
+<p>其中的 3D 场景，就是我们想要处理成素描效果的场景。这里使用了一个小技巧，
+那就是我们并非直接将 3D 场景中的渲染效果输出到屏幕，而是先将三种不同类型的渲染结果输出到位于显存中的 Buffer
+(Three.js 中的<code>WebGLRenderTarget</code>) 里。再在 2D 场景中合成这些输出结果。</p>
+<p>这个 2D 场景非常简单，里面只有一个恰好和视口大小一样的矩形平面和一个非透视类型的 Camera，
+将我们从 3D 场景得到的不同类型的渲染图作为矩形平面的贴图，这样我们就可以编写 Shader
+来高效地处理合成效果了。最终输出的结果其实是 2D 场景的渲染结果，但是观看的人不会感觉到任何差异。</p>
+<p>使用这样一个简单的 2D 场景进行后期合成可以说是一个非常常用的技巧，因为这样可以通过 OpenGL 充分利用显卡的渲染性能。</p>
+<h2>准备场景</h2>
+<p>首先要做的工作是准备用来渲染的场景，选用的建模软件当然是我最喜欢的 <a href="http://blender.org" target="_blank">Blender</a>。我参考
+BlenderNation 上刊登的一副<a href="http://www.blendernation.com/2014/08/06/image-entropy/" target="_blank">室内场景作品</a>进行了仿制。
+我仿制的场景渲染结果如下:</p>
+<p><img src="/img/posts/room-output.png" alt="Scene"></p>
+<p>选用这个场景的主要原因是场景的主体结构都非常简单，大多数物体都可以通过简单的立方体变换和修改而成。
+大量的平面也方便表现素描的效果。</p>
+<p>建模的细节不再赘述。在这一阶段还有一个主要的工序需要完成，那就是 UV 展开和阴影明暗的烘焙 (Bake)。</p>
+<p>模型的 UV 展开实质上就是确定模型的贴图坐标与模型坐标的映射关系。一个好的 UV 映射决定了模型渲染时贴图的显示效果。
+因为模型表面的素描效果实际是通过贴图实现的，因此如果没有一个好的 UV 映射，显示出来的笔触可能会出现扭曲、变形、
+粗细不一等各种问题。UV 展开可以说是一个非常繁琐耗时的工序。最后为了减少工作量，我不得不删除了一些比较复杂的模型。</p>
+<p>我将场景中的所有模型合并为一个物体，并完成 UV 展开后的结果如下：</p>
+<p><img src="/img/posts/room-uv-mapping.png" alt="UV Mapping"></p>
+<p>完成 UV 展开之后将会进行烘焙。所谓的烘焙 (Bake) 就是将模型在场景环境下的明暗变化、阴影等事先渲染并映射到模型的贴图上。
+这个技术常用于静态场景中。在这种静态场景里，灯光的位置和角度不会变化，只有摄像机的方向会改变。
+因此实际上物体的明暗阴影都是固定的，将其固定在贴图中之后，使用 OpenGL 渲染时不再进行明暗处理和阴影生成。
+这样可以节约大量的计算时间。而且使用 CPU 渲染的阴影往往可以使用更为复杂的算法以获得真实的效果。</p>
+<p>Blender 的烘焙选项在 Render 选项卡的最下方，这里选择 Full Render 来将一切光源产生的明暗阴影都固定下来。</p>
+<p><img src="/img/posts/bake-panel.png" alt="Bake Panel"></p>
+<p>对照之前的 UV 展开，我烘焙出来的光影贴图如下：</p>
+<p><img src="/img/posts/room-baked.png" alt="Room Baked"></p>
+<p>最后，使用 Three.js 提供的<a href="https://github.com/mrdoob/three.js/tree/master/utils/exporters/blender" target="_blank">输出插件</a>，将我们的场景输出成 Three.js 可以识别的<code>.json</code>文件。
+我输出的模型文件和相关贴图都已经上传到 GitHub 的<a href="https://github.com/shanzi/sketch-rendering" target="_blank">仓库</a>里。</p>
+<p>这里再为有兴趣的同学推荐一个来自台湾同胞的 Blender 基础教程 (<a href="https://www.youtube.com/playlist?list=PLE885296A496C3D38" target="_blank">YouTube</a>)。
+个人感觉是 Blender 的中文视频教程中比较好的一个，虽然时间录制早了些，但是讲解很清晰。
+而且本文制作时使用的建模、UV 展开、贴图和烘焙技巧都有介绍。</p>
+<h2>编写 Shader</h2>
+<p>终于到了这篇文章的重中之重了，Shader 是通过 GPU 实现图形渲染的核心，通过 OpenGL
+实现的任何 2D 或 3D 效果都离不开它。</p>
+<h3>一点点基础知识</h3>
+<p>众所周知， WebGL 使用的 Shader 语言其实是 OpenGL 的一个嵌入式版本
+OpenGL ES 所定义的，这一 Shader 语言使用了类似 C 语言的语法，但是有下面几个区别：</p>
+<ol>
+<li>Shader 语言没有动态分配内存的机制，所有内存 (变量) 的空间都是静态分配的</li>
+<li>Shader 语言是强类型的，不同类型的数不能隐式转换 (比如整形不能隐式转换为浮点型)</li>
+<li>Shader 语言提供的一些数据结构，如向量类型<code>vec2</code>、<code>vec3</code>、<code>vec4</code>
+和矩阵类型<code>mat2</code>、<code>mat2</code>、<code>mat4</code>是直接可以使用加减乘除运算符进行操作的。</li>
+</ol>
+<p>在 WebGL 中，我们可以自己编写的 Shader 有两种类型</p>
+<ol>
+<li>Vertex Shader: 模型的每个顶点上调用</li>
+<li>Fragment Shader: 模型三个顶点组成的面上显示出来的每个像素上执行</li>
+</ol>
+<p>在渲染时，GPU 会先在每个顶点上执行 Vertex Shader，再在每个像素上执行 Fragment Shader。
+Vertex Shader 主要用来计算每个定点投影在视平面上的位置，但是也可以用来进行一些颜色的计算并将结果传送给 Fragment Shader。
+Fragment Shader 则决定了最终显示出来的每个像素的颜色。</p>
+<p>接下来介绍 Shader 的变量修饰词。Shader 的变量修饰词可以分为 5 种:</p>
+<ol>
+<li>(无): 默认的变量修饰符，作用域只限本地</li>
+<li><code>const</code>: 只读常量</li>
+<li><code>attribute</code>: 用来将每个节点的数据和 Vertex Shader 联系起来的变量，简单来说就是在某一个顶点上执行
+Vertex Shader 时，变量的值就是这个顶点对应的值。这种对应关系是在初始化 WebGL 的程序时手动指定的。
+不过幸好 Three.js 已经为我们完成这一任务了。</li>
+<li><code>uniform</code>: 这种类型的变量也是运行在 CPU 的主程序向 Shader 传递数据的一个途径，主要用于与所处理的 Vertex 和 Fragment
+无关的值，比如摄像机的位置、灯光光源的位置方向等，这些参数在每一帧的渲染时都不变，因此使用<code>uniform</code>传递进来。</li>
+<li><code>varying</code>: 用来从 Vertex Shader 向 Fragment Shader 传递数据的变量。在 Vertex Shader 和 Fragment Shader
+上定义相同变量名的<code>varying</code>变量，在运行时 Fragment Shader 中变量的值将会是组成这个面的三个顶点所提供的值的线性插值。</li>
+</ol>
+<p>Three.js 已经为我们预设了必要的<code>attribute</code>和<code>uniform</code>，
+预设变量列表可以参见<a href="http://threejs.org/docs/#Reference/Renderers.WebGL/WebGLProgram" target="_blank">文档</a>。</p>
+<p>两种 Shader 都有一个<code>main</code>函数，不过执行的参数并非通过<code>main</code>函数的参数传入程序，
+输出结果也不是通过<code>main</code>函数的返回值返回的。实际上，OpenGL 已经固定了每种 Shader 的默认输入变量和输出变量的名称与类型，
+程序可以直接访问和设置这些变量。当然，外部程序也可以通过<code>attribute</code>和<code>uniform</code>机制来指定额外的输入。</p>
+<p>一个典型的 Vertex Shader 如下面的代码所示：</p>
+<figure class="highlight lang-glsl"><table><tr><td class="gutter"><pre>1
+2
+3
+</pre></td><td class="code"><pre><span class="keyword">void</span> main(<span class="keyword">void</span>) {
+  <span class="built_in">gl_Position</span> = projectionMatrix * modelViewMatrix * <span class="keyword">vec4</span>(position, <span class="number">1.0</span>);
+}
+</pre></td></tr></table></figure>
+
+<p>其中，<code>position</code>、<code>projectionMatrix</code>、<code>modelViewMatrix</code> 这些变量都是 Three.js 默认设置好并传递进 Shader 的。
+<code>position</code>是<code>attribute</code>类型，它代表了每个 Vertex 在 3D 空间中的坐标，另外两个变量是<code>uniform</code>，是 Three.js
+根据场景的属性而设定的。<code>gl_Position</code> 就是 OpenGL 指定的 Vertex Shader 的输出值。</p>
+<p>一个典型的 Vertex Shader 是通过给出的顶点<code>position</code>，以及相关的一些变换投影矩阵，
+计算出这个顶点做透视投影后显示在屏幕中的 2D 坐标。因此在这里也可以实现各种透视效果，
+如常见的投影透视 (近大远小)、平视透视 (远近一样大)，甚至超现实的反投影透视 (近小远大) 等。</p>
+<p>Fragment Shader 的主要用处是确定某个像素的颜色，其已经指定的输出值为<code>gl_FragColor</code>，这是一个<code>vec4</code>类型的变量，
+代表了 RGBA 类型的颜色表示，为每一个表面输出白色的 Fragment Shader 如下:</p>
+<figure class="highlight lang-glsl"><table><tr><td class="gutter"><pre>1
+2
+3
+</pre></td><td class="code"><pre><span class="keyword">void</span> main(<span class="keyword">void</span>) {
+  <span class="built_in">gl_FragColor</span> = <span class="keyword">vec4</span>(<span class="number">1.0</span>, <span class="number">1.0</span>, <span class="number">1.0</span>, <span class="number">1.0</span>);
+}
+</pre></td></tr></table></figure>
+
+<p>除了直接计算颜色，还可以通过贴图 (texture) 来确定某个 Fragment 的颜色。在 WebGL 中，贴图是通过<code>uniform</code>的方式传递进
+Shader 里的，其类型是<code>sample2D</code>。随后，我们可以使用<code>texture2D(texture, uv)</code>函数获得某一个像素的颜色，这里的<code>uv</code>
+是一个二维向量，可以通过 Vertex Shader 获得。</p>
+<p>在 Three.js 实现访问贴图的一个简单的例子是：</p>
+<figure class="highlight lang-glsl"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+</pre></td><td class="code"><pre><span class="comment">// Vertex Shader</span>
+<span class="keyword">varying</span> vUv;
+
+<span class="keyword">void</span> main(<span class="keyword">void</span>) {
+  <span class="built_in">gl_Position</span> = projectionMatrix * modelViewMatrix * <span class="keyword">vec4</span>(position, <span class="number">1.0</span>);
+  vUv = uv;
+}
+
+<span class="comment">// Fragment Shader</span>
+<span class="keyword">uniform</span> sample2D aTexture;
+<span class="keyword">varying</span> vUv;
+
+<span class="keyword">void</span> main(<span class="keyword">void</span>) {
+  <span class="built_in">gl_FragColor</span> = <span class="built_in">texture2D</span>(aTexture, vUv);
+}
+</pre></td></tr></table></figure>
+
+<p>在 Vertex Shader 中使用的<code>uv</code>变量，也是 Three.js 中已经提供好的<code>attribute</code>。接下来就是在 Three.js 中使用 Shader 的方法了。</p>
+<h3>在 Three.js 中使用 Shader</h3>
+<p>Three.js 提供了<code>ShaderMaterial</code>用于实现自定义 Shader 的
+Material。下面是一个来自其<a href="http://threejs.org/docs/#Reference/Materials/ShaderMaterial" target="_blank">官方文档</a>的例子。</p>
+<figure class="highlight lang-javascript"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+</pre></td><td class="code"><pre><span class="keyword">var</span> material = <span class="keyword">new</span> THREE.ShaderMaterial( {
+  uniforms: {
+    time: { type: <span class="string">"f"</span>, value: <span class="number">1.0</span> },
+    resolution: { type: <span class="string">"v2"</span>, value: <span class="keyword">new</span> THREE.Vector2() }
+  },
+  attributes: {
+    vertexOpacity: { type: <span class="string">'f'</span>, value: [] }
+  },
+  vertexShader: document.getElementById( <span class="string">'vertexShader'</span> ).textContent,
+  fragmentShader: document.getElementById( <span class="string">'fragmentShader'</span> ).textContent
+});
+</pre></td></tr></table></figure>
+
+<p>你可以通过设置<code>uniforms</code>和<code>attributes</code>等参数向 Shader 传递数据，传递的格式文档中都有介绍。
+我们也是在这里将 Shader 需要用到的 Texture 通过<code>uniforms</code>传递进去的。Texture 写在 unifroms 里的<code>type</code>是<code>t</code>，
+<code>value</code>可以是一个 Three.js 的<code>Texture</code>对象，也可以是<code>WebGLRenderTarget</code>。</p>
+<p>这里只是将值传递了进去，你还是要在 Shader 源码里自己声明这些变量才能访问他们，
+在 Shader 里定义的名称应该与你在 JavaScript 中给出的键名相同。</p>
+<h2>显示模型的 Outline</h2>
+<p>模型的 Outline 就是在卡通风格的图画中围绕在物体边缘的线，因为卡通风格中物体的总体色调都比较平面化，
+所以需要这样的线来强调物体与物体之间的区分。</p>
+<p>实现这种 Outline 有两种简单直观的方法：</p>
+<ol>
+<li>使用深度作为特征，将深度变化大的地方标记出来</li>
+<li>使用表面法线的方向作为特征，将发现变化大的地方标记出来</li>
+</ol>
+<p>这两种方法都各自有自己的缺点。比如深度特征时，很容易将一个与观察方向夹角比较小的面全部标记为黑色；
+而法线特征时，又无法将前后两个法线相近但是距离较远的表面区分开。这里参考另一篇相关内容的英文博客
+<a href="http://floored.com/blog/2014/sketch-rendering.html" target="_blank">Sketch Rendering</a> 的方法来实现。</p>
+<p>这种方法结合了深度和法线，假设有两个点 A 和 B，通过计算 A 的空间位置到 B 的法线所构成的平面的距离作为衡量，
+判断是否应该标记为 Outline。A 和 B 的空间位置则需要通过 A 和 B 的深度来计算出来。
+因此，我们需要先将我们的 3D 场景的深度和法线渲染图输出出来。</p>
+<p>Three.js 已经提供了<code>MeshDepthMaterial</code>和<code>MeshNormalMaterial</code>分别用来输出深度和法线渲染图。
+我们直接使用这两个类就好了。假设我们已经初始化了一个<code>depthMaterial</code>和一个<code>normalMaterial</code>，
+那么将整个场景里的物体都用某一个 Material 进行渲染的话，我们可以使用</p>
+<figure class="highlight lang-javascript"><table><tr><td class="gutter"><pre>1
+</pre></td><td class="code"><pre>objectScene.overrideMaterial = depthMaterial; <span class="comment">// 或 normalMaterial</span>
+</pre></td></tr></table></figure>
+
+<p>这样的方法实现。</p>
+<p>此外，我们不希望渲染结果直接输出到屏幕，因此我们需要先新建一个 <code>WebGLRenderTarget</code> 作为一个 FrameBuffer 来存放结果。
+此后这个<code>WebGLRenderTarget</code>可以直接作为贴图传入用于合成的 2D 场景。</p>
+<figure class="highlight lang-javascript"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9
+</pre></td><td class="code"><pre><span class="keyword">var</span> pars = {
+  minFilter: THREE.LinearFilter,
+  magFilter: THREE.LinearFilter,
+  format: THREE.RGBFormat,
+  stencilBuffer: <span class="literal">false</span>
+}
+
+<span class="keyword">var</span> depthTexture = <span class="keyword">new</span> THREE.WebGLRenderTarget(width, height, pars)
+<span class="keyword">var</span> normalTexture = <span class="keyword">new</span> THREE.WebGLRenderTarget(width, height, pars)
+</pre></td></tr></table></figure>
+
+<p>使用下面的代码，将渲染结果输出到 FrameBuffer 里:</p>
+<figure class="highlight lang-javascript"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+</pre></td><td class="code"><pre><span class="comment">// render depth</span>
+objectScene.overrideMaterial = depthMaterial;
+renderer.setClearColor(<span class="string">'#000000'</span>);
+renderer.clearTarget(depthTexture, <span class="literal">true</span>, <span class="literal">true</span>);
+renderer.render(objectScene, objectCamera, depthTexture);
+
+<span class="comment">// render normal</span>
+objectScene.overrideMaterial = normalMaterial;
+renderer.setClearColor(<span class="string">'#000000'</span>);
+renderer.clearTarget(normalTexture, <span class="literal">true</span>, <span class="literal">true</span>);
+renderer.render(objectScene, objectCamera, normalTexture);
+</pre></td></tr></table></figure>
+
+<p>在输出之前，别忘记使用<code>renderer</code>的<code>clearTarget</code>函数将 Buffer 清空。
+如果将我们在这一步生成的贴图显示出来的话，大概是下面的样子：</p>
+<p><img src="/img/posts/sketch-depth-and-normal.png" alt="Depth &amp; Normal Texture"></p>
+<h2>生成素描笔触</h2>
+<p>接下来就是在物体的表面生成绘制的素描线条效果了。这个方面其实比想象中更简单一点，
+我们的素描效果是使用的是如下一系列贴图组成的:</p>
+<p><img src="/img/posts/hatch-maps.png" alt="Hatching Maps"></p>
+<p>接下来的问题就是找一种方法将这种不同密度的贴图融合在一起，这种问题被称为 Hatching。
+这里使用的 Hatching 方法是 MicroSoft Research
+在 2001 年发表的一篇<a href="http://research.microsoft.com/en-us/um/people/hoppe/proj/hatching/" target="_blank">论文</a>中给出的。</p>
+<p>不同于原文中使用 6 张贴图合成的方法，这里采用了使用 3 张贴图合成，然后将贴图旋转 90 度再合成一次，
+从而获得交叉的笔划。</p>
+<figure class="highlight lang-glsl"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+7
+</pre></td><td class="code"><pre><span class="keyword">void</span> main() {
+  <span class="keyword">vec2</span> uv = vUv * <span class="number">15.0</span>;
+  <span class="keyword">vec2</span> uv2 = vUv.yx * <span class="number">10.0</span>;
+  <span class="keyword">float</span> shading = <span class="built_in">texture2D</span>(bakedshadow, vUv).r + <span class="number">0.1</span>;
+  <span class="keyword">float</span> crossedShading = shade(shading, uv) * shade(shading, uv2) * <span class="number">0.6</span> + <span class="number">0.4</span>;
+  <span class="built_in">gl_FragColor</span> = <span class="keyword">vec4</span>(<span class="keyword">vec3</span>(crossedShading), <span class="number">1.0</span>);
+}
+</pre></td></tr></table></figure>
+
+<p><code>shade</code>函数就是用合成多个贴图的函数，具体代码可以参见 GitHub
+上的<a href="https://github.com/shanzi/sketch-rendering/blob/master/coffee/hatch_material.coffee" target="_blank">这个文件</a>。
+可以注意到，我其实使用了之前 bake 出来的明暗来作为素描线条深浅的参考因素，
+这样就可以表现出明暗和阴影了。</p>
+<h2>最后的合成</h2>
+<p>最后就是要在我们的二维场景里进行最后的合成了。构造这样一个二维场景的代码很简单:</p>
+<figure class="highlight lang-javascript"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+</pre></td><td class="code"><pre><span class="keyword">var</span> composeCamera = <span class="keyword">new</span> THREE.OrthographicCamera(-width / <span class="number">2</span>, width / <span class="number">2</span>, height / <span class="number">2</span>, -height / <span class="number">2</span>, -<span class="number">10</span>, <span class="number">10</span>);
+<span class="keyword">var</span> composePlaneGeometry = <span class="keyword">new</span> THREE.PlaneBufferGeometry(width, height);
+composePlaneMesh = <span class="keyword">new</span> THREE.Mesh(composePlaneGeometry, composeMaterial);
+composeScene.add(composePlaneMesh);
+</pre></td></tr></table></figure>
+
+<p>场景的主要构造就是一个和视口一样大小的矩形几何体，摄像机则是一个<code>OrthographicCamera</code>，这种摄像机没有透视效果，
+正合适用于我们这种合成的需求。</p>
+<p>将前几步输出到 FrameBuffer (也就是<code>WebGLRenderTarget</code>) 的结果作为这个矩形表面的贴图，
+然后我们编写一个 Shader 来进行合成。</p>
+<p>这一次，我们不再需要输出到 Buffer 上，而是直接输出到屏幕。而 Outline 的生成也是在这一步完成的。
+用来计算 Outline 的函数是:</p>
+<figure class="highlight lang-glsl"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+</pre></td><td class="code"><pre><span class="keyword">float</span> planeDistance(<span class="keyword">const</span> <span class="keyword">in</span> <span class="keyword">vec3</span> positionA, <span class="keyword">const</span> <span class="keyword">in</span> <span class="keyword">vec3</span> normalA, 
+                    <span class="keyword">const</span> <span class="keyword">in</span> <span class="keyword">vec3</span> positionB, <span class="keyword">const</span> <span class="keyword">in</span> <span class="keyword">vec3</span> normalB) {
+  <span class="keyword">vec3</span> positionDelta = positionB-positionA;
+  <span class="keyword">float</span> planeDistanceDelta = <span class="built_in">max</span>(<span class="built_in">abs</span>(<span class="built_in">dot</span>(positionDelta, normalA)), <span class="built_in">abs</span>(<span class="built_in">dot</span>(positionDelta, normalB)));
+  <span class="keyword">return</span> planeDistanceDelta;
+}
+</pre></td></tr></table></figure>
+
+<p>在当前坐标周围取一个十字形的采样，对于上下和左右取出的点分别执行上面的函数，
+最后使用<code>smoothstep</code>来获得 Outline 的颜色:</p>
+<figure class="highlight lang-glsl"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+</pre></td><td class="code"><pre><span class="keyword">vec2</span> planeDist = <span class="keyword">vec2</span>(
+    planeDistance(leftpos, leftnor, rightpos, rightnor),
+    planeDistance(uppos, upnor, downpos, downnor));
+<span class="keyword">float</span> planeEdge = <span class="number">2.5</span> * <span class="built_in">length</span>(planeDist);
+planeEdge = <span class="number">1.0</span> - <span class="number">0.5</span> * <span class="built_in">smoothstep</span>(<span class="number">0.0</span>, depthCenter, planeEdge);
+</pre></td></tr></table></figure>
+
+<p>在最后实现的版本里，我还尝试了再混入法线方式生成的边缘线的效果。最终生成的 Outline 效果如下:</p>
+<p><img src="/img/posts/sketch-outline.png" alt="Outline"></p>
+<p>最后，将 Hatching 过程输出的结果混合进来:</p>
+<figure class="highlight lang-glsl"><table><tr><td class="gutter"><pre>1
+2
+</pre></td><td class="code"><pre><span class="keyword">vec4</span> hatch = <span class="built_in">texture2D</span>(hatchtexture, vUv);
+<span class="built_in">gl_FragColor</span> = <span class="keyword">vec4</span>(<span class="keyword">vec3</span>(hatch * edge), <span class="number">1.0</span>);
+</pre></td></tr></table></figure>
+
+<p>完整的实现可以参见我放在 GitHub
+上的<a href="https://github.com/shanzi/sketch-rendering/blob/master/coffee/compose_material.coffee" target="_blank">源码</a>。</p>
+<p>大功告成！最后的合成效果如图:</p>
+<p><img src="/img/posts/sketch-result.png" alt="Final Result"></p>
+<p>各位可以访问我使用简单添加了一点交互之后得到的 <a href="http://chasezhang.me/sketch-rendering/" target="_blank">Live Demo</a>
+(请使用支持 WebGL 的现代浏览器进行访问，加载模型和全部贴图可能需要一小会，请耐心等待)。</p>
+<p>我实现的所有代码以及模型都已经以 BSD 协议发布到 GitHub
+上了 (<a href="https://github.com/shanzi/sketch-rendering" target="_blank">这里</a>)。</p>
+<h2>总结一下</h2>
+<p>虽然是作为我在学校一门课程的 Final Project 的一部分完成的项目，
+但是在这个过程中我总算是对于 Shader 的编写方面有所入门。此外，这次进行 Blender
+进行建模也感觉比以前顺利了许多。</p>
+<p>虽然对 Blender 和 WebGL 的爱好现在看起来还没有什么现实价值，但是能够自己完成一个有趣的 Project
+还是很有成就感的！</p>
+
+    </div>
+    <footer>
+        
+  
+  <div class="categories">
+    <a href="/categories/web/">web</a>
+  </div>
+
+        
+  
+  <div class="tags">
+    <a href="/tags/webGL/">webGL</a>, <a href="/tags/sketch/">sketch</a>, <a href="/tags/rendering/">rendering</a>, <a href="/tags/GLSL/">GLSL</a>, <a href="/tags/shader/">shader</a>, <a href="/tags/blender/">blender</a>, <a href="/tags/web/">web</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2014/12/31/sketch-rendering/">使用 WebGL 实现素描效果的渲染</a>
+      </li>
+    
+      <li>
+        <a href="/2014/10/24/develop-for-yosemite-some-tips/">Develop for Yosemite: 几个小技巧</a>
+      </li>
+    
+      <li>
+        <a href="/2014/10/03/when-webgl-meets-device-motion/">When WebGL Meets Device Motion</a>
+      </li>
+    
+      <li>
+        <a href="/2014/09/01/contenteditable-and-selection/">在线文本编辑器的基本实现原理</a>
+      </li>
+    
+      <li>
+        <a href="/2014/07/30/go's-package-management/">Go 语言的包依赖管理</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Mastering Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>5</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/Apple/" style="font-size: 10.00px;">Apple</a><a href="/tags/Bezier Path/" style="font-size: 10.00px;">Bezier Path</a><a href="/tags/Cocoa/" style="font-size: 10.00px;">Cocoa</a><a href="/tags/Functional Programing/" style="font-size: 10.00px;">Functional Programing</a><a href="/tags/GLSL/" style="font-size: 10.00px;">GLSL</a><a href="/tags/Git/" style="font-size: 10.00px;">Git</a><a href="/tags/Go/" style="font-size: 13.33px;">Go</a><a href="/tags/Interface Builder/" style="font-size: 10.00px;">Interface Builder</a><a href="/tags/NSControl/" style="font-size: 13.33px;">NSControl</a><a href="/tags/OSX/" style="font-size: 16.67px;">OSX</a><a href="/tags/Objective-C/" style="font-size: 13.33px;">Objective-C</a><a href="/tags/SVG/" style="font-size: 10.00px;">SVG</a><a href="/tags/Swift/" style="font-size: 10.00px;">Swift</a><a href="/tags/Three.js/" style="font-size: 10.00px;">Three.js</a><a href="/tags/Xcode/" style="font-size: 10.00px;">Xcode</a><a href="/tags/accelerate meter/" style="font-size: 10.00px;">accelerate meter</a><a href="/tags/bezier path/" style="font-size: 13.33px;">bezier path</a><a href="/tags/blender/" style="font-size: 13.33px;">blender</a><a href="/tags/cocoa/" style="font-size: 13.33px;">cocoa</a><a href="/tags/completion/" style="font-size: 10.00px;">completion</a><a href="/tags/contenteditable/" style="font-size: 10.00px;">contenteditable</a><a href="/tags/design/" style="font-size: 10.00px;">design</a><a href="/tags/desktop/" style="font-size: 10.00px;">desktop</a><a href="/tags/develop/" style="font-size: 10.00px;">develop</a><a href="/tags/device motion/" style="font-size: 10.00px;">device motion</a><a href="/tags/distribute storage/" style="font-size: 10.00px;">distribute storage</a><a href="/tags/drawing/" style="font-size: 20.00px;">drawing</a><a href="/tags/editor/" style="font-size: 10.00px;">editor</a><a href="/tags/export/" style="font-size: 10.00px;">export</a><a href="/tags/font/" style="font-size: 13.33px;">font</a><a href="/tags/fontawesome/" style="font-size: 10.00px;">fontawesome</a><a href="/tags/go/" style="font-size: 10.00px;">go</a><a href="/tags/golang/" style="font-size: 10.00px;">golang</a><a href="/tags/html/" style="font-size: 10.00px;">html</a><a href="/tags/html5/" style="font-size: 10.00px;">html5</a><a href="/tags/iOS/" style="font-size: 10.00px;">iOS</a><a href="/tags/iOS 8/" style="font-size: 10.00px;">iOS 8</a><a href="/tags/iPad/" style="font-size: 16.67px;">iPad</a><a href="/tags/icon/" style="font-size: 10.00px;">icon</a><a href="/tags/icon font/" style="font-size: 13.33px;">icon font</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2015 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+
+</body>
+
+</html>

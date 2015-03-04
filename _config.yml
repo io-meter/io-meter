@@ -80,10 +80,9 @@ exclude_generator:
 # Deployment
 ## Docs: http://zespia.tw/hexo/docs/deploy.html
 deploy:
-  type: rsync
-  host: share.diumoo.net
-  user: root
-  root: /home/wwwroot/io-meter.com/
+  type: git
+  repo: dokku
+  branch: master
 
 markdown:
   gfm: false

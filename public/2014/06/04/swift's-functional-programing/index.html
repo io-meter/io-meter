@@ -1,0 +1,583 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>Swift の 函数式编程 | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="Swift 相比原先的 Objective-C 最重要的优点之一，就是对函数式编程提供了更好的支持。
+Swift 提供了更多的语法糖和一些新特性来增强函数式编程的能力，本文就在这方面进行一些讨论。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="Swift の 函数式编程"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content="undefined"/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2014/06/04/swift's-functional-programing/" target="_blank">Swift の 函数式编程</a></h1>
+
+
+      
+        <time datetime="2014-06-04T14:59:16.000Z">Jun 4 2014</time>
+      
+    </header>
+    <div class="entry">
+      <p>Swift 相比原先的 Objective-C 最重要的优点之一，就是对函数式编程提供了更好的支持。
+Swift 提供了更多的语法糖和一些新特性来增强函数式编程的能力，本文就在这方面进行一些讨论。</p>
+<a id="more"></a>
+
+<h2>Swift 概览</h2>
+<p>对编程语言有了一些经验的程序员，尤其是那些对多种不同类型的编程语言都有经验的开发者，
+在学习新的语言的时候更加得心应手。原因在于编程语言本身也是有各种范式的，
+把握住这些特点就可以比较容易的上手了。</p>
+<p>在入手一门新的语言的时候，一般关注的内容有：</p>
+<ol>
+<li>原生数据结构</li>
+<li>运算符</li>
+<li>分支控制</li>
+<li>如果是面向对象的编程语言，其面向对象的实现是怎样的</li>
+<li>如果是函数式编程语言，其面向函数式编程的实现是怎样的</li>
+</ol>
+<p>通过这几个点，其实只要阅读 Swift 文档的第一章，你就可以对这个语言有一个大概的印象。
+比如对于数据结构，Swift 和其他的编程语言大体一样，有 Int, Float, Array, Dictionary 等，
+运算符也基本与 C 语言一致等。
+本文主要集中于对 Swift 函数式编程方面的特点进行一些盘点，因此在这里假设大家对 Swift 的基本语法已经有所了解。</p>
+<p>对于一种编程范式，要掌握它也要抓住一些要点。对于支持函数式编程的语言，其一般的特点可能包含以下几种：</p>
+<ol>
+<li>支持递归</li>
+<li>函数本身是语言 First Class 的组成要素，且支持高阶函数和闭包</li>
+<li>函数调用尽可能没有副作用
+(<a href="http://en.wikipedia.org/wiki/Side_effect_%28computer_science%29" target="_blank">Side Effect</a>) 的条件</li>
+</ol>
+<p>接下来我们来逐个盘点这些内容。</p>
+<h1>递归</h1>
+<p>Swift 是支持递归的，事实上现在不支持递归的编程语言已经很难找到了。在 
+Swift 里写一个递归调用和其他编程语言并没有什么区别：</p>
+<figure class="highlight lang-none"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9
+</pre></td><td class="code"><pre><span class="title">func</span> fib(n: Int) -&gt; Int {
+  <span class="title">if</span> n &lt;= <span class="number">1</span> {
+    <span class="title">return</span> <span class="number">1</span>
+  }
+  else {
+    <span class="title">return</span> fib(n-<span class="number">1</span>) + fib(n-<span class="number">2</span>)
+  }
+}
+fib(<span class="number">6</span>) // output <span class="number">13</span>
+</pre></td></tr></table></figure>
+
+<p>关于 Swift 的递归没有什么好说的。作为一个常识，我们知道递归是需要消耗栈空间的。
+在函数式编程语言中，递归是一个非常常用的方法，然而使用不慎很容易导致栈溢出的问题。
+如果将代码改写为非递归实现，又可能会导致代码的可读性变差，因此有一个技巧是使用“尾递归”，
+然后让编译器来优化代码。</p>
+<p>一个 Common Lisp 的尾递归的例子是</p>
+<figure class="highlight lang-lisp"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+7
+</pre></td><td class="code"><pre><span class="list">(<span class="title">defun</span><span class="body"> fib<span class="list">(<span class="title">n</span><span class="body">)</span></span>
+    <span class="list">(<span class="title">fib-iter</span><span class="body"> <span class="number">1</span> <span class="number">0</span> n)</span></span>)</span></span>
+
+<span class="list">(<span class="title">defun</span><span class="body"> fib-iter<span class="list">(<span class="title">a</span><span class="body"> b count)</span></span>
+    <span class="list">(<span class="title">if</span><span class="body"> <span class="list">(<span class="title">=</span><span class="body"> count <span class="number">0</span>)</span></span>
+        b
+        <span class="list">(<span class="title">fib-iter</span><span class="body"> <span class="list">(<span class="title">+</span><span class="body"> a b)</span></span> a <span class="list">(<span class="title">-</span><span class="body"> count <span class="number">1</span>)</span></span>)</span></span>)</span></span>)</span></span>
+</pre></td></tr></table></figure>
+
+<p>我们可以把我们上述的 Swift 代码也改写成相同形式</p>
+<figure class="highlight lang-none"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+</pre></td><td class="code"><pre><span class="title">func</span> fibiter(a: Int, b: Int, count: Int) -&gt; Int {
+  <span class="title">if</span> count==<span class="number">0</span> {
+    <span class="title">return</span> b
+  }
+  else {
+    <span class="title">return</span> fibiter(a + b, a, count-<span class="number">1</span>)
+  }
+}
+
+func fib(n: Int) -&gt; Int {
+  <span class="title">return</span> fibiter(<span class="number">1</span>, <span class="number">1</span>, n);
+}
+</pre></td></tr></table></figure>
+
+<p>我们可以 Playground 里观察是否使用尾递归时的迭代结果变化。</p>
+<p><img src="/img/posts/recurrence-fib.png" alt=""></p>
+<p>值得注意的是，这里出现了一个 Swift 的问题。虽然 Swift 支持嵌套函数，但是当我们将<code>fibiter</code>
+作为一个高阶函数包含在<code>fib</code>函数之内的时候却发生了 EXC_BAD_ACCESS 报错，
+并不清楚这是语言限制还是 Bug。</p>
+<h2>Swift 的高阶函数和闭包</h2>
+<p>在 Objective-C 时代，使用 block 来实现高阶函数或者闭包已经是非常成熟的技术了。
+Swift 相比 Objective-C 的提高在于为函数式编程添加了诸多语法上的方便。</p>
+<p>首先是高阶函数的支持，可以在函数内定义函数，下面就是一个很简洁的例子。</p>
+<figure class="highlight lang-none"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+</pre></td><td class="code"><pre>func greetingGenerator(<span class="keyword">object</span>:String) -&gt; (greeting:String) -&gt; String {
+  func sayGreeting(greeting:String) -&gt; String {
+    <span class="keyword">return</span> greeting + <span class="string">", "</span> + <span class="keyword">object</span>
+  }
+  <span class="keyword">return</span> sayGreeting
+}
+
+<span class="keyword">let</span> sayToWorld = greetingGenerator(<span class="string">"world"</span>)
+sayToWorld(greeting: <span class="string">"Hello"</span>) <span class="comment">// "Hello, World"</span>
+sayToWorld(greeting: <span class="string">" 你好 "</span>) <span class="comment">// " 你好, World"</span>
+</pre></td></tr></table></figure>
+
+<p>如果使用 block 实现上述功能，可读性就不会有这么好。而且 block 的语法本身也比较怪异，
+之前没少被人吐槽。Swift 从这个角度来看比较方便。事实上，在 Swift 里可以将函数当做对象赋值，
+这和很多函数式编程语言是一样的。</p>
+<p>作为一盘大杂烩，Swift 的函数系统也很有 JavaScript 的影子在里面。比如可以向下面这样定义函数：</p>
+<figure class="highlight lang-none"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+</pre></td><td class="code"><pre><span class="keyword">let</span> add = {
+  (a:Int, b:Int) -&gt; Int <span class="keyword">in</span>
+  <span class="keyword">return</span> a+b
+}
+
+add(<span class="number">1</span>, <span class="number">2</span>) <span class="comment">// 3</span>
+</pre></td></tr></table></figure>
+
+<p>等号之后被赋予变量<code>add</code>的是一个闭包表达式，因此更准确的说，
+这是将一个闭包赋值给常量了。注意在闭包表达式中，<code>in</code>关键字之前是闭包的形式定义，之后是具体代码实现。
+Swift 中的闭包跟匿名函数没有什么区别。
+如果你将它赋值给对象，就跟 JavaScript 中相同的实践是一样的了。幸好 Swift 作为 C 系列的语言，
+其分支语句 if 等本身是有作用域的，因此不会出现下列 JavaScript 的坑：</p>
+<figure class="highlight lang-javascript"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+7
+8
+</pre></td><td class="code"><pre><span class="keyword">if</span> (someNum&gt;<span class="number">0</span>) {
+  <span class="function"><span class="keyword">function</span> <span class="title">a</span><span class="params">()</span>{</span> alert(<span class="string">"one"</span>) };
+}
+<span class="keyword">else</span> {
+  <span class="function"><span class="keyword">function</span> <span class="title">a</span><span class="params">()</span>{</span> alert(<span class="string">"two"</span>) };
+}
+
+a() <span class="comment">// will always alert "two" in most of browsers</span>
+</pre></td></tr></table></figure>
+
+<p>Swift 的闭包表达式和函数都可以作为函数的参数，从下面的代码我们可以看出闭包和函数的一致性：</p>
+<figure class="highlight lang-none"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+</pre></td><td class="code"><pre><span class="title">func</span> function() {
+  println(<span class="string">"this is a function"</span>)
+}
+
+<span class="title">let</span> closure = {
+  () -&gt; () <span class="keyword">in</span>
+  println(<span class="string">"this is a closure"</span>)
+}
+
+<span class="title">func</span> run(somethingCanRun:()-&gt; ()) {
+  somethingCanRun()
+}
+
+<span class="title">run</span>(function)
+<span class="title">run</span>(closure)
+</pre></td></tr></table></figure>
+
+<p>类似于 Ruby，Swift 作为函数参数的闭包做了一点语法糖。
+在 Ruby 中使用 Block 的时候，我们可以这样写:</p>
+<figure class="highlight lang-ruby"><table><tr><td class="gutter"><pre>1
+</pre></td><td class="code"><pre>(<span class="number">1</span>...<span class="number">5</span>).map {|x| x*<span class="number">2</span>} /<span class="regexp">/ =&gt; [2, 4, 6, 8]
+</pre></td></tr></table></figure>
+
+<p>在 Swift 当中我们可以得到几乎一样的表达式。</p>
+<figure class="highlight lang-none"><table><tr><td class="gutter"><pre>1
+2
+</pre></td><td class="code"><pre><span class="title">var</span> a = Array(<span class="number">1</span>..<span class="number">5</span>).map {<span class="title">x</span> in x*<span class="number">2</span>}
+// a = [<span class="number">2</span>, <span class="number">4</span>, <span class="number">6</span>, <span class="number">8</span>]
+</pre></td></tr></table></figure>
+
+<p>也就是说， 如果一个函数的最后一个参数是闭包，那么它在语法上可以放在函数调用的外面。
+闭包还可以用<code>$0</code>、<code>$1</code>等分别来表示第 0、第 1 个参数等。 基本的运算符也可以看做函数。
+下面的几种方式都可以实现逆序倒排的功能。</p>
+<figure class="highlight lang-none"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+</pre></td><td class="code"><pre>let thingsToSort = Array(<span class="number">1.</span><span class="number">.5</span>)
+var reversed1 = <span class="keyword">sort</span>(thingsToSort) { a, b <span class="keyword">in</span> a&lt;b}
+var reversed2 = <span class="keyword">sort</span>(thingsToSort) { <span class="variable">$0</span> &lt; <span class="variable">$1</span>}
+var reversed3 = <span class="keyword">sort</span>(thingsToSort, &lt;) <span class="comment">// operator as a function</span>
+<span class="comment">// all the above are [5, 4, 3, 2, 1]</span>
+</pre></td></tr></table></figure>
+
+<p>总体来说，Swift 在添加方便函数操作、添加相关语法糖方面走的很远，基本上整合了目前各种语言中比较方便的特性。
+实用性较好。</p>
+<h2>Side Effects</h2>
+<p>在计算机科学中，函数副作用指当调用函数时，除了返回函数值之外，还对主调用函数产生附加的影响。例如修改全局变量
+(函数外的变量) 或修改参数 (<a href="http://en.wikipedia.org/wiki/Side_effect_%28computer_science%29" target="_blank">wiki</a>)。
+函数副作用会给程序带来一些不必要的麻烦。</p>
+<p>为了减少函数副作用，很多函数式编程语言都力求达到所谓的“纯函数”。
+纯函数是指函数与外界交换数据的唯一渠道是参数和返回值， 而不会受到函数的外部变量的干扰。
+乍看起来这似乎跟闭包的概念相抵触，因为闭包本身的一个重要特点就是可以访问到函数定义时的上下文环境。</p>
+<p>事实上，为了在这种情况下支持纯函数，一些编程语言如 Clojure 等提供的数据结构都是不可变 (或者说 Persist) 的。
+因此其实也就没有我们传统意义上的所认为的“变量”的概念。比如说，在 Python 中，字符串<code>str</code>就是一类不可变的数据结构。
+你不能在原来的字符串上进行修改，每次想要进行类似的操作，其实都是生成了一个新的<code>str</code>对象。
+然而 Python 中的链表结构则是可变的。且看下面的代码，在 Python 中对<code>a</code>字符串进行修改并不会影响<code>b</code>，
+但是同样的操作作用于链表就会产生不一样的结果：</p>
+<figure class="highlight lang-python"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+</pre></td><td class="code"><pre>a = <span class="string">"hello, "</span>
+b = a
+a += <span class="string">"world"</span>
+<span class="keyword">print</span> a <span class="comment"># hello, world</span>
+<span class="keyword">print</span> b <span class="comment"># hello,</span>
+</pre></td></tr></table></figure>
+
+<p>Swift 的数据结构的 Persist 性质跟 Python 有点类似。需要注意的是，Swift 有变量和常量两种概念，
+变量使用<code>var</code>声明，常量使用<code>let</code>声明，使用<code>var</code>声明的时候，Swift 中的字符串的行为跟 Python 相似，
+因此修改字符串可以被理解为生成了一个新的字符串并修改了指针。同样，
+使用<code>var</code>声明的数组和字典也都是可变的。</p>
+<p>在 Swift 中使用<code>let</code>声明的对象不能被赋值，基本数据结果也会变得不可变，但是情况更复杂一点。</p>
+<figure class="highlight lang-none"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+</pre></td><td class="code"><pre><span class="function_or_atom">let</span> <span class="function_or_atom">aDict</span> = [<span class="string">"k1"</span>:<span class="string">"v1"</span>]
+<span class="function_or_atom">let</span> <span class="function_or_atom">anArray</span> = [<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>]
+
+<span class="function_or_atom">aDict</span>[<span class="string">"k1"</span>] = <span class="string">"newVal"</span> // <span class="exclamation_mark">!</span><span class="exclamation_mark">!</span> <span class="function_or_atom">will</span> <span class="function_or_atom">fail</span> <span class="exclamation_mark">!</span><span class="exclamation_mark">!</span>
+<span class="function_or_atom">anArray</span>.<span class="function_or_atom">append</span>(<span class="number">5</span>) // <span class="exclamation_mark">!</span><span class="exclamation_mark">!</span> <span class="function_or_atom">will</span> <span class="function_or_atom">fail</span> <span class="exclamation_mark">!</span><span class="exclamation_mark">!</span>
+<span class="function_or_atom">anArray</span>[<span class="number">0</span>] = <span class="number">5</span> // <span class="function_or_atom">anArray</span> = [<span class="number">5</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>] <span class="function_or_atom">now</span> <span class="exclamation_mark">!</span>
+</pre></td></tr></table></figure>
+
+<p>从上面的代码中可以看出，使用<code>let</code>声明的字典是完全不可变的，但是数组虽然不可以改变长度，
+却可以改变数组元素的值！Swift 的文档中指出这里其实是将 Array 理解为定长数组从而方便编译优化，
+来获得更好的访问性能。</p>
+<p>综上所述，对象是否可变的关系其实略有复杂的，可以总结为：</p>
+<ol>
+<li>使用<code>var</code>和<code>let</code>，<code>Int</code>和<code>String</code>类型都是不可变的，但是<code>var</code>时可以对变量重新赋值</li>
+<li>使用<code>let</code>声明的常量不可以被重新赋值</li>
+<li>使用<code>let</code>声明的<code>Dictionary</code>是完全不可变的</li>
+<li>使用<code>let</code>声明的<code>Array</code>长度不可变，但是可以修改元素的值</li>
+<li>使用<code>let</code>声明的类对象是可变的</li>
+</ol>
+<p>综上所述，即使是使用<code>let</code>声明的对象也有可能可变，因此在多线程情况下就无法达到“无副作用”的要求了。</p>
+<p>此外 Swift 的函数虽然没有指针，但是仍通过参数来修改变量的。只要在函数的参数定义中加入<code>inout</code>关键字即可。
+这个特性很有 C 的风格。</p>
+<p>个人觉得在支持通过元组来实现多返回值的情况下，这个特性不但显得鸡肋，也是一个导致程序产生“副作用”的特性。
+Swift 支持这样的特性，恐怕更多的是为了兼容 Objective-C 以及方便在两个语言之间搭建 Bridge。</p>
+<figure class="highlight lang-none"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+</pre></td><td class="code"><pre><span class="title">func</span> inc(inout a:Int) {
+  <span class="title">a</span> += <span class="number">1</span>
+}
+var num = <span class="number">1</span>
+inc(&num) // num = <span class="number">2</span> now!
+</pre></td></tr></table></figure>
+
+<p>综上所述，使用 Swift 自带的数据结构并不能很好的实现“无副作用”的“纯函数式”编程，
+它并没有比 Python、Ruby 这类语言走的更远。幸好作为一种关注度很高的语言，
+已经有开发者为其实现了一套完全满足不可变要求的数据结构和库：<a href="https://github.com/maxpow4h/swiftz" target="_blank">Swiftz</a>。
+坚持使用<code>let</code>和 Swiftz 提供的数据结构来操作，就可以实现“纯函数式”编程。</p>
+<h2>总结</h2>
+<p>在我看来，Swift 虽然实现了很多其他语言的亮点特性，但是总体实现来说并不是很整齐。
+它在函数式编程方面添加了很多特性，但在控制副作用方面仅能达到平均水准。
+有些特性看起来像是为了兼容原来的 Objective-C 才加入的。</p>
+<p>Swift 写起来相对比 Objective-C 更方便一点，脱离 Xcode 这样的 IDE 来写也是应该是可以的。
+目前 Swift 只支持集中少量的原生数据结构而没有标准库，更不具备跨平台特性，这是一个缺点。
+在仔细阅读了文档之后发现 Swift 本身的语法细节还是很多的，就比如<code>switch</code>分置语句的用法就有很多内容。
+入门学习的容易程度并没有原来想象的那么好。我个人并不觉得这门语言会对其他平台的开发者有很大吸引力。</p>
+<p>Swift 是一门很强大的语言，在其稳定版本发布之后我认为我会从 Objective-C 专向 Swift 来进行编程，
+它在未来很可能成为 iOS 和 Mac 开发的首选。</p>
+
+    </div>
+    <footer>
+        
+  
+  <div class="categories">
+    <a href="/categories/essay/">essay</a>
+  </div>
+
+        
+  
+  <div class="tags">
+    <a href="/tags/Functional Programing/">Functional Programing</a>, <a href="/tags/Swift/">Swift</a>, <a href="/tags/Apple/">Apple</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2014/12/31/sketch-rendering/">使用 WebGL 实现素描效果的渲染</a>
+      </li>
+    
+      <li>
+        <a href="/2014/10/24/develop-for-yosemite-some-tips/">Develop for Yosemite: 几个小技巧</a>
+      </li>
+    
+      <li>
+        <a href="/2014/10/03/when-webgl-meets-device-motion/">When WebGL Meets Device Motion</a>
+      </li>
+    
+      <li>
+        <a href="/2014/09/01/contenteditable-and-selection/">在线文本编辑器的基本实现原理</a>
+      </li>
+    
+      <li>
+        <a href="/2014/07/30/go's-package-management/">Go 语言的包依赖管理</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Mastering Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>5</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/Apple/" style="font-size: 10.00px;">Apple</a><a href="/tags/Bezier Path/" style="font-size: 10.00px;">Bezier Path</a><a href="/tags/Cocoa/" style="font-size: 10.00px;">Cocoa</a><a href="/tags/Functional Programing/" style="font-size: 10.00px;">Functional Programing</a><a href="/tags/GLSL/" style="font-size: 10.00px;">GLSL</a><a href="/tags/Git/" style="font-size: 10.00px;">Git</a><a href="/tags/Go/" style="font-size: 13.33px;">Go</a><a href="/tags/Interface Builder/" style="font-size: 10.00px;">Interface Builder</a><a href="/tags/NSControl/" style="font-size: 13.33px;">NSControl</a><a href="/tags/OSX/" style="font-size: 16.67px;">OSX</a><a href="/tags/Objective-C/" style="font-size: 13.33px;">Objective-C</a><a href="/tags/SVG/" style="font-size: 10.00px;">SVG</a><a href="/tags/Swift/" style="font-size: 10.00px;">Swift</a><a href="/tags/Three.js/" style="font-size: 10.00px;">Three.js</a><a href="/tags/Xcode/" style="font-size: 10.00px;">Xcode</a><a href="/tags/accelerate meter/" style="font-size: 10.00px;">accelerate meter</a><a href="/tags/bezier path/" style="font-size: 13.33px;">bezier path</a><a href="/tags/blender/" style="font-size: 13.33px;">blender</a><a href="/tags/cocoa/" style="font-size: 13.33px;">cocoa</a><a href="/tags/completion/" style="font-size: 10.00px;">completion</a><a href="/tags/contenteditable/" style="font-size: 10.00px;">contenteditable</a><a href="/tags/design/" style="font-size: 10.00px;">design</a><a href="/tags/desktop/" style="font-size: 10.00px;">desktop</a><a href="/tags/develop/" style="font-size: 10.00px;">develop</a><a href="/tags/device motion/" style="font-size: 10.00px;">device motion</a><a href="/tags/distribute storage/" style="font-size: 10.00px;">distribute storage</a><a href="/tags/drawing/" style="font-size: 20.00px;">drawing</a><a href="/tags/editor/" style="font-size: 10.00px;">editor</a><a href="/tags/export/" style="font-size: 10.00px;">export</a><a href="/tags/font/" style="font-size: 13.33px;">font</a><a href="/tags/fontawesome/" style="font-size: 10.00px;">fontawesome</a><a href="/tags/go/" style="font-size: 10.00px;">go</a><a href="/tags/golang/" style="font-size: 10.00px;">golang</a><a href="/tags/html/" style="font-size: 10.00px;">html</a><a href="/tags/html5/" style="font-size: 10.00px;">html5</a><a href="/tags/iOS/" style="font-size: 10.00px;">iOS</a><a href="/tags/iOS 8/" style="font-size: 10.00px;">iOS 8</a><a href="/tags/iPad/" style="font-size: 16.67px;">iPad</a><a href="/tags/icon/" style="font-size: 10.00px;">icon</a><a href="/tags/icon font/" style="font-size: 13.33px;">icon font</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2015 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+
+</body>
+
+</html>

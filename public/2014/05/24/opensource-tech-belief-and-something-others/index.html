@@ -1,0 +1,395 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>开源、技术信仰及其他 | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="这是一篇吐槽为主的文章，主要针对的是最近的一个时期比较热点的话题，
+包括开源产品成本更高论、
+HeartBleed、
+技术信仰是如何毁掉程序员的、RMS 的中国之行、
+学生开源组织的建设等等话题。总体来说内容比较有争议，请慎入。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="开源、技术信仰及其他"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content="undefined"/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2014/05/24/opensource-tech-belief-and-something-others/" target="_blank">开源、技术信仰及其他</a></h1>
+
+
+      
+        <time datetime="2014-05-24T12:09:13.000Z">May 24 2014</time>
+      
+    </header>
+    <div class="entry">
+      <p>这是一篇吐槽为主的文章，主要针对的是最近的一个时期比较热点的话题，
+包括<a href="http://blog.jobbole.com/67744/" target="_blank">开源产品成本更高论</a>、
+<a href="http://zh.wikipedia.org/zh-cn/%E5%BF%83%E8%84%8F%E5%87%BA%E8%A1%80%E6%BC%8F%E6%B4%9E" target="_blank">HeartBleed</a>、
+<a href="http://blog.jobbole.com/67818/" target="_blank">技术信仰是如何毁掉程序员的</a>、RMS 的中国之行、
+学生开源组织的建设等等话题。总体来说内容比较有争议，请慎入。</p>
+<a id="more"></a>
+
+<h2>开源产品的成本更高？</h2>
+<p><a href="http://blog.jobbole.com/67744/" target="_blank">开源产品成本高之论</a>不是什么新鲜货，它几乎每隔一段时间都会被翻出来炒。
+这次是来自英国政府首席信息官的说法。其主要观点就是：开源产品虽然是免费的，但是使用它的隐性成本高。
+我们有充分的理由相信英国政府是做过仔细的核算的，对于他们来说，迁移和员工培训的确是一笔可观的额外开销。</p>
+<p>其实，在我看来，这份报道的并没有歪曲事实——他只是掩盖了部分事实 (这是新闻媒体多么喜欢干的事情啊)，
+实际上世界上大多规模模比较大的 IT 企业，好几百万台服务器，不都在使用开源技术么？几乎所有的互联网创业企业，
+开源技术不都是他们的首选么？对于那种大型的 IT
+相关企业。使用竞争对手微软的产品可能会有受制于人的危险，转化为隐性成本就会非常高，
+这同样是一种成本分析，结果却不一样。</p>
+<p>开源技术的成本高并不是在所有场合都成立，这就是持有类似成本论的人想要掩盖的地方，目的无非是
+使不明真相的读者将开源技术视为某种昂贵又不实用的东西。</p>
+<p>那么对于个人来说，开源产品的成本怎么样呢？在这个问题上我不得不承认的是: 就目前的开源产品而言，
+每个人的平均使用成本是要高于商业产品的，尤其是对于普通的电脑使用者来说更是如此。</p>
+<p>也正因为这样，目前在桌面领域 Linux 占有率不高是一个很正常的现象，没有什么多余的借口可讲。
+我能理解很多开源爱好者喜欢归咎于微软，认为微软存在垄断等等行为。
+但是把自己不成功的原因推卸到别人身上，真的是一种逃避的心理。</p>
+<p>同之前所说的一样，也不是每个人的开源产品使用的成本也不是一样的。
+如果你是一个有追求的计算机技术人员，那么至少应该对此有所了解。否则可能要在其他地方承受很大的隐性成本。
+比如大多知名技术企业都对 Linux 技能有所要求，如果相关知识缺乏，可能会减少自己求职范围的宽度。</p>
+<h2>HeartBleed</h2>
+<p>HeartBleed 可以算是这小半年来开源界最大的新闻了。其产生的动荡不但使普通人也能感受到开源技术产生的影响，
+也在一定程度上打击了大家对开源技术的信心。</p>
+<p>是的，尽管自由软件基金会在其后发表了文章试图减弱 HeartBleed 带来的信任危机，但是仍然不可能完全消除影响。
+HeartBleed 事件告诉大家了一个事实，那就是开源技术“有更多的眼睛在看，因此导致代码更安全更稳定”这一优势，
+并不一定总是可靠的。这对人们对开源技术的信心必然会产生影响。</p>
+<p>这真是一件大好事！为什么这么说？我们来好好思考一下为什么 OpenSSL 的一个漏洞这么长时间都没有被发现，
+为什么对于一个那么流行的开源软件，前面所讲的“开源的优势”并没有生效？
+归根结底是因为人们对开源技术太信任了！对 OpenSSL 太信任了！</p>
+<p>当一个系统管理员选择 OpenSSL 时，他会想：有这么多大企业在用，其中不乏 Google 这样的大企业，
+那么一定是一个很安全的软件；同样，全世界一半的网络都在用，有 Bug 很快就能发现，因此应该是一个很稳定的软件。
+可惜 Google 这样的大企业的管理员也许也是这么想的，大家都以为其他人会 Review 这些代码，
+都以为有了 Bug 其他人肯定会修，结果到最后越来越少人真的会检查代码。
+这一切难道不是因为技术人员对这些开源技术太过信任了么？</p>
+<p>经过这次事件的洗礼，人们对开源技术没有那么信任了，也许使用开源软件的人会少一些，
+但是剩下一些坚持使用的人或者企业，就不会对自己所用的东西那么信任，也就会多一些人来检查代码，
+发现 Bug，修复 Bug，使得开源软件更安全。因此至少在一段时间内“开源的优势”又可以有效。</p>
+<p>当然，除了这条“更多眼睛在看”的优势，对于有能力的人，我们还有“有 Bug 可以自己修”这条优势。
+这对于大企业尤其是非常重要的。</p>
+<h2>关于技术信仰</h2>
+<p><a href="http://blog.jobbole.com/67818/" target="_blank">《技术信仰是如何毁掉程序员的》</a> 这篇文章之前产生了很大的影响，
+此外还出现了很多评论这篇文章的相关文章。这篇文章里面已经谈得很好了，但是我还是想要在这里强调一下。
+因为纵使有写的这么好的文章在，还是有些人不遗余力的引发关于技术信仰的争论。</p>
+<p>现在这些争论表面上都显得很无辜，比如在某曾经质量很高的程序员社区几乎每天都可以看到类似<a href="http://v2ex.com/t/114033" target="_blank">这篇</a>
+和<a href="http://www.v2ex.com/t/113887" target="_blank">这篇</a>的文章。发帖人自己显得特无辜，好像是来请教，但是其实就是来找喷的，
+喷的人多了有成就感，尤其还有积分赚的时候。正是大量这样的文章导致了某社区变成了“曾经”质量很高，不得不让人扼腕。</p>
+<p>此外，对于《技术信仰》这篇文章，我还想有一点补充的地方。我完全赞同文中认为执拗于某一门技术会导致一叶障目的论述，
+赞同程序员应该广泛涉猎技术爱好。但是我不认为有“技术信仰”是有害的。
+人都是有性格的，其实技术也有性格，程序员选择一门技术作为信仰，就像是在谈恋爱，有相同性格的人在一起会更融洽，
+人和技术也是如此。一个没有性格的老好人是不招人喜欢的，在技术信仰这个概念上也是一样。人总是要有所坚持。</p>
+<p>著名科幻小说《安德的游戏》中安德为了打败威胁人类的异星生物，尽可能掌握有关敌人更多信息，去理解敌人的优势和行为方式，
+当他终于掌握了足够的信息足以消灭敌人之时，他却发现他已经爱上了这个种族——但这没有妨碍他为人类毁灭异己，
+他<strong>含泪</strong>挽救了人类。
+这正是大多数有技术信仰的人所缺乏的——他们光顾着跟自己喜欢的技术谈恋爱，而不想着如何去理解自己的敌人，以便消灭他们。</p>
+<p>因此，我认为毁掉一个程序员的不是技术信仰，而是失去了接受新事物的能力，不愿意为了消灭敌人而去稍微接受一点自己不熟悉的东西。
+他们失去了宽容的心胸，有的只是狭隘。</p>
+<h2>RMS</h2>
+<p>RMS，Richard Stallman，自由软件之父，最近在国内做多个地方做了演讲。我看到很多人认为，RMS 的有些想法过于激进。
+我曾经就是其中之一，说“曾经”并不是说我现在已经能够完全接受他的所有看法了，只是我认为他的存在是必要的，
+他的激进的言论和宣传也是必要的。</p>
+<p>永远也不要低估人类的残忍和邪恶。你也许以为，你只要保持走中间路线就可以了，社会总是平衡的，RMS 以及《1984》
+所描述的黑暗社会并不会出现。然而想想现今社会，有多少国家的人民，生活更恶劣的境地之中？
+有多少政府在不断挑战着民主的底线？</p>
+<p>那些想要将社会变成这种不自由的极端的人，是绝不会将这样的观点表露出来的，他们隐藏自己，他们小心翼翼将自己伪装成中间派，
+对大众进行着“虽然自由很重要，但是为了 xxx 稍作妥协也是合理的”的宣传，因此大部分人只看到了 RMS 的抗争，觉得 RMS
+是在跟不存在的敌人战斗，因此不能理解，觉得这是偏执和神经质。</p>
+<p>事实上，如果没有像 RMS 这样的人存在，我们可能已经像温水青蛙一般煮掉了。RMS 作为一种刺激，
+虽然略有极端，但是却能每隔一段时间都让我们警醒一下，不啻为一剂良药！</p>
+<p>若有一天，我们的社会真的要倒向自由的反面，像 RMS 这样的人就是我们的最后屏障和救赎的希望。
+因此你可以不接受他的思想，不接受他的行为方式，但是你应该尊重他努力。</p>
+<h2>学生开源组织的建设</h2>
+<p>我是一个很幸运的人，我在大学的时候加入了开源社区，结识了一群欢快的小伙伴们，
+在现在的研究生阶段，也在努力从零做起，发起一个类似的开源组织。在这些过程中都是收获良多。</p>
+<p>不得不说这一过程是很辛苦的，你会遇到各种的人，各种的事。而想要让一个开源社区发展壮大是非常困难的
+——大多数学生都会对你敬而远之。</p>
+<p>本来我们认为，在学校里适合开源技术的人等同于计算机技术相关专业的学生，
+因为很多知名企业都在使用 Linux 技术，作为一个计算机方向的毕业生，
+缺乏相关技能可以算是一笔巨大的隐性成本。与此相比，花费成本去学习 Linux 的也就是划算的了。</p>
+<p>到后来我们终于明白，这只是保证了大学的计算机相关专业学生“应该”去了解 Linux 技术，
+但是并不意味着他们就“适合”。什么样的学生才是适合 Linux 以及开源技术的呢？我认为有下面几条：</p>
+<ol>
+<li>有强烈好奇心的人。没有好奇心的人，别说学习 Linux，恐怕也不会对其他任何东西有探索的欲望</li>
+<li>喜欢探索新事物，能够接受新事物的人。Linux 相对于大部分人来说可能算是一种新事物，年轻人接受新事物的能力一般都很强。
+然而令人沮丧的是，现在大学生已经有人失去了这种能力。对于自己不知道不熟悉的事物持有抵触情绪，
+连 Win7 可能都不愿意去尝试，因此更不用指望他去接受 Linux 了。</li>
+<li>百折不挠，能够坚持的人。一开始使用 Linux 时，Linux 会时常让你有挫折感。驱动上的问题、
+稳定性上的问题、耗电的问题等等。如果不是一个能够坚持的人，是熬不到成为一个熟练的使用者的。</li>
+</ol>
+<p>我认为以上三条，缺一不可，少了哪一条这个人都不会最后成为开源技术的认同者和追随者。因此，
+在组建一个开源技术相关社区时，对于不具备这样特点的人就不要白费力气了。当然，想要构建一个成功的组织，
+还需要各种因素，比如领导力、凝聚力等等，并不是发现了具备以上三者特点的同学就万事大吉了。</p>
+<p>在大学中，符合以上条件的人实在是不能算多。但是组成一个小型的组织也不是什么大问题了。
+但是还有一类人，如果有一两个在组织里都嫌多——因为他们是有害的。具体表现在于：</p>
+<ol>
+<li>也许有一些真才实学，但是喜欢吓唬人，比如甩一些高端的名词，呼啦呼啦说一大堆，美其名曰分享经验，
+显得很高端，很多新手很容易就被唬住了，从而将其奉为“大牛”什么的。其实说的东西不一定行得通，
+拍拍脑袋就出来了，自己不一定试过</li>
+<li>自己觉得自己很牛，然后还很不谦虚，动不动说自己要去美国哪个企业啦，或者说自己曾经干过什么惊天伟业。
+说的事情没人能验证，如果你要跟他较真，他就跟你急</li>
+<li>看不起初学者走过的一些弯路，比较突出的是坚决反对初学者第一次使用虚拟机装 Linux。
+非要人第一次就要独立装系统，还能说出一堆大道理来。我觉得适合 Linux 的人，最终还是会一步步提高技术，
+有没有用虚拟机装过 Linux 根本属于细枝末节的问题，他们之所以纠结于此，不过是为了显示自己的优越感</li>
+<li>爱跟人吵架，比如没事儿喷喷微软什么的，其实对对手的了解就那么一点，喷起来没什么花样，但是还是喜欢喷。
+好像整个组织里就他最拥护开源技术，你只要提出一点异议，就属于背叛组织</li>
+<li>喜欢“显得自己有价值”的人。在一些团队里，你会发现有些人好像什么都在干，可是其实什么事儿也没干。
+这种人给人的第一印象是特有价值，但是你如果仔细想想，这件事也不是他干的，那件事也不是他干的，
+他不过在旁边附和，或者实在不行了干点不重要的事儿。这种人还特别喜欢显得自己有价值，比如时常跟人说，
+没有我就怎么怎么样了，或者这件事当初是“我跟谁谁谁”去干的。着实可恨！</li>
+</ol>
+<p>遇到这种类型的人，一定要小心，对组织真是贻害无穷，你问我为何能总结的那么清楚？那是因为我遇到过不止一个呢，
+比如说<strong>我自己</strong>，膝盖上就可以中好多箭了。现在想想真是羞愧不已，幸好我造成危害还不算大，同志们比较包容，
+组织现在也发展的越来越好了。否则真是罪莫大焉！</p>
+<h2>总结跟自槽</h2>
+<p>这篇文章，我就算是又多给自己中了一枪，虽说好好地喷了喷想喷之事，
+但像这种吐槽类的文章，确实没多大意义。</p>
+<p>我观察了一下，
+发现在在各种社交网络上往往是这种文章特别火爆。我想，大概是这类文章写起来和读起来都比较容易，没有什么技术门槛，
+无论你是真大神还是门外汉，都能扯上几句，当然容易有人气。反过来，有技术含量的文章写起来不易，
+读者看起来也会比较吃力。</p>
+<p>写出来这篇文章，真的很抱歉耽误了大家的很多时间。但是我想，如果读了这篇文章的人中若有能认同我的，
+能以后不再在这种没有营养的文章上浪费时间，能不再盲目崇拜写这类文章的所谓“大神”们，
+这篇文章也就不算是没有意义。</p>
+
+    </div>
+    <footer>
+        
+  
+  <div class="categories">
+    <a href="/categories/essay/">essay</a>
+  </div>
+
+        
+  
+  <div class="tags">
+    <a href="/tags/opensource/">opensource</a>, <a href="/tags/linux/">linux</a>, <a href="/tags/吐槽/">吐槽</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2014/12/31/sketch-rendering/">使用 WebGL 实现素描效果的渲染</a>
+      </li>
+    
+      <li>
+        <a href="/2014/10/24/develop-for-yosemite-some-tips/">Develop for Yosemite: 几个小技巧</a>
+      </li>
+    
+      <li>
+        <a href="/2014/10/03/when-webgl-meets-device-motion/">When WebGL Meets Device Motion</a>
+      </li>
+    
+      <li>
+        <a href="/2014/09/01/contenteditable-and-selection/">在线文本编辑器的基本实现原理</a>
+      </li>
+    
+      <li>
+        <a href="/2014/07/30/go's-package-management/">Go 语言的包依赖管理</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Mastering Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>5</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/Apple/" style="font-size: 10.00px;">Apple</a><a href="/tags/Bezier Path/" style="font-size: 10.00px;">Bezier Path</a><a href="/tags/Cocoa/" style="font-size: 10.00px;">Cocoa</a><a href="/tags/Functional Programing/" style="font-size: 10.00px;">Functional Programing</a><a href="/tags/GLSL/" style="font-size: 10.00px;">GLSL</a><a href="/tags/Git/" style="font-size: 10.00px;">Git</a><a href="/tags/Go/" style="font-size: 13.33px;">Go</a><a href="/tags/Interface Builder/" style="font-size: 10.00px;">Interface Builder</a><a href="/tags/NSControl/" style="font-size: 13.33px;">NSControl</a><a href="/tags/OSX/" style="font-size: 16.67px;">OSX</a><a href="/tags/Objective-C/" style="font-size: 13.33px;">Objective-C</a><a href="/tags/SVG/" style="font-size: 10.00px;">SVG</a><a href="/tags/Swift/" style="font-size: 10.00px;">Swift</a><a href="/tags/Three.js/" style="font-size: 10.00px;">Three.js</a><a href="/tags/Xcode/" style="font-size: 10.00px;">Xcode</a><a href="/tags/accelerate meter/" style="font-size: 10.00px;">accelerate meter</a><a href="/tags/bezier path/" style="font-size: 13.33px;">bezier path</a><a href="/tags/blender/" style="font-size: 13.33px;">blender</a><a href="/tags/cocoa/" style="font-size: 13.33px;">cocoa</a><a href="/tags/completion/" style="font-size: 10.00px;">completion</a><a href="/tags/contenteditable/" style="font-size: 10.00px;">contenteditable</a><a href="/tags/design/" style="font-size: 10.00px;">design</a><a href="/tags/desktop/" style="font-size: 10.00px;">desktop</a><a href="/tags/develop/" style="font-size: 10.00px;">develop</a><a href="/tags/device motion/" style="font-size: 10.00px;">device motion</a><a href="/tags/distribute storage/" style="font-size: 10.00px;">distribute storage</a><a href="/tags/drawing/" style="font-size: 20.00px;">drawing</a><a href="/tags/editor/" style="font-size: 10.00px;">editor</a><a href="/tags/export/" style="font-size: 10.00px;">export</a><a href="/tags/font/" style="font-size: 13.33px;">font</a><a href="/tags/fontawesome/" style="font-size: 10.00px;">fontawesome</a><a href="/tags/go/" style="font-size: 10.00px;">go</a><a href="/tags/golang/" style="font-size: 10.00px;">golang</a><a href="/tags/html/" style="font-size: 10.00px;">html</a><a href="/tags/html5/" style="font-size: 10.00px;">html5</a><a href="/tags/iOS/" style="font-size: 10.00px;">iOS</a><a href="/tags/iOS 8/" style="font-size: 10.00px;">iOS 8</a><a href="/tags/iPad/" style="font-size: 16.67px;">iPad</a><a href="/tags/icon/" style="font-size: 10.00px;">icon</a><a href="/tags/icon font/" style="font-size: 13.33px;">icon font</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2015 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+
+</body>
+
+</html>

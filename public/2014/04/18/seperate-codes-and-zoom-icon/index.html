@@ -1,0 +1,565 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>写个 Icon Font Viewer : 贰 | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="这次我们先来做一些代码拆分，将窗口管理的代码从IFDocument当中剥离出来。随后将会实现
+Icon 的缩放功能。
+完整代码可以在这里找到。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="写个 Icon Font Viewer : 贰"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content="undefined"/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+</head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2014/04/18/seperate-codes-and-zoom-icon/" target="_blank">写个 Icon Font Viewer : 贰</a></h1>
+
+
+      
+        <time datetime="2014-04-18T15:21:46.000Z">Apr 18 2014</time>
+      
+    </header>
+    <div class="entry">
+      <p>这次我们先来做一些代码拆分，将窗口管理的代码从<code>IFDocument</code>当中剥离出来。随后将会实现
+Icon 的缩放功能。
+完整代码可以在<a href="https://github.com/shanzi/iconfontr/tree/R02_scale_and_color" target="_blank">这里</a>找到。</p>
+<a id="more"></a>
+
+<p>这次的技术要点有：</p>
+<ul>
+<li>在<code>NSDocument</code>中切换为使用<code>WindowController</code>来管理窗体</li>
+<li><code>NSScrollView</code> 的 ZOOM 功能的使用，以及<code>JNWCollectionView</code>缩放问题的处理</li>
+<li>键盘事件的侦听</li>
+</ul>
+<h2>切换到 WindowController</h2>
+<p>对于初学者来说，理解 Xcode 当中的 UI 设计器与程序代码的交互可能需要一点时间。Xcode 4
+之前，现在的窗口设计器部分其实是独立于 Xcode 的一个应用，名叫
+Interface Builder(<a href="wikipedia.org/wiki/Interface_Builder">Wiki</a>，简称 IB)。
+现在说起来可能有点不可思议，不过 IB 最初是的确是开发出来写 Lisp 的。</p>
+<p><a href="io-meter.com/2014/04/12/iconfontr-1/">上一篇文章</a>介绍了使用<code>NSDocument</code>来实现简单的
+Icon Font 预览，当时窗口管理的代码是写在<code>IFDocument.m</code>当中的。 这样做有一个坏处，
+如果窗口控制代码比较复杂，在<code>IFDocument.m</code>类当中的代码就会变得不好维护。
+所以我们需要一个独立的<code>WindowController</code>来控制窗口。</p>
+<p>在<code>File&gt;new&gt;Files..</code>菜单中选择新建一个 Objective-C Class，设置如下图所示</p>
+<p><img src="/img/iconfontr/IFDocumentWindowController.png" alt="IFDocumentWindowController"></p>
+<p>这里如果勾选 Also create XIB file for user interface 的话，Xcode 会自动帮你新建并设置好 XIB 文件。
+我们想要复用原来的<code>IFDocument.xib</code>，因此取消勾选这个选项。</p>
+<p>接下来重新调整 XIB 文件和代码关系，<code>IFDocument.m</code>中存在这么一个函数:</p>
+<figure class="highlight lang-objectivec"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+</pre></td><td class="code"><pre>- (<span class="built_in">NSString</span> *)windowNibName
+{
+  <span class="keyword">return</span> @<span class="string">"IFDocument"</span>;
+}
+</pre></td></tr></table></figure>
+
+<p>这个函数指定了当前的<code>IFDocument</code>类对应的 UI 设计文件 (也就是<code>IFDocument.xib</code>)。
+我们把这个函数删除掉以切断<code>IFDocument.m</code>与<code>IFDocument.xib</code>的关系。</p>
+<p>将<code>IFDocument.xib</code>重命名为<code>IFDocumentWindow.xib</code>。点击进入设计器之后，我们先把这个 XIB
+文件分配给刚刚新建立的<code>IFDocumentWindowController</code>。如下图所示，在左边一栏点选<code>File&#39;s Owner</code>
+后右边的参数面板中作如下调整:</p>
+<p><img src="/img/iconfontr/set-files-owner.png" alt="Set File&#39;s Owner"></p>
+<p>我们知道，在右边参数面板中的<code>Custom Class</code>选项，就是指定 IB 中的对象与代码中定义的类的对应关系的。
+我们在这里改变了<code>File&#39;s Owner</code>对应的类，就相当于在这个 XIB 文件和之前建立的
+<code>IFDocumentWindowController</code>类之间建立了一个关系。</p>
+<p>右键单击<code>File&#39;s Owner</code>弹出的浮动窗口里有一栏叫做 outlets。这些 outlets 就是在代码中定义的用以和 XIB 中对象对接的接口。
+在此需确保<code>Window</code>这一栏已经和设计器中的窗口连接在一起了
+(如果没有，从右边的圆点处，拖动到窗口上释放以绑定连接)。如下图所示。</p>
+<p><img src="/img/iconfontr/outlets.png" alt="Outlets"></p>
+<p>建立了连接之后，我们在<code>IFDocumentWindowController.m</code>当中就可以用<code>self.window</code>来获得 XIB 当中的窗口了，
+这个接口是在<code>IFDocumentWindowController</code>的父类<code>NSWindowController</code>当中定义的。
+我们在<code>IFDocumentWindowController.h</code>中用下面代码来添加一个新的接口。</p>
+<figure class="highlight lang-objectivec"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+</pre></td><td class="code"><pre>@<span class="class"><span class="keyword">interface</span> <span class="id">IFDocumentWindowController</span> : <span class="id">NSWindowController</span></span>
+
+@<span class="keyword">property</span>(<span class="keyword">assign</span>) <span class="keyword">IBOutlet</span> JNWCollectionView *collectionView;
+
+@<span class="keyword">end</span>
+</pre></td></tr></table></figure>
+
+<p>注意，在对象的类型前有一个<code>IBOutlet</code>关键字，这个关键字就是声明这个指针可以绑定到 IB 中的一个对象
+(IBOutlet 中的 IB 当然代表 Interface Builder 咯)。在代码中声明了 Outlet 之后，我们可以在 IB 中把 <code>collectionView</code> 
+这个接口和 XIB 中的 collectionView 对象连接起来了。</p>
+<p>最后我们还要让 WindowController 知道自己对应的 XIB 文件是谁，以便于在
+初始化的时候加载进来。在<code>IFDocumentWindowController.m</code> 中添加如下一个函数:</p>
+<figure class="highlight lang-objectivec"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+</pre></td><td class="code"><pre>- (<span class="built_in">NSString</span> *)windowNibName
+{
+  <span class="keyword">return</span> @<span class="string">"IFDocumentWindow"</span>;
+}
+</pre></td></tr></table></figure>
+
+<p>接下来清理一下原来的<code>IFDocument.m</code>并把窗口控制相关的代码迁移到<code>IFDocumentWindowController</code>当中。</p>
+<p>怎么样把原来的<code>IFDocument</code>和新的 <code>IFDocumentWindowController</code> 联系起来呢？在<code>makeWindowControllers</code>
+函数中创建<code>IFDocumentWindowController</code>的一个实例并调用<code>addWindowController:</code>函数就可以了。</p>
+<figure class="highlight lang-objectivec"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+</pre></td><td class="code"><pre>- (<span class="keyword">void</span>) makeWindowControllers
+{
+  IFDocumentWindowController *windowController = [[IFDocumentWindowController alloc] init];
+  [(IFDocumentWindowController *)windowController setGlyphPathes:_glyphPathes];
+  [<span class="keyword">self</span> addWindowController:windowController];
+}
+</pre></td></tr></table></figure>
+
+<p>通过上面的步骤，可以看出了 XIB 和代码配合的的几个要点：</p>
+<ul>
+<li>File&#39;s Owner 的类将 XIB 和一个 Controller 联系起来</li>
+<li>在代码中可以用 IBOutlet 来定义一个接口，在运行时这个接口将会指向 XIB 中的一个对象</li>
+<li>在 Files&#39;s Owner 对应的 Controller 可以通过一个函数来指定对应 XIB 文件的名字</li>
+<li>之后的文章还会介绍使用 IBAction 关键字来接收一个事件回调</li>
+</ul>
+<h2>实现缩放功能</h2>
+<p>老实说，缩放功能的实现比预计的要麻烦很多。本来以为作为<code>NSScroller</code>子类的<code>JNWCollectionView</code>
+能够很方便的开启缩放功能，结果却因在缩放过程中其会对子视图进行排版而导致各种 Bug，
+经过多次尝试，终于还是找到了一个解决方案。</p>
+<p>在<code>JNWCollectionView</code>上实现缩放的要点主要有：</p>
+<ul>
+<li>在缩放进行时，必须要禁止<code>JNWCollectionViewLayout</code>更新 layout 布局，否则将会出现卡顿</li>
+<li>缩放结束后要调整<code>JNWCollectionViewLayout</code>的<code>documentView</code>大小，否则将无法横向滚动</li>
+<li>如果要显示横向滚动条，需要修改<code>JNWCollectionViewLayout</code>的<code>ScrollDirection</code></li>
+</ul>
+<p>首先创建几个子类：</p>
+<p><img src="/img/iconfontr/new-subclasses.png" alt="New Subclasses"></p>
+<p>其中<code>IFMagnifyCollectionView</code>是<code>JNWCollectionView</code>的子类，<code>IFCollectionGridLayout</code>
+是<code>JNWCollectionGridLayout</code>的子类。为了在缩放过程中禁止<code>IFCollectionGridLayout</code>刷新排版，
+给他添加一个新的属性并重载 <code>shouldInvalidateLayoutForBoundsChange</code>方法，
+此外还要复写<code>ScrollDirection</code>方法来显示横向滚动条：</p>
+<figure class="highlight lang-objectivec"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+</pre></td><td class="code"><pre><span class="comment">// JNWCollectionGridLayout.h</span>
+
+<span class="preprocessor">#import <span class="title">"JNWCollectionViewGridLayout.h"</span></span>
+
+@<span class="class"><span class="keyword">interface</span> <span class="id">IFCollectionGridLayout</span> : <span class="id">JNWCollectionViewGridLayout</span></span>
+@<span class="keyword">property</span>(<span class="keyword">nonatomic</span>) <span class="built_in">BOOL</span> allowsLiveLayout;
+@<span class="keyword">end</span>
+
+
+<span class="comment">// JNWCollectionGridLayout.m</span>
+
+@<span class="class"><span class="keyword">implementation</span> <span class="id">IFCollectionGridLayout</span></span>
+
+- (<span class="built_in">BOOL</span>)shouldInvalidateLayoutForBoundsChange:(<span class="built_in">CGRect</span>)newBounds
+{
+  <span class="comment">// Forbid layout update when zooming</span>
+  <span class="comment">// _allowsLiveLayout will be set to NO when zooming</span>
+  <span class="keyword">return</span> _allowsLiveLayout;
+}
+
+- (JNWCollectionViewScrollDirection)scrollDirection
+{
+  <span class="comment">// scroll in both vertical and horizontal direction</span>
+  <span class="keyword">return</span> JNWCollectionViewScrollDirectionBoth;
+}
+
+@<span class="keyword">end</span>
+</pre></td></tr></table></figure>
+
+<p><code>IFMagnifyCollectionView</code>的父类<code>NSScrollView</code>其实已经提供了缩放的支持，
+所以并不需要自己捕捉多点触摸的事件。开启缩放功能使用下面的函数就可以了。最关键的一句就是
+<code>self.allowsMagnification=YES;</code>，代表着允许使用缩放。</p>
+<figure class="highlight lang-objectivec"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+</pre></td><td class="code"><pre>- (<span class="keyword">void</span>)invokeMagnification
+{
+  <span class="keyword">if</span> (!<span class="keyword">self</span><span class="variable">.allowsMagnification</span>) {
+    <span class="keyword">self</span><span class="variable">.allowsMagnification</span> = <span class="literal">YES</span>;  <span class="comment">// turn on magnification</span>
+    <span class="keyword">self</span><span class="variable">.magnification</span> = <span class="number">1.0</span>;
+    <span class="keyword">self</span><span class="variable">.maxMagnification</span> = <span class="number">3</span>;
+    <span class="keyword">self</span><span class="variable">.minMagnification</span> = <span class="number">1.0</span>;
+    [[<span class="built_in">NSNotificationCenter</span> defaultCenter] addObserver:<span class="keyword">self</span>
+                                             <span class="keyword">selector</span>:@<span class="keyword">selector</span>(liveMagnifyWillStart:)
+                                                 name:NSScrollViewWillStartLiveMagnifyNotification
+                                               object:<span class="keyword">self</span>];
+    
+    [[<span class="built_in">NSNotificationCenter</span> defaultCenter] addObserver:<span class="keyword">self</span>
+                                             <span class="keyword">selector</span>:@<span class="keyword">selector</span>(liveMagnifyDidEnd:)
+                                                 name:NSScrollViewDidEndLiveMagnifyNotification
+                                               object:<span class="keyword">self</span>];
+  }
+}
+</pre></td></tr></table></figure>
+
+<p>在函数的最后用<code>NSNotificationCenter</code>添加了两个消息侦听，这两个消息分别在缩放开始和结束时发出。
+侦听这两个消息的目的就是为了在缩放开始和结束的时候设定<code>IFCollectionGridLayout</code>的<code>allowsLiveLayout</code>
+属性，以实现在缩放时禁止重新布局的需求。</p>
+<p><code>liveMagnifyWillStart:</code>和<code>liveMagnifyDidEnd:</code>这两个回调函数的内容这里就略去不表了，
+具体实现看
+<a href="https://github.com/shanzi/iconfontr/blob/R02_scale_and_color/iconfontr/IFMagnifyCollectionView.m" target="_blank">IFMagnifyCollectionView</a>。</p>
+<p>接下来我们解决缩放后的滚动问题，不同于 iOS 上的<code>UIScrollView</code>，<code>NSScrollView</code>没有<code>contentSize</code>属性。
+实际上，<code>NSScrollView</code>包含一个子视图<code>documentView</code>，所有<code>NSScrollView</code>显示的 Subviews
+都放置在<code>documentView</code>中。而<code>documentView</code>的<code>frame</code>属性指定了想要显示的内容的<em>完整</em>大小，
+<code>NSScrollView</code>的<code>documentVisbleRect</code>属性指定了想要内容<em>实际显示</em>的范围。</p>
+<p>想要实现正确的滚动效果，就要正确的设置<code>documentView.frame</code>和<code>documentViewVisibleRect</code>两个属性。
+在 Zoom 的过程中，<code>documentView</code>的大小其实是不变的，之所以我们可以看到内容被放大了，是因为对
+<code>documentView</code>发送了<code>scaleUnitSquareToSize:</code>消息，而<code>documentViewVisibleRect</code>也同时被缩小了。</p>
+<p>现在的问题是，缩放结束之后<code>JNWCollectionView</code>会根据可视范围的大小重新调整<code>documentView</code>的大小，
+<code>documetView</code>的宽度将总是和<code>documventVisibleRect</code>一样，这样横向滚动就失效了。
+一个最简单的解决方案是重载<code>documentVisibleRect</code>函数，不让它的宽度随着放大而相对变小。</p>
+<figure class="highlight lang-objectivec"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+7
+</pre></td><td class="code"><pre>- (NSRect)documentVisibleRect
+{
+  NSRect visibleRect = [<span class="keyword">super</span> documentVisibleRect];
+  visibleRect<span class="variable">.origin</span><span class="variable">.x</span> = <span class="number">0</span>;
+  visibleRect<span class="variable">.size</span><span class="variable">.width</span> *= <span class="keyword">self</span><span class="variable">.magnification</span>;
+  <span class="keyword">return</span> visibleRect;
+}
+</pre></td></tr></table></figure>
+
+<p>这样做牺牲了一定的性能，因为<code>JNWCollectionView</code>是根据<code>documentVisibleRect</code>来决定一个子视图是否可见，
+据此移除看不见的 Subviews 并节约资源。最终还是是要修改<code>JNWCollectionView</code>的源码才能达到最好的效果，
+这里也不详细介绍了。</p>
+<p>为了方便使用，还可以添加键盘的事件侦听，只要设定<code>IFCollectionView</code>的<code>magnification</code>属性的大小就行了:</p>
+<figure class="highlight lang-objectivec"><table><tr><td class="gutter"><pre>1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+</pre></td><td class="code"><pre><span class="preprocessor">#define kEqualsKeyCode 24</span>
+<span class="preprocessor">#define kMinusKeyCode 27</span>
+
+- (<span class="keyword">void</span>)keyDown:(NSEvent *)theEvent
+{
+  <span class="comment">// cancel the sound played after keydown</span>
+}
+
+- (<span class="keyword">void</span>)keyUp:(NSEvent *)theEvent
+{
+  <span class="keyword">if</span> ([theEvent keyCode]==kEqualsKeyCode) {
+    <span class="keyword">self</span><span class="variable">.magnification</span> += <span class="number">0.2</span>;
+  }
+  <span class="keyword">else</span> <span class="keyword">if</span>([theEvent keyCode]==kMinusKeyCode) {
+    <span class="keyword">self</span><span class="variable">.magnification</span> -= <span class="number">0.2</span>;
+  }
+}
+</pre></td></tr></table></figure>
+
+<p>想要捕捉键盘事件，只要重载<code>keyUp</code>、<code>keyDown</code>这样的函数就行了。包括鼠标、键盘和触摸事件在内的回调函数最初都定义在
+<a href="https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSResponder_Class/Reference/Reference.html" target="_blank">NSResponder</a>
+中，在所有的<code>NSResponder</code>的子类中都可以使用。</p>
+<p>对于键盘事件，<code>[theEvent keyCode]</code>返回的是一个设备无关的虚拟键值，符号<code>-</code>的值是<code>27</code>，符号<code>=</code>(也就是<code>+</code>所在的键)
+的值是<code>24</code>。这里需要复写一下<code>keyDown</code>函数，避免按键时出现提示音。</p>
+<p>现在就可以在触摸板上用 Spin 手势和键盘上的加减符号实现放大缩小了，效果如下图所示：</p>
+<p><img src="/img/iconfontr/zoom-result.png" alt="Zoom Result"></p>
+<h2>一点总结和预告</h2>
+<p>这次的文章主要记录了拆分代码和实现缩放的功能，其中详细介绍了 XIB 和代码之间的关系以及配合的问题，
+感觉讲解的还不是很清楚，如果各位看官有什么问题，欢迎直接询问我。</p>
+<p>在上面的结果图上可以看到其实已经实现了选择预览颜色的功能，不过限于篇幅原因还是决定留到下一篇文章再讲。
+下次将会详细介绍一下如何编写一个自定义的 NSControl，附带图形绘制更详细的介绍以及用<code>IBAction</code>
+来实现事件的回调的方法。</p>
+
+    </div>
+    <footer>
+        
+  
+  <div class="categories">
+    <a href="/categories/iconfontr/">iconfontr</a>
+  </div>
+
+        
+  
+  <div class="tags">
+    <a href="/tags/OSX/">OSX</a>, <a href="/tags/Objective-C/">Objective-C</a>, <a href="/tags/icon font/">icon font</a>, <a href="/tags/iconfontr/">iconfontr</a>, <a href="/tags/NSControl/">NSControl</a>, <a href="/tags/Cocoa/">Cocoa</a>, <a href="/tags/Interface Builder/">Interface Builder</a>, <a href="/tags/Xcode/">Xcode</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2014/12/31/sketch-rendering/">使用 WebGL 实现素描效果的渲染</a>
+      </li>
+    
+      <li>
+        <a href="/2014/10/24/develop-for-yosemite-some-tips/">Develop for Yosemite: 几个小技巧</a>
+      </li>
+    
+      <li>
+        <a href="/2014/10/03/when-webgl-meets-device-motion/">When WebGL Meets Device Motion</a>
+      </li>
+    
+      <li>
+        <a href="/2014/09/01/contenteditable-and-selection/">在线文本编辑器的基本实现原理</a>
+      </li>
+    
+      <li>
+        <a href="/2014/07/30/go's-package-management/">Go 语言的包依赖管理</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Mastering Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>5</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/Apple/" style="font-size: 10.00px;">Apple</a><a href="/tags/Bezier Path/" style="font-size: 10.00px;">Bezier Path</a><a href="/tags/Cocoa/" style="font-size: 10.00px;">Cocoa</a><a href="/tags/Functional Programing/" style="font-size: 10.00px;">Functional Programing</a><a href="/tags/GLSL/" style="font-size: 10.00px;">GLSL</a><a href="/tags/Git/" style="font-size: 10.00px;">Git</a><a href="/tags/Go/" style="font-size: 13.33px;">Go</a><a href="/tags/Interface Builder/" style="font-size: 10.00px;">Interface Builder</a><a href="/tags/NSControl/" style="font-size: 13.33px;">NSControl</a><a href="/tags/OSX/" style="font-size: 16.67px;">OSX</a><a href="/tags/Objective-C/" style="font-size: 13.33px;">Objective-C</a><a href="/tags/SVG/" style="font-size: 10.00px;">SVG</a><a href="/tags/Swift/" style="font-size: 10.00px;">Swift</a><a href="/tags/Three.js/" style="font-size: 10.00px;">Three.js</a><a href="/tags/Xcode/" style="font-size: 10.00px;">Xcode</a><a href="/tags/accelerate meter/" style="font-size: 10.00px;">accelerate meter</a><a href="/tags/bezier path/" style="font-size: 13.33px;">bezier path</a><a href="/tags/blender/" style="font-size: 13.33px;">blender</a><a href="/tags/cocoa/" style="font-size: 13.33px;">cocoa</a><a href="/tags/completion/" style="font-size: 10.00px;">completion</a><a href="/tags/contenteditable/" style="font-size: 10.00px;">contenteditable</a><a href="/tags/design/" style="font-size: 10.00px;">design</a><a href="/tags/desktop/" style="font-size: 10.00px;">desktop</a><a href="/tags/develop/" style="font-size: 10.00px;">develop</a><a href="/tags/device motion/" style="font-size: 10.00px;">device motion</a><a href="/tags/distribute storage/" style="font-size: 10.00px;">distribute storage</a><a href="/tags/drawing/" style="font-size: 20.00px;">drawing</a><a href="/tags/editor/" style="font-size: 10.00px;">editor</a><a href="/tags/export/" style="font-size: 10.00px;">export</a><a href="/tags/font/" style="font-size: 13.33px;">font</a><a href="/tags/fontawesome/" style="font-size: 10.00px;">fontawesome</a><a href="/tags/go/" style="font-size: 10.00px;">go</a><a href="/tags/golang/" style="font-size: 10.00px;">golang</a><a href="/tags/html/" style="font-size: 10.00px;">html</a><a href="/tags/html5/" style="font-size: 10.00px;">html5</a><a href="/tags/iOS/" style="font-size: 10.00px;">iOS</a><a href="/tags/iOS 8/" style="font-size: 10.00px;">iOS 8</a><a href="/tags/iPad/" style="font-size: 16.67px;">iPad</a><a href="/tags/icon/" style="font-size: 10.00px;">icon</a><a href="/tags/icon font/" style="font-size: 13.33px;">icon font</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2015 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+
+</body>
+
+</html>
