@@ -1,6 +1,7 @@
 title: 最近的一点生活总结
 date: 2015-05-04 22:41:24
-tags: 
+category: essay
+tags: [summary, life, GSoC, Algorithm]
 ---
 
 距离上次发表文章已经过了很久了，原来许诺的 [MyIcons](http://myicons.io-meter.com)

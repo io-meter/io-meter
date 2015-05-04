@@ -4,7 +4,7 @@
   <subtitle><![CDATA[Programic Creativity]]></subtitle>
   <link href="/atom.xml" rel="self"/>
   <link href="http://io-meter.com/"/>
-  <updated>2015-05-04T16:11:19.047Z</updated>
+  <updated>2015-05-04T16:13:57.218Z</updated>
   <id>http://io-meter.com/</id>
   
   <author>
@@ -19,7 +19,7 @@
     <link href="http://io-meter.com/2015/05/04/recently-works/"/>
     <id>http://io-meter.com/2015/05/04/recently-works/</id>
     <published>2015-05-04T14:41:24.000Z</published>
-    <updated>2015-05-04T16:09:33.000Z</updated>
+    <updated>2015-05-04T16:13:50.000Z</updated>
     <content type="html"><![CDATA[<p>距离上次发表文章已经过了很久了，原来许诺的 <a href="http://myicons.io-meter.com" target="_blank">MyIcons</a>
 介绍也一直未能完成。主要的原因在于在这段时间忙了一些比较重要的事情。
 今天抽出一点时间，在这里稍微总结一下。</p>
@@ -105,6 +105,16 @@
 介绍也一直未能完成。主要的原因在于在这段时间忙了一些比较重要的事情。
 今天抽出一点时间，在这里稍微总结一下。</p>
 ]]></summary>
+    
+      <category term="summary" scheme="http://io-meter.com/tags/summary/"/>
+    
+      <category term="life" scheme="http://io-meter.com/tags/life/"/>
+    
+      <category term="GSoC" scheme="http://io-meter.com/tags/GSoC/"/>
+    
+      <category term="Algorithm" scheme="http://io-meter.com/tags/Algorithm/"/>
+    
+      <category term="essay" scheme="http://io-meter.com/categories/essay/"/>
     
   </entry>
   
