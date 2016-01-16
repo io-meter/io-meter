@@ -1,4 +1,4 @@
-title: Mastering Paper by 53 : 基础介绍及工具使用指导
+title: 'Mastering Paper by 53 : 基础介绍及工具使用指导'
 date: 2014-05-07 14:24:29
 tags: [paper, drawing, iPad]
 category: [Mastering Paper]

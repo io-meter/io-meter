@@ -1,4 +1,4 @@
-title: 写个 Icon Font Viewer: 终
+title: '写个 Icon Font Viewer: 终'
 date: 2014-05-04 15:49:49
 tags: [Bezier Path, SVG, image, export, icon fontr, osx, xcode]
 category: [iconfontr] 

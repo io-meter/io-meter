@@ -1,4 +1,4 @@
-title: 写个 Icon Font Viewer : 贰
+title: '写个 Icon Font Viewer : 贰'
 date: 2014-04-18 23:21:46
 tags: [OSX, Objective-C, icon font, iconfontr, NSControl, Cocoa, Interface Builder, Xcode]
 category: iconfontr

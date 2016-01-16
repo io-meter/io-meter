@@ -1,104 +1,99 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html>
-
-
-
 <head>
   <meta charset="utf-8">
-
-  <meta name="msapplication-TileColor" content="#000000">
-  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
-
-  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
-  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
-  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
-  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
-
   
-  <title>写个 Icon Font Viewer: 终 | IO-meter</title>
-  <meta name="author" content="Chase Zhang">
-  
-  <meta name="description" content="终于到了 Icon Fontr 最重要的一部分了。这一次要把已经读入为NSBezierPath
-的 Icon 导出成 SVG 和图片，以便于在桌面和移动应用或者 UI 设计软件当中使用。">
-  
-  
+  <title>写个 Icon Font Viewer: 终 | Hexo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-
-  <meta property="og:title" content="写个 Icon Font Viewer: 终"/>
-  <meta property="og:site_name" content="IO-meter"/>
-
+  <meta name="description" content="终于到了 Icon Fontr 最重要的一部分了。这一次要把已经读入为NSBezierPath的 Icon 导出成 SVG 和图片，以便于在桌面和移动应用或者 UI 设计软件当中使用。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="写个 Icon Font Viewer: 终">
+<meta property="og:url" content="http://yoursite.com/2014/05/04/iconfontr-export-images/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="终于到了 Icon Fontr 最重要的一部分了。这一次要把已经读入为NSBezierPath的 Icon 导出成 SVG 和图片，以便于在桌面和移动应用或者 UI 设计软件当中使用。">
+<meta property="og:image" content="http://yoursite.com/img/iconfontr/iconfontr256.png">
+<meta property="og:image" content="http://yoursite.com/img/iconfontr/resolutions.png">
+<meta property="og:image" content="http://yoursite.com/img/iconfontr/copysvg.png">
+<meta property="og:updated_time" content="2016-01-16T14:15:11.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="写个 Icon Font Viewer: 终">
+<meta name="twitter:description" content="终于到了 Icon Fontr 最重要的一部分了。这一次要把已经读入为NSBezierPath的 Icon 导出成 SVG 和图片，以便于在桌面和移动应用或者 UI 设计软件当中使用。">
   
-    <meta property="og:image" content="undefined"/>
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
   
-
-  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
-  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
-  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
-  <script type="text/javascript" src="/js/retina.min.js"></script>
-  <script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-  ga('create', 'UA-48012866-2', 'io-meter.com');
-  ga('send', 'pageview');
-</script>
+  
+    <link rel="icon" href="/favicon.png">
+  
+  <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="/css/style.css" type="text/css">
+  
 
 </head>
 
 <body>
-<div id="banner">
-    <div class="wrapper">
-        <header>
-            <div id="header" class="simple" >
-<nav id="main-nav">
-    <ul class="alignright">
-        
-        <li><a href="/">Home</a></li>
-        
-        <li><a href="/archives">Archives</a></li>
-        
-        <li><a href="http://chasezhang.me">About</a></li>
-        
-    </ul>
-    <div class="clearfix"></div>
-</nav>
-
-  <h1 class="main"><a href="/">
-  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
-  <h2 class="main">Programic Creativity</h2>
-  <h1 class="alt">
-      <a href="/">IO METER</a>
-  </h1>
-  <div class="clearfix"></div>
-</div>
-
-        </header>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
     </div>
-</div>
-<div id="content" class="wrapper">
-    <div id="articles"><h2 class="subtitle article-title">Article</h2>
-<article class="post title-article full-article">
-  <div class="post-content">
-    <header>
-      
-    <h1 class="title"><a href="/2014/05/04/iconfontr-export-images/" target="_blank">写个 Icon Font Viewer: 终</a></h1>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" results="0" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://yoursite.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-iconfontr-export-images" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2014/05/04/iconfontr-export-images/" class="article-date">
+  <time datetime="2014-05-04T07:49:49.000Z" itemprop="datePublished">2014-05-04</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/iconfontr/">iconfontr</a>
+  </div>
 
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      写个 Icon Font Viewer: 终
+    </h1>
+  
 
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
       
-        <time datetime="2014-05-04T07:49:49.000Z">May 4 2014</time>
-      
-    </header>
-    <div class="entry">
-      <p>终于到了 Icon Fontr 最重要的一部分了。这一次要把已经读入为<code>NSBezierPath</code>
-的 Icon 导出成 SVG 和图片，以便于在桌面和移动应用或者 UI 设计软件当中使用。</p>
+        <p>终于到了 Icon Fontr 最重要的一部分了。这一次要把已经读入为<code>NSBezierPath</code><br>的 Icon 导出成 SVG 和图片，以便于在桌面和移动应用或者 UI 设计软件当中使用。</p>
 <a id="more"></a>
-
-<h1>NSBezierPath To SVG Path</h1>
-<p>首先是将<code>NSBezierPath</code>转换为 SVG 中的 Path 的方法。这一部分实际上是相当容易的。</p>
-<p>我们先来了解一下 SVG Path 的基础知识，根据 MDN 上的<a href="https://developer.mozilla.org/en/docs/Web/SVG/Tutorial/Paths" target="_blank">介绍</a>
-对于一个<code>&lt;path&gt;&lt;/path&gt;</code>标签，由名为<code>d</code>的属性来指定了遗传
-一串简写的图形绘制命令。其可用参数可以总结如下:</p>
+<h1 id="NSBezierPath_To_SVG_Path"><a href="#NSBezierPath_To_SVG_Path" class="headerlink" title="NSBezierPath To SVG Path"></a>NSBezierPath To SVG Path</h1><p>首先是将<code>NSBezierPath</code>转换为 SVG 中的 Path 的方法。这一部分实际上是相当容易的。</p>
+<p>我们先来了解一下 SVG Path 的基础知识，根据 MDN 上的<a href="https://developer.mozilla.org/en/docs/Web/SVG/Tutorial/Paths" target="_blank" rel="external">介绍</a><br>对于一个<code>&lt;path&gt;&lt;/path&gt;</code>标签，由名为<code>d</code>的属性来指定了遗传<br>一串简写的图形绘制命令。其可用参数可以总结如下:</p>
 <ul>
 <li><code>M</code>: Move To，移动光标到某一位置，接受一组 x y 参数</li>
 <li><code>L</code>: Line To，从光标位置起始绘制一条直线到目标点，接受一组 x y 参数</li>
@@ -106,349 +101,197 @@
 <li><code>Z</code>: Close Path，闭合曲线。只有将曲线闭合之后才能对 Path 进行颜色填充</li>
 <li><code>C</code>: Cubic Curve To，绘制三阶 Bezier 曲线，接受三组 x y 参数，分别是两个控制点和一个结束点的位置</li>
 <li><code>Q</code>: Quadratic Curve To，绘制二阶 Bezier 曲线，接受两组 x y 参数，分别是一个控制点和一个结束点的位置</li>
-<li><code>A</code>: Arc To, 绘制圆弧，这个命令的参数比较复杂，这里就不赘述了。在一些绘制 SVG 的实现中使用 A 可以
-绘制出比较完美的圆弧。但是大多绘制 API （包括 Cocoa Drawing）都是使用 Bezier 曲线来拟合圆弧的</li>
+<li><code>A</code>: Arc To, 绘制圆弧，这个命令的参数比较复杂，这里就不赘述了。在一些绘制 SVG 的实现中使用 A 可以<br>绘制出比较完美的圆弧。但是大多绘制 API （包括 Cocoa Drawing）都是使用 Bezier 曲线来拟合圆弧的</li>
 </ul>
-<p>除了以上的绘制命令，SVG 还提供两个用来续接 SVG 曲线的命令，<code>S</code>和<code>T</code>，分别对应的是<code>C</code>和<code>Q</code>。
-接受比<code>C</code>和<code>Q</code>少一组 x y 的参数。这两个命令用于在原来的 SVG 上续接 G2 平滑的曲线
-(在衔接点一阶导数连续)。</p>
-<p>对于所有这些大写字母组成的命令，其参数都是相对于画布的绝对值。此外还分别有一套与之对应的小写字母组成的命令。
-接受相同数量的参数，区别在于所有参数的意义都是增量值。此外需要注意的是，
-这些命令都省略了第一个控制点。比如说，对于一条三阶 Bezier 曲线，是需要 4 个控制点才能定义出来的，
-而命令<code>C</code>只有三组参数，省略的第一个控制点就是画布光标的当前位置 (也就是<code>M</code>命令指定的点)。</p>
-<p>一个 SVG 绘制曲线的例子如下：</p>
-<figure class="highlight lang-xml"><table><tr><td class="gutter"><pre>1
-2
-3
-4
-</pre></td><td class="code"><pre><span class="pi">&lt;?xml version="1.0" standalone="no"?&gt;</span>
-<span class="tag">&lt;<span class="title">svg</span> <span class="attribute">width</span>=<span class="value">"190px"</span> <span class="attribute">height</span>=<span class="value">"160px"</span> <span class="attribute">version</span>=<span class="value">"1.1"</span> <span class="attribute">xmlns</span>=<span class="value">"http://www.w3.org/2000/svg"</span>&gt;</span>
-  <span class="tag">&lt;<span class="title">path</span> <span class="attribute">d</span>=<span class="value">"M10 80 C 40 10, 65 10, 95 80 S 150 150, 180 80"</span> <span class="attribute">stroke</span>=<span class="value">"black"</span> <span class="attribute">fill</span>=<span class="value">"transparent"</span>/&gt;</span>
-<span class="tag">&lt;/<span class="title">svg</span>&gt;</span>
-</pre></td></tr></table></figure>
+<p>除了以上的绘制命令，SVG 还提供两个用来续接 SVG 曲线的命令，<code>S</code>和<code>T</code>，分别对应的是<code>C</code>和<code>Q</code>。<br>接受比<code>C</code>和<code>Q</code>少一组 x y 的参数。这两个命令用于在原来的 SVG 上续接 G2 平滑的曲线<br>(在衔接点一阶导数连续)。</p>
+<p>对于所有这些大写字母组成的命令，其参数都是相对于画布的绝对值。此外还分别有一套与之对应的小写字母组成的命令。<br>接受相同数量的参数，区别在于所有参数的意义都是增量值。此外需要注意的是，<br>这些命令都省略了第一个控制点。比如说，对于一条三阶 Bezier 曲线，是需要 4 个控制点才能定义出来的，<br>而命令<code>C</code>只有三组参数，省略的第一个控制点就是画布光标的当前位置(也就是<code>M</code>命令指定的点)。</p>
+<p>一个 SVG 绘制曲线的例子如下：<br><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="pi">&lt;?xml version="1.0" standalone="no"?&gt;</span></span><br><span class="line"><span class="tag">&lt;<span class="title">svg</span> <span class="attribute">width</span>=<span class="value">"190px"</span> <span class="attribute">height</span>=<span class="value">"160px"</span> <span class="attribute">version</span>=<span class="value">"1.1"</span> <span class="attribute">xmlns</span>=<span class="value">"http://www.w3.org/2000/svg"</span>&gt;</span></span><br><span class="line">  <span class="tag">&lt;<span class="title">path</span> <span class="attribute">d</span>=<span class="value">"M10 80 C 40 10, 65 10, 95 80 S 150 150, 180 80"</span> <span class="attribute">stroke</span>=<span class="value">"black"</span> <span class="attribute">fill</span>=<span class="value">"transparent"</span>/&gt;</span></span><br><span class="line"><span class="tag">&lt;/<span class="title">svg</span>&gt;</span></span><br></pre></td></tr></table></figure></p>
+<p>直接使用内联 SVG 显示出来就是下面的效果(需支持 SVG 的浏览器支持才能显示)。</p>
+<svg style="border:#eee 1px solid;margin:1em 0;" width="100%" height="160px" version="1.1" xmlns="http://www.w3.org/2000/svg"><br/>  <path d="M10 80 C 40 10, 65 10, 95 80 S 150 150, 180 80" stroke="black" fill="transparent"/><br/></svg>
 
-<p>直接使用内联 SVG 显示出来就是下面的效果 (需支持 SVG 的浏览器支持才能显示)。</p>
-<svg style="border:#eee 1px solid;margin:1em 0;" width="100%" height="160px" version="1.1" xmlns="http://www.w3.org/2000/svg">
-  <path d="M10 80 C 40 10, 65 10, 95 80 S 150 150, 180 80" stroke="black" fill="transparent"/>
-</svg>
-
-<p>接下来回到<code>NSBezierPath</code>这边，阅读
-<code>NSBezierPath</code>的<a href="https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSBezierPath_Class/Reference/Reference.html#//apple_ref/doc/c_ref/NSBezierPathElement" target="_blank">文档</a>
-可以发现，其绘制的命令与 SVG 基本上是对应的。
-比如说它包含如下一组函数:</p>
-<figure class="highlight lang-objectivec"><table><tr><td class="gutter"><pre>1
-2
-3
-4
-</pre></td><td class="code"><pre>– (<span class="keyword">void</span>)moveToPoint:(NSPoint)point;
-– (<span class="keyword">void</span>)lineToPoint:(NSPoint)point
-– (<span class="keyword">void</span>)curveToPoint:(NSPoint)point controlPoint1:(NSPoint)point1 controlPoint2:(NSPoint)point2
-– (<span class="keyword">void</span>)closePath
-</pre></td></tr></table></figure>
-
-<p>基本上就对应了 SVG 中的<code>M</code>、<code>L</code>、<code>C</code>和<code>Z</code>了。因此，只要能够将<code>NSBezierPath</code>当中储存的信息，
-按照这种命令方式取出一个序列，我们就可以将其转化为 SVG 的绘制命令了。</p>
+<p>接下来回到<code>NSBezierPath</code>这边，阅读<br><code>NSBezierPath</code>的<a href="https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/NSBezierPath_Class/Reference/Reference.html#//apple_ref/doc/c_ref/NSBezierPathElement" target="_blank" rel="external">文档</a><br>可以发现，其绘制的命令与 SVG 基本上是对应的。<br>比如说它包含如下一组函数:<br><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">– (<span class="keyword">void</span>)moveToPoint:(<span class="built_in">NSPoint</span>)point;</span><br><span class="line">– (<span class="keyword">void</span>)lineToPoint:(<span class="built_in">NSPoint</span>)point</span><br><span class="line">– (<span class="keyword">void</span>)curveToPoint:(<span class="built_in">NSPoint</span>)point controlPoint1:(<span class="built_in">NSPoint</span>)point1 controlPoint2:(<span class="built_in">NSPoint</span>)point2</span><br><span class="line">– (<span class="keyword">void</span>)closePath</span><br></pre></td></tr></table></figure></p>
+<p>基本上就对应了 SVG 中的<code>M</code>、<code>L</code>、<code>C</code>和<code>Z</code>了。因此，只要能够将<code>NSBezierPath</code>当中储存的信息，<br>按照这种命令方式取出一个序列，我们就可以将其转化为 SVG 的绘制命令了。</p>
 <p>这当然是一件可以实现的事情咯，我们需要做的就是使用下面两个<code>NSBezierPath</code>的对象方法:</p>
-<figure class="highlight lang-objectivec"><table><tr><td class="gutter"><pre>1
-2
-</pre></td><td class="code"><pre>- (<span class="built_in">NSInteger</span>)elementCount;
-- (NSBezierPathElement)elementAtIndex:(<span class="built_in">NSInteger</span>)index associatedPoints:(NSPointArray)points
-</pre></td></tr></table></figure>
-
-<p>其中第一个方法可以得到<code>NSBezierPath</code>对象包含的元素个数，而第二个方法提供了取出元素及其相关的控制点的方法。
-<code>NSBezierPathElement</code>的定义是：</p>
-<figure class="highlight lang-objectivec"><table><tr><td class="gutter"><pre>1
-2
-3
-4
-5
-6
-</pre></td><td class="code"><pre><span class="keyword">typedef</span> <span class="keyword">enum</span> {
-   NSMoveToBezierPathElement,
-   NSLineToBezierPathElement,
-   NSCurveToBezierPathElement,
-   NSClosePathBezierPathElement
-} NSBezierPathElement;
-</pre></td></tr></table></figure>
-
-<p>看到这里就应该明白了，<code>NSBezierPath</code>包含的元素就是控制的命令，而且这些控制命令是 SVG 的控制命令的子集。
-因此我们能很方便的将元素分别映射到<code>M</code>、<code>L</code>、<code>C</code>和<code>Z</code>上。</p>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">- (<span class="built_in">NSInteger</span>)elementCount;</span><br><span class="line">- (<span class="built_in">NSBezierPathElement</span>)elementAtIndex:(<span class="built_in">NSInteger</span>)index associatedPoints:(<span class="built_in">NSPointArray</span>)points</span><br></pre></td></tr></table></figure>
+<p>其中第一个方法可以得到<code>NSBezierPath</code>对象包含的元素个数，而第二个方法提供了取出元素及其相关的控制点的方法。<br><code>NSBezierPathElement</code>的定义是：</p>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="keyword">enum</span> &#123;</span><br><span class="line">   <span class="built_in">NSMoveToBezierPathElement</span>,</span><br><span class="line">   <span class="built_in">NSLineToBezierPathElement</span>,</span><br><span class="line">   <span class="built_in">NSCurveToBezierPathElement</span>,</span><br><span class="line">   <span class="built_in">NSClosePathBezierPathElement</span></span><br><span class="line">&#125; <span class="built_in">NSBezierPathElement</span>;</span><br></pre></td></tr></table></figure>
+<p>看到这里就应该明白了，<code>NSBezierPath</code>包含的元素就是控制的命令，而且这些控制命令是 SVG 的控制命令的子集。<br>因此我们能很方便的将元素分别映射到<code>M</code>、<code>L</code>、<code>C</code>和<code>Z</code>上。</p>
 <p>这里需要注意两个地方:</p>
-<p>其一，<code>NSPointArray</code>其实是一个指向<code>NSPoint</code>的指针，在<code>NSBezierPath</code>里，一个元素的控制点最多有三个。
-因此可以<code>malloc</code>三倍<code>NSPoint</code>的长度的空间，并将指针传入<code>associatedPoints:</code>中，
-最后的控制点数据将会借由指针传出。</p>
-<p>其二，SVG 的坐标系统和<code>NSBezierPath</code>的坐标系统是不一样的，对于 SVG 来说，原点在左上角，Y 轴朝下。因此需要进行坐标变换。
-关于坐标系统的问题<a href="http://io-meter.com/2014/04/24/iconfontr-make-your-nscontrol/">上一篇文章</a>曾经讨论过。</p>
-<p>OK，有了这些基础知识，将<code>NSBezierPath</code>曲线转换为 SVG 也就不在话下了。
-我的实现代码在<a href="https://github.com/shanzi/iconfontr/blob/master/iconfontr/NSBezierPath%2BSVGPathString.m#L21" target="_blank">这里</a>。
-其实有了这些知识，将 SVG 转换为<code>NSBezierPath</code>也基本足够了。要点就在于要把<code>NSBezierPath</code>不支持的一些控制命令，
-如<code>Q</code>、<code>H</code>等转换为原来的<code>C</code>和<code>L</code>等。这部分就等以后有机会再详细说明吧。</p>
-<h1>NSBezierPath To PNG</h1>
-<p>将<code>NSBezierPath</code>转为 PNG 位图输出也很容易，之前在<a href="http://io-meter.com/2014/04/12/iconfontr-1/">这里</a>
-里给出了在 View 中绘制图标的代码。得益于<code>Cocoa Drawing</code>框架的良好设计，我们可以直接复用这些代码来绘制到图片甚至 PDF。
-绘制到图片的方法有很多。主要包括：</p>
+<p>其一，<code>NSPointArray</code>其实是一个指向<code>NSPoint</code>的指针，在<code>NSBezierPath</code>里，一个元素的控制点最多有三个。<br>因此可以<code>malloc</code>三倍<code>NSPoint</code>的长度的空间，并将指针传入<code>associatedPoints:</code>中，<br>最后的控制点数据将会借由指针传出。</p>
+<p>其二，SVG 的坐标系统和<code>NSBezierPath</code>的坐标系统是不一样的，对于 SVG 来说，原点在左上角，Y 轴朝下。因此需要进行坐标变换。<br>关于坐标系统的问题<a href="http://io-meter.com/2014/04/24/iconfontr-make-your-nscontrol/" target="_blank" rel="external">上一篇文章</a>曾经讨论过。</p>
+<p>OK，有了这些基础知识，将<code>NSBezierPath</code>曲线转换为 SVG 也就不在话下了。<br>我的实现代码在<a href="https://github.com/shanzi/iconfontr/blob/master/iconfontr/NSBezierPath%2BSVGPathString.m#L21" target="_blank" rel="external">这里</a>。<br>其实有了这些知识，将 SVG 转换为<code>NSBezierPath</code>也基本足够了。要点就在于要把<code>NSBezierPath</code>不支持的一些控制命令，<br>如<code>Q</code>、<code>H</code>等转换为原来的<code>C</code>和<code>L</code>等。这部分就等以后有机会再详细说明吧。</p>
+<h1 id="NSBezierPath_To_PNG"><a href="#NSBezierPath_To_PNG" class="headerlink" title="NSBezierPath To PNG"></a>NSBezierPath To PNG</h1><p>将<code>NSBezierPath</code>转为 PNG 位图输出也很容易，之前在<a href="http://io-meter.com/2014/04/12/iconfontr-1/" target="_blank" rel="external">这里</a><br>里给出了在 View 中绘制图标的代码。得益于<code>Cocoa Drawing</code>框架的良好设计，我们可以直接复用这些代码来绘制到图片甚至PDF。<br>绘制到图片的方法有很多。主要包括：</p>
 <ul>
 <li>先绘制到 View，再从 View 中获得绘制出的位图图像</li>
 <li>绘制到一个 Off Screen 的 GraphicContext 再从 GraphicContext 中抽出图像，好处是不需要在屏幕中显示出来</li>
-<li>使用<code>NSBitmapImageRep</code>创建一个<code>NSGraphicContext</code>，再在这个 Context 上进行绘制。
-和上一种方法的区别是绘制完成后不需要再手动抽取图像。因为图像已经被直接写入对应<code>NSBitmapImageRep</code>了</li>
+<li>使用<code>NSBitmapImageRep</code>创建一个<code>NSGraphicContext</code>，再在这个 Context 上进行绘制。<br>和上一种方法的区别是绘制完成后不需要再手动抽取图像。因为图像已经被直接写入对应<code>NSBitmapImageRep</code>了</li>
 </ul>
 <p>我们使用最后一种方法来绘制，创建一个<code>NSImageRep</code>的函数参数比较复杂，如下所示：</p>
-<figure class="highlight lang-objectivec"><table><tr><td class="gutter"><pre>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-</pre></td><td class="code"><pre>NSBitmapImageRep *rep = [[NSBitmapImageRep alloc] initWithBitmapDataPlanes:<span class="literal">NULL</span>
-                                                                  pixelsWide:width
-                                                                  pixelsHigh:height
-                                                               bitsPerSample:<span class="number">8</span>
-                                                             samplesPerPixel:<span class="number">4</span>
-                                                                    hasAlpha:<span class="literal">YES</span>
-                                                                    isPlanar:<span class="literal">NO</span>
-                                                              colorSpaceName:NSCalibratedRGBColorSpace
-                                                                 bytesPerRow:<span class="number">0</span>
-                                                                bitsPerPixel:<span class="number">32</span>];
-</pre></td></tr></table></figure>
-
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">NSBitmapImageRep</span> *rep = [[<span class="built_in">NSBitmapImageRep</span> alloc] initWithBitmapDataPlanes:<span class="literal">NULL</span></span><br><span class="line">                                                                  pixelsWide:width</span><br><span class="line">                                                                  pixelsHigh:height</span><br><span class="line">                                                               bitsPerSample:<span class="number">8</span></span><br><span class="line">                                                             samplesPerPixel:<span class="number">4</span></span><br><span class="line">                                                                    hasAlpha:<span class="literal">YES</span></span><br><span class="line">                                                                    isPlanar:<span class="literal">NO</span></span><br><span class="line">                                                              colorSpaceName:<span class="built_in">NSCalibratedRGBColorSpace</span></span><br><span class="line">                                                                 bytesPerRow:<span class="number">0</span></span><br><span class="line">                                                                bitsPerPixel:<span class="number">32</span>];</span><br></pre></td></tr></table></figure>
 <p>接下来详细介绍下这些参数：</p>
 <ul>
-<li><code>bitmapDataPlanes</code>：指定图片的色彩通道，这个参数可以理解为事先指定一部分空间用来存储产生的像素数据。
-如果指定为<code>NULL</code>，函数会通过其他参数来估计空间以分配内存。</li>
+<li><code>bitmapDataPlanes</code>：指定图片的色彩通道，这个参数可以理解为事先指定一部分空间用来存储产生的像素数据。<br>如果指定为<code>NULL</code>，函数会通过其他参数来估计空间以分配内存。</li>
 <li><code>pixelsWide</code>, <code>pixelsHigh</code>: 这两个参数指定位图的像素宽和高</li>
-<li><code>bitsPerSample</code>: 每个<code>Sample</code>的位宽，这里的<code>Sample</code>可以翻译为位图色彩的采样或者分量，对于我们通常用的<code>RGB</code>
-色彩空间，红色分量<code>R</code>就是一个<code>Sample</code>。常用的 RGB 颜色值，每个分量的大小最高是<code>255</code>，
-这就代表这样一个<code>Sample</code>是一个 8 bits 的数，因此这里我们把位宽设为 8。 <code>NSBitmapImageRep</code>最高支持 16 bits 的位宽</li>
+<li><code>bitsPerSample</code>: 每个<code>Sample</code>的位宽，这里的<code>Sample</code>可以翻译为位图色彩的采样或者分量，对于我们通常用的<code>RGB</code><br>色彩空间，红色分量<code>R</code>就是一个<code>Sample</code>。常用的 RGB 颜色值，每个分量的大小最高是<code>255</code>，<br>这就代表这样一个<code>Sample</code>是一个 8 bits 的数，因此这里我们把位宽设为 8。 <code>NSBitmapImageRep</code>最高支持 16 bits 的位宽</li>
 <li><code>hasAlpha</code>: 是否支持透明度</li>
-<li><code>isPlanar</code>: Plane 这个概念和 PhotoShop 中的通道类似。如果这个参数为<code>YES</code>，那么色彩值将会分通道储存。
-如果参数为<code>NO</code>，那么同一个像素的颜色分量将会紧挨着存储在一起。</li>
+<li><code>isPlanar</code>: Plane 这个概念和 PhotoShop 中的通道类似。如果这个参数为<code>YES</code>，那么色彩值将会分通道储存。<br>如果参数为<code>NO</code>，那么同一个像素的颜色分量将会紧挨着存储在一起。</li>
 <li><code>colorSpaceName</code>: 颜色空间的名称，这里使用的是 RGB 色彩空间，可选的还有 CMYK 色彩空间、灰度色彩空间等。</li>
-<li><code>bytesPerRow</code>: 一行像素需要的空间，这个值可以依据<code>bitsPerSample</code>和<code>pixelsWide</code>来计算出来，
-但是如果在实际使用中分配的空间不够，那么超出的部分将会被截断。这里我取了零，让程序自己确定。</li>
-<li><code>bitsPerPixel</code>: 这个参数其实也可以不指定，它指的是一个像素的位宽，我们前面指定了每个颜色分量的位宽是 8，
-每个像素有 4 个分量，那么这个值就应该是 32</li>
+<li><code>bytesPerRow</code>: 一行像素需要的空间，这个值可以依据<code>bitsPerSample</code>和<code>pixelsWide</code>来计算出来，<br>但是如果在实际使用中分配的空间不够，那么超出的部分将会被截断。这里我取了零，让程序自己确定。</li>
+<li><code>bitsPerPixel</code>: 这个参数其实也可以不指定，它指的是一个像素的位宽，我们前面指定了每个颜色分量的位宽是8，<br>每个像素有 4 个分量，那么这个值就应该是32</li>
 </ul>
-<p>总体来说，初始化一个<code>NSBitmapImageRep</code>虽然参数很多，但是其中大多是为了保证安全和某些特殊情况而要求指定的。
-大概了解这些参数的含义，在必要的时候指定正确的值即可。</p>
-<p>创建了<code>NSBitmapImageRep</code>对象之后，可以再从这个对象创建一个<code>NSGraphicContext</code>，并把后者指定为<code>currentContext</code>。
-此后就可以像在 View 里一样绘制图形了。</p>
-<figure class="highlight lang-objectivec"><table><tr><td class="gutter"><pre>1
-2
-3
-4
-5
-6
-7
-</pre></td><td class="code"><pre>[NSGraphicsContext saveGraphicsState];
-NSGraphicsContext *g = [NSGraphicsContext graphicsContextWithBitmapImageRep:rep];
-[NSGraphicsContext setCurrentContext:g];
-<span class="comment">// ...</span>
-<span class="comment">// drawing code here</span>
-<span class="comment">// ...</span>
-[NSGraphicsContext restoreGraphicsState];
-</pre></td></tr></table></figure>
-
-<p>如何将绘制完成的<code>NSBitmapImageRep</code>转换为 PNG 文件的格式呢？只需要调用<code>Rep</code>对象的入下方法即可。
-这个函数返回的是一个可以直接写入文件的<code>NSData</code>类型的对象。
-Cocoa 支持的文件格式，除了 PNG 以外，还有 TIFF、JPG 等等。</p>
-<figure class="highlight lang-objectivec"><table><tr><td class="gutter"><pre>1
-</pre></td><td class="code"><pre>[rep representationUsingType:NSPNGFileType properties:<span class="literal">nil</span>]
-</pre></td></tr></table></figure>
-
+<p>总体来说，初始化一个<code>NSBitmapImageRep</code>虽然参数很多，但是其中大多是为了保证安全和某些特殊情况而要求指定的。<br>大概了解这些参数的含义，在必要的时候指定正确的值即可。</p>
+<p>创建了<code>NSBitmapImageRep</code>对象之后，可以再从这个对象创建一个<code>NSGraphicContext</code>，并把后者指定为<code>currentContext</code>。<br>此后就可以像在 View 里一样绘制图形了。</p>
+<figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">[<span class="built_in">NSGraphicsContext</span> saveGraphicsState];</span><br><span class="line"><span class="built_in">NSGraphicsContext</span> *g = [<span class="built_in">NSGraphicsContext</span> graphicsContextWithBitmapImageRep:rep];</span><br><span class="line">[<span class="built_in">NSGraphicsContext</span> setCurrentContext:g];</span><br><span class="line"><span class="comment">// ...</span></span><br><span class="line"><span class="comment">// drawing code here</span></span><br><span class="line"><span class="comment">// ...</span></span><br><span class="line">[<span class="built_in">NSGraphicsContext</span> restoreGraphicsState];</span><br></pre></td></tr></table></figure>
+<p>如何将绘制完成的<code>NSBitmapImageRep</code>转换为 PNG 文件的格式呢？只需要调用<code>Rep</code>对象的入下方法即可。<br>这个函数返回的是一个可以直接写入文件的<code>NSData</code>类型的对象。<br>Cocoa 支持的文件格式，除了 PNG 以外，还有 TIFF、JPG 等等。<br><figure class="highlight objectivec"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">[rep representationUsingType:<span class="built_in">NSPNGFileType</span> properties:<span class="literal">nil</span>]</span><br></pre></td></tr></table></figure></p>
 <p>至此，图像的输出功能的核心就完成了。</p>
-<h1>自食狗粮，为 Icon Fontr 设计一个图标</h1>
-<p>所谓自食狗粮，就是要自己用自己开发的东西来帮助自己开发。具体到这里，
-就是要用 IconFontr 导出来的图标为它自己设计一个图标。我从 <a href="http://ionicons.com" target="_blank">ionicons</a>
-中选取了四个图标，稍加处理，最后得到了下面的样子</p>
+<h1 id="u81EA_u98DF_u72D7_u7CAE_uFF0C_u4E3A_Icon_Fontr__u8BBE_u8BA1_u4E00_u4E2A_u56FE_u6807"><a href="#u81EA_u98DF_u72D7_u7CAE_uFF0C_u4E3A_Icon_Fontr__u8BBE_u8BA1_u4E00_u4E2A_u56FE_u6807" class="headerlink" title="自食狗粮，为 Icon Fontr 设计一个图标"></a>自食狗粮，为 Icon Fontr 设计一个图标</h1><p>所谓自食狗粮，就是要自己用自己开发的东西来帮助自己开发。具体到这里，<br>就是要用 IconFontr 导出来的图标为它自己设计一个图标。我从 <a href="http://ionicons.com" target="_blank" rel="external">ionicons</a><br>中选取了四个图标，稍加处理，最后得到了下面的样子</p>
 <p><img src="/img/iconfontr/iconfontr256.png" alt="Icon"></p>
-<h1>结语</h1>
-<p>至此，一个完整功能的 Icon Viewer 就完成啦。其实 IconFontr 还有很多可以改进的地方，
-比如说可以有一个批量输出 Icon 的功能，下图是我实现出来的样子:</p>
+<h1 id="u7ED3_u8BED"><a href="#u7ED3_u8BED" class="headerlink" title="结语"></a>结语</h1><p>至此，一个完整功能的 Icon Viewer 就完成啦。其实 IconFontr 还有很多可以改进的地方，<br>比如说可以有一个批量输出 Icon 的功能，下图是我实现出来的样子:</p>
 <p><img src="/img/iconfontr/resolutions.png" alt="Multiple Resolutions"></p>
-<p>我还提供了几种预设的分辨率，比如 iOS 的 Tabbar 图标的尺寸等等。
-这样就比较方便在 Desktop 和 iOS 应用里使用，也可以用来画原型图等等。</p>
-<p>有一些文章 (<a href="http://css-tricks.com/icon-fonts-vs-svg/" target="_blank">1</a>,<a href="http://ianfeather.co.uk/ten-reasons-we-switched-from-an-icon-font-to-svg/" target="_blank">2</a>
-认为，我们应该尽量使用内联 SVG 而不是 Icon Font 在网页中显示图标。Icon Fontr 也为这种需求提供了方便。
-我为其添加了一个复制 SVG 的功能:</p>
+<p>我还提供了几种预设的分辨率，比如 iOS 的 Tabbar 图标的尺寸等等。<br>这样就比较方便在 Desktop 和 iOS 应用里使用，也可以用来画原型图等等。</p>
+<p>有一些文章(<a href="http://css-tricks.com/icon-fonts-vs-svg/" target="_blank" rel="external">1</a>,<a href="http://ianfeather.co.uk/ten-reasons-we-switched-from-an-icon-font-to-svg/" target="_blank" rel="external">2</a><br>认为，我们应该尽量使用内联 SVG 而不是 Icon Font 在网页中显示图标。Icon Fontr 也为这种需求提供了方便。<br>我为其添加了一个复制 SVG 的功能:</p>
 <p><img src="/img/iconfontr/copysvg.png" alt="Copy SVG"></p>
-<p>这个系列的文章今天就告一段落了，不过在接下来的时间里，我还会继续维护 Icon Fontr，为其添加各种好用的功能，
-各位看官如果有什么需求，欢迎在 Comment 里告诉我。
-也欢迎点击<a href="http://cl.ly/2N3i0U0G402k" target="_blank">这里</a>下载一份目前的测试版本试用，并反馈 Bug。
-IconFontr 的代码托管在 Github 上，别忘了来<a href="https://github.com/shanzi/iconfontr/" target="_blank">这里</a> Star 一下。</p>
+<p>这个系列的文章今天就告一段落了，不过在接下来的时间里，我还会继续维护 Icon Fontr，为其添加各种好用的功能，<br>各位看官如果有什么需求，欢迎在 Comment 里告诉我。<br>也欢迎点击<a href="http://cl.ly/2N3i0U0G402k" target="_blank" rel="external">这里</a>下载一份目前的测试版本试用，并反馈 Bug。<br>IconFontr的代码托管在 Github 上，别忘了来<a href="https://github.com/shanzi/iconfontr/" target="_blank" rel="external">这里</a> Star 一下。</p>
 
+      
     </div>
-    <footer>
-        
-  
-  <div class="categories">
-    <a href="/categories/iconfontr/">iconfontr</a>
-  </div>
-
-        
-  
-  <div class="tags">
-    <a href="/tags/Bezier Path/">Bezier Path</a>, <a href="/tags/SVG/">SVG</a>, <a href="/tags/image/">image</a>, <a href="/tags/export/">export</a>, <a href="/tags/icon fontr/">icon fontr</a>, <a href="/tags/osx/">osx</a>, <a href="/tags/xcode/">xcode</a>
-  </div>
-
-        
-<div class="recent-posts">
-  <h3 class="title">Recent Posts</h3>
-  <ul>
-    
-      <li>
-        <a href="/2015/05/04/recently-works/">最近的一点生活总结</a>
-      </li>
-    
-      <li>
-        <a href="/2014/12/31/sketch-rendering/">使用 WebGL 实现素描效果的渲染</a>
-      </li>
-    
-      <li>
-        <a href="/2014/10/24/develop-for-yosemite-some-tips/">Develop for Yosemite: 几个小技巧</a>
-      </li>
-    
-      <li>
-        <a href="/2014/10/03/when-webgl-meets-device-motion/">When WebGL Meets Device Motion</a>
-      </li>
-    
-      <li>
-        <a href="/2014/09/01/contenteditable-and-selection/">在线文本编辑器的基本实现原理</a>
-      </li>
-    
-  </ul>
-</div>
-
-
-        
-<div class="follow-me">
-  <h3 class="title">Follow Me</h3>
-  <div class="links">
-    
-    <a href="https://twitter.com/ant_sz">
-        <i class="twitter"></i>
-    </a>
-    
-    
-    <a href="https://github.com/shanzi">
-        <i class="github"></i>
-    </a>
-    
-    
-    <a href="https://plus.google.com/+ChaseZhang">
-        <i class="gplus"></i>
-    </a>
-    
-    
-    <a href="https://www.facebook.com/yunerrun">
-        <i class="facebook"></i>
-    </a>
-    
-    </div>
-</div>
-
+    <footer class="article-footer">
+      <a data-url="http://yoursite.com/2014/05/04/iconfontr-export-images/" data-id="cijh7659s000i7or28lg8ni4x" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/Bezier-Path/">Bezier Path</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/SVG/">SVG</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/export/">export</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/icon-fontr/">icon fontr</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/image/">image</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/osx/">osx</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/xcode/">xcode</a></li></ul>
 
     </footer>
   </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2014/05/07/mastering-paper-by-53/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          Mastering Paper by 53 : 基础介绍及工具使用指导
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2014/04/24/iconfontr-make-your-nscontrol/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">写个 Icon Font Viewer : 叁</div>
+    </a>
+  
+</nav>
+
+  
 </article>
 
-
-<section id="comment">
-  <h1 class="title">Comments</h1>
-
-  
-  <div id="disqus_thread">
-    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-  </div>
-  
 </section>
-
-</div>
-    <div class="clearfix"></div>
-    <aside id="sidebar">
-  <div class="widget search">
-  <form action="//google.com/search" method="get" accept-charset="utf-8">
-    <input type="search" name="q" results="0" placeholder="Search">
-    <input type="hidden" name="q" value="site:io-meter.com">
-  </form>
-</div>
-
-
+        
+          <aside id="sidebar">
   
-<div class="widget tag">
-  <h3 class="title">Categories</h3>
-  <ul class="entry">
-  
-    <li><a href="/categories/Mastering Paper/">Mastering Paper</a><small>1</small></li>
-  
-    <li><a href="/categories/Math/">Math</a><small>1</small></li>
-  
-    <li><a href="/categories/essay/">essay</a><small>6</small></li>
-  
-    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
-  
-    <li><a href="/categories/osx/">osx</a><small>1</small></li>
-  
-    <li><a href="/categories/review/">review</a><small>1</small></li>
-  
-    <li><a href="/categories/web/">web</a><small>6</small></li>
-  
-  </ul>
-</div>
-
-
-  
-<div class="widget tagcloud">
-  <h3 class="title">Tags</h3>
-  <div class="entry">
-    <a href="/tags/Algorithm/" style="font-size: 10.00px;">Algorithm</a><a href="/tags/Apple/" style="font-size: 10.00px;">Apple</a><a href="/tags/Bezier Path/" style="font-size: 10.00px;">Bezier Path</a><a href="/tags/Cocoa/" style="font-size: 10.00px;">Cocoa</a><a href="/tags/Functional Programing/" style="font-size: 10.00px;">Functional Programing</a><a href="/tags/GLSL/" style="font-size: 10.00px;">GLSL</a><a href="/tags/GSoC/" style="font-size: 10.00px;">GSoC</a><a href="/tags/Git/" style="font-size: 10.00px;">Git</a><a href="/tags/Go/" style="font-size: 13.33px;">Go</a><a href="/tags/Interface Builder/" style="font-size: 10.00px;">Interface Builder</a><a href="/tags/NSControl/" style="font-size: 13.33px;">NSControl</a><a href="/tags/OSX/" style="font-size: 16.67px;">OSX</a><a href="/tags/Objective-C/" style="font-size: 13.33px;">Objective-C</a><a href="/tags/SVG/" style="font-size: 10.00px;">SVG</a><a href="/tags/Swift/" style="font-size: 10.00px;">Swift</a><a href="/tags/Three.js/" style="font-size: 10.00px;">Three.js</a><a href="/tags/Xcode/" style="font-size: 10.00px;">Xcode</a><a href="/tags/accelerate meter/" style="font-size: 10.00px;">accelerate meter</a><a href="/tags/bezier path/" style="font-size: 13.33px;">bezier path</a><a href="/tags/blender/" style="font-size: 13.33px;">blender</a><a href="/tags/cocoa/" style="font-size: 13.33px;">cocoa</a><a href="/tags/completion/" style="font-size: 10.00px;">completion</a><a href="/tags/contenteditable/" style="font-size: 10.00px;">contenteditable</a><a href="/tags/design/" style="font-size: 10.00px;">design</a><a href="/tags/desktop/" style="font-size: 10.00px;">desktop</a><a href="/tags/develop/" style="font-size: 10.00px;">develop</a><a href="/tags/device motion/" style="font-size: 10.00px;">device motion</a><a href="/tags/distribute storage/" style="font-size: 10.00px;">distribute storage</a><a href="/tags/drawing/" style="font-size: 20.00px;">drawing</a><a href="/tags/editor/" style="font-size: 10.00px;">editor</a><a href="/tags/export/" style="font-size: 10.00px;">export</a><a href="/tags/font/" style="font-size: 13.33px;">font</a><a href="/tags/fontawesome/" style="font-size: 10.00px;">fontawesome</a><a href="/tags/go/" style="font-size: 10.00px;">go</a><a href="/tags/golang/" style="font-size: 10.00px;">golang</a><a href="/tags/html/" style="font-size: 10.00px;">html</a><a href="/tags/html5/" style="font-size: 10.00px;">html5</a><a href="/tags/iOS/" style="font-size: 10.00px;">iOS</a><a href="/tags/iOS 8/" style="font-size: 10.00px;">iOS 8</a><a href="/tags/iPad/" style="font-size: 16.67px;">iPad</a>
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Categories</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Mastering-Paper/">Mastering Paper</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/Math/">Math</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/essay/">essay</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/iconfontr/">iconfontr</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/osx/">osx</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/review/">review</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/web/">web</a></li></ul>
+    </div>
   </div>
-</div>
 
 
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Algorithm/">Algorithm</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Apple/">Apple</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Bezier-Path/">Bezier Path</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Cocoa/">Cocoa</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Functional-Programing/">Functional Programing</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GLSL/">GLSL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GSoC/">GSoC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Git/">Git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Go/">Go</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Interface-Builder/">Interface Builder</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/NSControl/">NSControl</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/OSX/">OSX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Objective-C/">Objective-C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SVG/">SVG</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Swift/">Swift</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Three-js/">Three.js</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Xcode/">Xcode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/accelerate-meter/">accelerate meter</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/bezier-path/">bezier path</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/blender/">blender</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/cocoa/">cocoa</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/completion/">completion</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/contenteditable/">contenteditable</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/design/">design</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/desktop/">desktop</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/develop/">develop</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/device-motion/">device motion</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/distribute-storage/">distribute storage</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/drawing/">drawing</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/editor/">editor</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/export/">export</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/font/">font</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/fontawesome/">fontawesome</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go/">go</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/golang/">golang</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/html/">html</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/html5/">html5</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/iOS/">iOS</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/iOS-8/">iOS 8</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/iPad/">iPad</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/icon/">icon</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/icon-font/">icon font</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/icon-fontr/">icon fontr</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/iconfontr/">iconfontr</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/image/">image</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/indexing/">indexing</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/io-meter/">io-meter</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ionicons/">ionicons</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/life/">life</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/linux/">linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mac/">mac</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/math/">math</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mobile/">mobile</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/online-editor/">online editor</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opensource/">opensource</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/osx/">osx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/package/">package</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/paper/">paper</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/pencil/">pencil</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/programing/">programing</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/rendering/">rendering</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/review/">review</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/rpc/">rpc</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/selection/">selection</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/server/">server</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/shader/">shader</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/sketch/">sketch</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/stylus/">stylus</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/summary/">summary</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/svg/">svg</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/swift/">swift</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/tips/">tips</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/web/">web</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/webGL/">webGL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/webgl/">webgl</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/xcode/">xcode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/zocial/">zocial</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/吐槽/">吐槽</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/Algorithm/" style="font-size: 10px;">Algorithm</a> <a href="/tags/Apple/" style="font-size: 10px;">Apple</a> <a href="/tags/Bezier-Path/" style="font-size: 10px;">Bezier Path</a> <a href="/tags/Cocoa/" style="font-size: 10px;">Cocoa</a> <a href="/tags/Functional-Programing/" style="font-size: 10px;">Functional Programing</a> <a href="/tags/GLSL/" style="font-size: 10px;">GLSL</a> <a href="/tags/GSoC/" style="font-size: 10px;">GSoC</a> <a href="/tags/Git/" style="font-size: 10px;">Git</a> <a href="/tags/Go/" style="font-size: 13.33px;">Go</a> <a href="/tags/Interface-Builder/" style="font-size: 10px;">Interface Builder</a> <a href="/tags/NSControl/" style="font-size: 13.33px;">NSControl</a> <a href="/tags/OSX/" style="font-size: 16.67px;">OSX</a> <a href="/tags/Objective-C/" style="font-size: 13.33px;">Objective-C</a> <a href="/tags/SVG/" style="font-size: 10px;">SVG</a> <a href="/tags/Swift/" style="font-size: 10px;">Swift</a> <a href="/tags/Three-js/" style="font-size: 10px;">Three.js</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/accelerate-meter/" style="font-size: 10px;">accelerate meter</a> <a href="/tags/bezier-path/" style="font-size: 13.33px;">bezier path</a> <a href="/tags/blender/" style="font-size: 13.33px;">blender</a> <a href="/tags/cocoa/" style="font-size: 13.33px;">cocoa</a> <a href="/tags/completion/" style="font-size: 10px;">completion</a> <a href="/tags/contenteditable/" style="font-size: 10px;">contenteditable</a> <a href="/tags/design/" style="font-size: 10px;">design</a> <a href="/tags/desktop/" style="font-size: 10px;">desktop</a> <a href="/tags/develop/" style="font-size: 10px;">develop</a> <a href="/tags/device-motion/" style="font-size: 10px;">device motion</a> <a href="/tags/distribute-storage/" style="font-size: 10px;">distribute storage</a> <a href="/tags/drawing/" style="font-size: 20px;">drawing</a> <a href="/tags/editor/" style="font-size: 10px;">editor</a> <a href="/tags/export/" style="font-size: 10px;">export</a> <a href="/tags/font/" style="font-size: 13.33px;">font</a> <a href="/tags/fontawesome/" style="font-size: 10px;">fontawesome</a> <a href="/tags/go/" style="font-size: 10px;">go</a> <a href="/tags/golang/" style="font-size: 10px;">golang</a> <a href="/tags/html/" style="font-size: 10px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/iOS/" style="font-size: 10px;">iOS</a> <a href="/tags/iOS-8/" style="font-size: 10px;">iOS 8</a> <a href="/tags/iPad/" style="font-size: 16.67px;">iPad</a> <a href="/tags/icon/" style="font-size: 10px;">icon</a> <a href="/tags/icon-font/" style="font-size: 13.33px;">icon font</a> <a href="/tags/icon-fontr/" style="font-size: 10px;">icon fontr</a> <a href="/tags/iconfontr/" style="font-size: 16.67px;">iconfontr</a> <a href="/tags/image/" style="font-size: 10px;">image</a> <a href="/tags/indexing/" style="font-size: 10px;">indexing</a> <a href="/tags/io-meter/" style="font-size: 10px;">io-meter</a> <a href="/tags/ionicons/" style="font-size: 10px;">ionicons</a> <a href="/tags/life/" style="font-size: 10px;">life</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/mac/" style="font-size: 10px;">mac</a> <a href="/tags/math/" style="font-size: 10px;">math</a> <a href="/tags/mobile/" style="font-size: 10px;">mobile</a> <a href="/tags/online-editor/" style="font-size: 10px;">online editor</a> <a href="/tags/opensource/" style="font-size: 10px;">opensource</a> <a href="/tags/osx/" style="font-size: 13.33px;">osx</a> <a href="/tags/package/" style="font-size: 10px;">package</a> <a href="/tags/paper/" style="font-size: 13.33px;">paper</a> <a href="/tags/pencil/" style="font-size: 10px;">pencil</a> <a href="/tags/programing/" style="font-size: 10px;">programing</a> <a href="/tags/rendering/" style="font-size: 10px;">rendering</a> <a href="/tags/review/" style="font-size: 10px;">review</a> <a href="/tags/rpc/" style="font-size: 10px;">rpc</a> <a href="/tags/selection/" style="font-size: 10px;">selection</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/shader/" style="font-size: 10px;">shader</a> <a href="/tags/sketch/" style="font-size: 10px;">sketch</a> <a href="/tags/stylus/" style="font-size: 10px;">stylus</a> <a href="/tags/summary/" style="font-size: 10px;">summary</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/swift/" style="font-size: 10px;">swift</a> <a href="/tags/tips/" style="font-size: 10px;">tips</a> <a href="/tags/web/" style="font-size: 20px;">web</a> <a href="/tags/webGL/" style="font-size: 13.33px;">webGL</a> <a href="/tags/webgl/" style="font-size: 10px;">webgl</a> <a href="/tags/xcode/" style="font-size: 10px;">xcode</a> <a href="/tags/zocial/" style="font-size: 10px;">zocial</a> <a href="/tags/吐槽/" style="font-size: 10px;">吐槽</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/12/">December 2014</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/10/">October 2014</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/09/">September 2014</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/07/">July 2014</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/06/">June 2014</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/05/">May 2014</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/04/">April 2014</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/02/">February 2014</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recents</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2015/05/04/recently-works/">最近的一点生活总结</a>
+          </li>
+        
+          <li>
+            <a href="/2014/12/31/sketch-rendering/">使用 WebGL 实现素描效果的渲染</a>
+          </li>
+        
+          <li>
+            <a href="/2014/10/24/develop-for-yosemite-some-tips/">Develop for Yosemite: 几个小技巧</a>
+          </li>
+        
+          <li>
+            <a href="/2014/10/03/when-webgl-meets-device-motion/">When WebGL Meets Device Motion</a>
+          </li>
+        
+          <li>
+            <a href="/2014/09/01/contenteditable-and-selection/">在线文本编辑器的基本实现原理</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
 </aside>
-    <div class="clearfix"></div>
-    <footer id="footer"><div>
+        
+      </div>
+      <footer id="footer">
   
-  &copy; 2015 Chase Zhang
-  
-</div>
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2016 John Doe<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
 </footer>
-</div>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
-<script src="/js/jquery.imagesloaded.min.js"></script>
-<script src="/js/gallery.js"></script>
 
 
-<script type="text/javascript">
-var disqus_shortname = 'iometer';
-
-(function(){
-  var dsq = document.createElement('script');
-  dsq.type = 'text/javascript';
-  dsq.async = true;
-  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-}());
-</script>
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css" type="text/css">
+  <script src="/fancybox/jquery.fancybox.pack.js" type="text/javascript"></script>
 
 
+<script src="/js/script.js" type="text/javascript"></script>
 
-<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
-<script src="/fancybox/jquery.fancybox.pack.js"></script>
-<script type="text/javascript">
-(function($){
-  $('.fancybox').fancybox();
-})(jQuery);
-</script>
-
-
-
-
+  </div>
 </body>
-
 </html>

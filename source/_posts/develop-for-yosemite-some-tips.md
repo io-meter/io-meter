@@ -1,4 +1,4 @@
-title: Develop for Yosemite: 几个小技巧
+title: 'Develop for Yosemite: 几个小技巧'
 date: 2014-10-24 15:02:02
 tags: [OSX, mac, cocoa, swift, develop, desktop]
 category: osx

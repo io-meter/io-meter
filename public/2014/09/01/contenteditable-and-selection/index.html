@@ -1,104 +1,95 @@
-<!DOCTYPE HTML>
+<!DOCTYPE html>
 <html>
-
-
-
 <head>
   <meta charset="utf-8">
-
-  <meta name="msapplication-TileColor" content="#000000">
-  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
-
-  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
-  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
-  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
-  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
-
   
-  <title>在线文本编辑器的基本实现原理 | IO-meter</title>
-  <meta name="author" content="Chase Zhang">
-  
-  <meta name="description" content="最近研究了一下在浏览器中实现的 WYSIWYG 文本编辑器的原理，
-在了解基本原理并浏览了 zenpen 这个相对简单的在线编辑器的源码后，
-在这方面有种豁然开朗的感觉。">
-  
-  
+  <title>在线文本编辑器的基本实现原理 | Hexo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-
-  <meta property="og:title" content="在线文本编辑器的基本实现原理"/>
-  <meta property="og:site_name" content="IO-meter"/>
-
+  <meta name="description" content="最近研究了一下在浏览器中实现的 WYSIWYG 文本编辑器的原理，在了解基本原理并浏览了 zenpen 这个相对简单的在线编辑器的源码后，在这方面有种豁然开朗的感觉。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="在线文本编辑器的基本实现原理">
+<meta property="og:url" content="http://yoursite.com/2014/09/01/contenteditable-and-selection/index.html">
+<meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="最近研究了一下在浏览器中实现的 WYSIWYG 文本编辑器的原理，在了解基本原理并浏览了 zenpen 这个相对简单的在线编辑器的源码后，在这方面有种豁然开朗的感觉。">
+<meta property="og:updated_time" content="2016-01-16T14:10:38.000Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="在线文本编辑器的基本实现原理">
+<meta name="twitter:description" content="最近研究了一下在浏览器中实现的 WYSIWYG 文本编辑器的原理，在了解基本原理并浏览了 zenpen 这个相对简单的在线编辑器的源码后，在这方面有种豁然开朗的感觉。">
   
-    <meta property="og:image" content="undefined"/>
+    <link rel="alternate" href="/atom.xml" title="Hexo" type="application/atom+xml">
   
-
-  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
-  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
-  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
-  <script type="text/javascript" src="/js/retina.min.js"></script>
-  <script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-  ga('create', 'UA-48012866-2', 'io-meter.com');
-  ga('send', 'pageview');
-</script>
+  
+    <link rel="icon" href="/favicon.png">
+  
+  <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
+  <link rel="stylesheet" href="/css/style.css" type="text/css">
+  
 
 </head>
 
 <body>
-<div id="banner">
-    <div class="wrapper">
-        <header>
-            <div id="header" class="simple" >
-<nav id="main-nav">
-    <ul class="alignright">
-        
-        <li><a href="/">Home</a></li>
-        
-        <li><a href="/archives">Archives</a></li>
-        
-        <li><a href="http://chasezhang.me">About</a></li>
-        
-    </ul>
-    <div class="clearfix"></div>
-</nav>
-
-  <h1 class="main"><a href="/">
-  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
-  <h2 class="main">Programic Creativity</h2>
-  <h1 class="alt">
-      <a href="/">IO METER</a>
-  </h1>
-  <div class="clearfix"></div>
-</div>
-
-        </header>
+  <div id="container">
+    <div id="wrap">
+      <header id="header">
+  <div id="banner"></div>
+  <div id="header-outer" class="outer">
+    <div id="header-title" class="inner">
+      <h1 id="logo-wrap">
+        <a href="/" id="logo">Hexo</a>
+      </h1>
+      
     </div>
-</div>
-<div id="content" class="wrapper">
-    <div id="articles"><h2 class="subtitle article-title">Article</h2>
-<article class="post title-article full-article">
-  <div class="post-content">
-    <header>
-      
-    <h1 class="title"><a href="/2014/09/01/contenteditable-and-selection/" target="_blank">在线文本编辑器的基本实现原理</a></h1>
+    <div id="header-inner" class="inner">
+      <nav id="main-nav">
+        <a id="main-nav-toggle" class="nav-icon"></a>
+        
+          <a class="main-nav-link" href="/">Home</a>
+        
+          <a class="main-nav-link" href="/archives">Archives</a>
+        
+      </nav>
+      <nav id="sub-nav">
+        
+          <a id="nav-rss-link" class="nav-icon" href="/atom.xml" title="RSS Feed"></a>
+        
+        <a id="nav-search-btn" class="nav-icon" title="Search"></a>
+      </nav>
+      <div id="search-form-wrap">
+        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" results="0" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="http://yoursite.com"></form>
+      </div>
+    </div>
+  </div>
+</header>
+      <div class="outer">
+        <section id="main"><article id="post-contenteditable-and-selection" class="article article-type-post" itemscope itemprop="blogPost">
+  <div class="article-meta">
+    <a href="/2014/09/01/contenteditable-and-selection/" class="article-date">
+  <time datetime="2014-09-01T11:56:26.000Z" itemprop="datePublished">2014-09-01</time>
+</a>
+    
+  <div class="article-category">
+    <a class="article-category-link" href="/categories/web/">web</a>
+  </div>
 
+  </div>
+  <div class="article-inner">
+    
+    
+      <header class="article-header">
+        
+  
+    <h1 class="article-title" itemprop="name">
+      在线文本编辑器的基本实现原理
+    </h1>
+  
 
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
       
-        <time datetime="2014-09-01T11:56:26.000Z">Sep 1 2014</time>
-      
-    </header>
-    <div class="entry">
-      <p>最近研究了一下在浏览器中实现的 WYSIWYG 文本编辑器的原理，
-在了解基本原理并浏览了 <a href="http://zenpen.io" target="_blank">zenpen</a> 这个相对简单的在线编辑器的源码后，
-在这方面有种豁然开朗的感觉。</p>
+        <p>最近研究了一下在浏览器中实现的 WYSIWYG 文本编辑器的原理，<br>在了解基本原理并浏览了 <a href="http://zenpen.io" target="_blank" rel="external">zenpen</a> 这个相对简单的在线编辑器的源码后，<br>在这方面有种豁然开朗的感觉。</p>
 <a id="more"></a>
-
-<p>说来让人惊讶，最初在浏览器中使之变为可能的浏览器是 IE5。在那个时代，
-IE 的确也算是非常先进的浏览器了，现在广为使用的 AJAX 技术，不也是 IE5 最早提供的么？
-不过这里就不再讨论当初 IE 那套陈旧的 API 了，而主要来讨论 HTML5 之后被各个浏览器广泛支持的一些技术方法。</p>
+<p>说来让人惊讶，最初在浏览器中使之变为可能的浏览器是 IE5。在那个时代，<br>IE 的确也算是非常先进的浏览器了，现在广为使用的 AJAX 技术，不也是 IE5 最早提供的么？<br>不过这里就不再讨论当初 IE 那套陈旧的 API 了，而主要来讨论 HTML5 之后被各个浏览器广泛支持的一些技术方法。</p>
 <p>进行 WYSIWYG 的文本编辑，需要的几个基础是</p>
 <ol>
 <li>使得某一部分 DOM 可以被编辑</li>
@@ -106,332 +97,177 @@ IE 的确也算是非常先进的浏览器了，现在广为使用的 AJAX 技�
 <li>可以在编辑的同时对所编辑的部分 DOM 进行修改，实现如添加样式等功能</li>
 </ol>
 <p>这些功能都非常方便实现。</p>
-<h2>使 DOM 可编辑</h2>
-<p>使一部分 HTML 的 DOM 作为容器进入编辑状态，只需要为这个 DOM 添加一个 <code>contentEditable</code> 属性。
-一般来讲，是使用<code>div</code>或者<code>article</code>元素作为这样的容器。</p>
-<p>被添加 <code>contentEditable</code> 属性的容器元素的子元素都就可以由用户修改了，
-如果想在这个容器下面嵌套一个不可修改的子元素，需要显式地在这个子元素中添加
-<code>contentEditable=&#39;false&#39;</code>这样的声明。</p>
-<h2>获取和操作用户选择</h2>
-<p>操作和获取用户选择是一个非常有用的功能，它不但可以用来实现这里提出的编辑器的功能，
-还可以用来实现在光标位置显示提示选单等多种功能，在后面对所编辑部分进行样式修改的时候也常用到。</p>
+<h2 id="u4F7F_DOM__u53EF_u7F16_u8F91"><a href="#u4F7F_DOM__u53EF_u7F16_u8F91" class="headerlink" title="使 DOM 可编辑"></a>使 DOM 可编辑</h2><p>使一部分 HTML 的 DOM 作为容器进入编辑状态，只需要为这个 DOM 添加一个 <code>contentEditable</code> 属性。<br>一般来讲，是使用<code>div</code>或者<code>article</code>元素作为这样的容器。</p>
+<p>被添加 <code>contentEditable</code> 属性的容器元素的子元素都就可以由用户修改了，<br>如果想在这个容器下面嵌套一个不可修改的子元素，需要显式地在这个子元素中添加<br><code>contentEditable=&#39;false&#39;</code>这样的声明。</p>
+<h2 id="u83B7_u53D6_u548C_u64CD_u4F5C_u7528_u6237_u9009_u62E9"><a href="#u83B7_u53D6_u548C_u64CD_u4F5C_u7528_u6237_u9009_u62E9" class="headerlink" title="获取和操作用户选择"></a>获取和操作用户选择</h2><p>操作和获取用户选择是一个非常有用的功能，它不但可以用来实现这里提出的编辑器的功能，<br>还可以用来实现在光标位置显示提示选单等多种功能，在后面对所编辑部分进行样式修改的时候也常用到。</p>
 <p>想要获取一个 Selection 对象非常简单:</p>
-<figure class="highlight lang-javascript"><table><tr><td class="gutter"><pre>1
-</pre></td><td class="code"><pre><span class="keyword">var</span> selection = window.getSelection();
-</pre></td></tr></table></figure>
-
-<p>Selection 对象有<code>anchorNode</code>和<code>focusNode</code>两个属性，可以用来获得选中部分的开始和结束元素，
-不过实用不多 (一般实用 Range 代替)。此外还有一个<code>isCollapsed</code>
-属性值得注意，当其为<code>true</code>时，代表选择区域开始和结束在相同的点，也就是没有选中内容时光标闪烁的模式。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> selection = <span class="built_in">window</span>.getSelection();</span><br></pre></td></tr></table></figure>
+<p>Selection 对象有<code>anchorNode</code>和<code>focusNode</code>两个属性，可以用来获得选中部分的开始和结束元素，<br>不过实用不多(一般实用 Range 代替)。此外还有一个<code>isCollapsed</code><br>属性值得注意，当其为<code>true</code>时，代表选择区域开始和结束在相同的点，也就是没有选中内容时光标闪烁的模式。</p>
 <p>selection 对象还有诸多方法可以用来修改选择范围，主要就是对 Range 对象的编辑。</p>
-<p>首先可以通过</p>
-<figure class="highlight lang-javascript"><table><tr><td class="gutter"><pre>1
-</pre></td><td class="code"><pre><span class="keyword">var</span> range = selection.getRangeAt(<span class="number">0</span>);
-</pre></td></tr></table></figure>
-
-<p>来获取被选中的第一个区块，以此类推还可以获得第二个、第三个。简单起见我们只讨论选中一个区块的情况。
-获得了 Range 对象，我们就可以方便地进行获得选中区域内容了。
-Range 对象有一对属性分别用来获得选择区域的开始和结束点。</p>
-<figure class="highlight lang-javascript"><table><tr><td class="gutter"><pre>1
-2
-3
-4
-</pre></td><td class="code"><pre>range.startContainer <span class="comment">// 开始点所在的容器 (元素)</span>
-range.endOffset <span class="comment">// 开始点在其容器内的偏移</span>
-range.endContainer <span class="comment">// 结束点所在的容器 (元素)</span>
-range.endOffset <span class="comment">// 结束点在其容器内的偏移</span>
-</pre></td></tr></table></figure>
-
+<p>首先可以通过<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> range = selection.getRangeAt(<span class="number">0</span>);</span><br></pre></td></tr></table></figure></p>
+<p>来获取被选中的第一个区块，以此类推还可以获得第二个、第三个。简单起见我们只讨论选中一个区块的情况。<br>获得了 Range 对象，我们就可以方便地进行获得选中区域内容了。<br>Range 对象有一对属性分别用来获得选择区域的开始和结束点。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">range.startContainer <span class="comment">// 开始点所在的容器(元素)</span></span><br><span class="line">range.endOffset <span class="comment">// 开始点在其容器内的偏移</span></span><br><span class="line">range.endContainer <span class="comment">// 结束点所在的容器(元素)</span></span><br><span class="line">range.endOffset <span class="comment">// 结束点在其容器内的偏移</span></span><br></pre></td></tr></table></figure></p>
 <p>除了这两对属性，还有一个非常有用的属性，那就是</p>
-<figure class="highlight lang-javascript"><table><tr><td class="gutter"><pre>1
-</pre></td><td class="code"><pre>range.commonAncestorContainer <span class="comment">// 选择范围的共同父元素</span>
-</pre></td></tr></table></figure>
-
-<p>上面这个属性常用于检测选择范围的类型 / 样式，比如检测到选中范围的公共父元素是一个 <code>h1</code> 元素，
-那么可以在工具栏中将代表 <code>h1</code> 元素的按钮设为激活状态。</p>
-<p>需要注意的是，返回的 Range 对象是一类可变对象。简单来说，如果用户的选区改变了，
-那么 Range 对象的内容也会改变。因此要记录某一时刻的 Range ，就要记录上面提到了的两对属性。
-此外，Range 对象的属性都是只读的，需要通过对应的函数方法来修改。</p>
-<p>Range 还定义了各种获取内容和修改内容的函数，详细参数和方法可以参见<a href="https://developer.mozilla.org/en-US/docs/Web/API/range" target="_blank">文档</a>，
-这里对几个常见的 Use Case 说明一下。</p>
-<h3>获得选取的坐标范围</h3>
-<p>我们可以获得光标在网页上的精确位置，对于选区还能得到其矩形边框的几何表示，
-这为我们显示提示菜单提供了方便。获得光标的位置或者选区的矩形边框可以使用</p>
-<figure class="highlight lang-javascript"><table><tr><td class="gutter"><pre>1
-</pre></td><td class="code"><pre><span class="keyword">var</span> rect = range.getBoundingClientRect();
-</pre></td></tr></table></figure>
-
-<p><code>rect</code>对象包括的属性包括矩形的<code>top</code>、<code>left</code>、<code>right</code>、<code>bottom</code>坐标。
-如果选取是<code>collapsed</code>的话，这四个属性就可以用来计算光标的位置了。</p>
-<h3>保存选区并恢复</h3>
-<p>如果对选择区域内的元素进行了修改，比如添加新元素、改变元素类型等等，
-那么原来的选区会失效。因此一个比较有用的技巧就是在修改元素之前，先保存选区 Range，
-待修改完成后再恢复。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">range.commonAncestorContainer <span class="comment">// 选择范围的共同父元素</span></span><br></pre></td></tr></table></figure>
+<p>上面这个属性常用于检测选择范围的类型/样式，比如检测到选中范围的公共父元素是一个 <code>h1</code> 元素，<br>那么可以在工具栏中将代表 <code>h1</code> 元素的按钮设为激活状态。</p>
+<p>需要注意的是，返回的 Range 对象是一类可变对象。简单来说，如果用户的选区改变了，<br>那么 Range 对象的内容也会改变。因此要记录某一时刻的 Range ，就要记录上面提到了的两对属性。<br>此外，Range 对象的属性都是只读的，需要通过对应的函数方法来修改。</p>
+<p>Range 还定义了各种获取内容和修改内容的函数，详细参数和方法可以参见<a href="https://developer.mozilla.org/en-US/docs/Web/API/range" target="_blank" rel="external">文档</a>，<br>这里对几个常见的 Use Case 说明一下。</p>
+<h3 id="u83B7_u5F97_u9009_u53D6_u7684_u5750_u6807_u8303_u56F4"><a href="#u83B7_u5F97_u9009_u53D6_u7684_u5750_u6807_u8303_u56F4" class="headerlink" title="获得选取的坐标范围"></a>获得选取的坐标范围</h3><p>我们可以获得光标在网页上的精确位置，对于选区还能得到其矩形边框的几何表示，<br>这为我们显示提示菜单提供了方便。获得光标的位置或者选区的矩形边框可以使用</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> rect = range.getBoundingClientRect();</span><br></pre></td></tr></table></figure>
+<p><code>rect</code>对象包括的属性包括矩形的<code>top</code>、<code>left</code>、<code>right</code>、<code>bottom</code>坐标。<br>如果选取是<code>collapsed</code>的话，这四个属性就可以用来计算光标的位置了。</p>
+<h3 id="u4FDD_u5B58_u9009_u533A_u5E76_u6062_u590D"><a href="#u4FDD_u5B58_u9009_u533A_u5E76_u6062_u590D" class="headerlink" title="保存选区并恢复"></a>保存选区并恢复</h3><p>如果对选择区域内的元素进行了修改，比如添加新元素、改变元素类型等等，<br>那么原来的选区会失效。因此一个比较有用的技巧就是在修改元素之前，先保存选区 Range，<br>待修改完成后再恢复。</p>
 <p>一个完整的例子如下：</p>
-<figure class="highlight lang-javascript"><table><tr><td class="gutter"><pre>1
-2
-3
-4
-5
-6
-7
-8
-9
-10
-11
-12
-13
-14
-15
-16
-17
-18
-19
-20
-</pre></td><td class="code"><pre><span class="keyword">var</span> selection = window.getSelection();
-<span class="keyword">var</span> range = selection.getRangeAt(<span class="number">0</span>);
-
-<span class="comment">// 保存所有 Range 的属性</span>
-<span class="keyword">var</span> startContainer = range.startContainer;
-<span class="keyword">var</span> startOffset = range.startOffset;
-<span class="keyword">var</span> endContainer = range.endContainer;
-<span class="keyword">var</span> endOffset = range.endOffset;
-
-<span class="comment">// 进行元素修改操作</span>
-<span class="comment">// ......</span>
-
-<span class="comment">// 构造新的 Range</span>
-<span class="keyword">var</span> newRange = document.createRange(); <span class="comment">// 注意，此处必须创建一个新的选区，在原来的 range 上修改无效</span>
-newRange.setStart(startContainer, startOffset);
-newRange.setEnd(endContainer, endOffset);
-
-<span class="comment">// 恢复选区</span>
-selection.removeAllRanges();
-selection.addRange(newRange);
-</pre></td></tr></table></figure>
-
-<p>需要注意的是，有些操作可能会自动修改选区，那么使用上面方法就不能达到恢复选区的目的了。
-一个常用的技巧是为恢复选区添加一个延迟，也就是在上面将<code>addRange</code>调用放入<code>setTimeout</code>当中。</p>
-<figure class="highlight lang-javascript"><table><tr><td class="gutter"><pre>1
-2
-3
-</pre></td><td class="code"><pre>setTimeout(<span class="keyword">function</span>(){
-  selection.addRange(newRange);
-}, <span class="number">50</span>);
-</pre></td></tr></table></figure>
-
-<h2>编辑 DOM，修改样式</h2>
-<p>文本编辑器的一个很重要的功能就是修改内容的样式，比如将文字加粗、倾斜、加下划线等。
-还包括将段落修改为标题、块引用等。一个比较直观的方法是按照上述介绍的保存和恢复选区的方法，
-按照需求修改元素添加样式即可。但是这种方法其实细想起来比较复杂，尤其是段落中，
-存在混杂多种样式，以至于存在样式可以嵌套的情况 (比如一段即是加粗又是倾斜的文字)，
-维护节点关系和清理空白节点会很繁琐。</p>
-<p>好在浏览器为我们提供了一个方便的接口来实现这样的功能。那就是<code>document.execCommand</code>，
-这个接口将各种操作抽象成命令的形式。下面展示了实现一些基本功能的方法。</p>
-<figure class="highlight lang-javascript"><table><tr><td class="gutter"><pre>1
-2
-3
-4
-5
-6
-7
-8
-9
-</pre></td><td class="code"><pre>document.execCommand(<span class="string">'bold'</span>); <span class="comment">// 加粗所选</span>
-document.execCommand(<span class="string">'italic'</span>); <span class="comment">// 倾斜所选</span>
-document.execCommand(<span class="string">'underline'</span>); <span class="comment">// 下划线所选</span>
-
-document.execCommand(<span class="string">'createLink'</span>, <span class="literal">true</span>, <span class="string">'http://io-meter.com'</span>); <span class="comment">// 为所选文字加链接</span>
-document.execCommand(<span class="string">'unlink'</span>); <span class="comment">// 取消链接</span>
-
-document.execCommand(<span class="string">'formatBlock'</span>, <span class="literal">true</span>, <span class="string">'h1'</span>); <span class="comment">// 将光标所在段落修改为一级标题</span>
-document.execCommand(<span class="string">'formatBlock'</span>, <span class="literal">true</span>, <span class="string">'p'</span>); <span class="comment">// 将光标所在块修改为段落</span>
-</pre></td></tr></table></figure>
-
-<p>除此之外，浏览器还提供了一些编辑命令，如<code>copy</code>、<code>cut</code>和<code>paste</code>等。
-完整的命令列表可以参见<a href="https://developer.mozilla.org/en-US/docs/Web/API/document.execCommand" target="_blank">这个文档</a></p>
-<p>需要注意的是，各种浏览器对这些命令的支持也有些不同，因此需要格外注意。
-了解了这些命令，就具备实现编辑器中修改样式等功能的基本知识了。</p>
-<h2>侦听修改</h2>
-<p>在此还需要说一点题外话，在以往要侦听用户对文本的修改，一般是绑定<code>keydown</code>事件，
-此外考虑到用户还可能选取并拖拽来改变内容，可能还要添加<code>mouseup</code>事件，
-这种方法是低效且繁琐的，还对元素样式的修改无能为力。</p>
-<p>还好，现代浏览器提供了一种新的机制用来检测内容的修改，那就是 Mutation Observer
-机制。关于这方面，有一篇很好的文章值得阅读：
-<a href="http://addyosmani.com/blog/mutation-observers/" target="_blank">Detect, Undo And Redo DOM Changes With Mutation Observers</a>。</p>
-<h2>总结</h2>
-<p>OK，了解了这些知识，实现一个简单的 Web 文本编辑器是不是也显得不那么难了呢？
-虽然在这些 API 上不同浏览器还有些差异，但是已经被广泛应用在实现在线文本编辑功能了。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> selection = <span class="built_in">window</span>.getSelection();</span><br><span class="line"><span class="keyword">var</span> range = selection.getRangeAt(<span class="number">0</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 保存所有 Range 的属性</span></span><br><span class="line"><span class="keyword">var</span> startContainer = range.startContainer;</span><br><span class="line"><span class="keyword">var</span> startOffset = range.startOffset;</span><br><span class="line"><span class="keyword">var</span> endContainer = range.endContainer;</span><br><span class="line"><span class="keyword">var</span> endOffset = range.endOffset;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 进行元素修改操作</span></span><br><span class="line"><span class="comment">// ......</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// 构造新的 Range</span></span><br><span class="line"><span class="keyword">var</span> newRange = <span class="built_in">document</span>.createRange(); <span class="comment">// 注意，此处必须创建一个新的选区，在原来的 range 上修改无效</span></span><br><span class="line">newRange.setStart(startContainer, startOffset);</span><br><span class="line">newRange.setEnd(endContainer, endOffset);</span><br><span class="line"></span><br><span class="line"><span class="comment">// 恢复选区</span></span><br><span class="line">selection.removeAllRanges();</span><br><span class="line">selection.addRange(newRange);</span><br></pre></td></tr></table></figure>
+<p>需要注意的是，有些操作可能会自动修改选区，那么使用上面方法就不能达到恢复选区的目的了。<br>一个常用的技巧是为恢复选区添加一个延迟，也就是在上面将<code>addRange</code>调用放入<code>setTimeout</code>当中。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">setTimeout(<span class="function"><span class="keyword">function</span>(<span class="params"></span>)</span>&#123;</span><br><span class="line">  selection.addRange(newRange);</span><br><span class="line">&#125;, <span class="number">50</span>);</span><br></pre></td></tr></table></figure>
+<h2 id="u7F16_u8F91_DOM_uFF0C_u4FEE_u6539_u6837_u5F0F"><a href="#u7F16_u8F91_DOM_uFF0C_u4FEE_u6539_u6837_u5F0F" class="headerlink" title="编辑 DOM，修改样式"></a>编辑 DOM，修改样式</h2><p>文本编辑器的一个很重要的功能就是修改内容的样式，比如将文字加粗、倾斜、加下划线等。<br>还包括将段落修改为标题、块引用等。一个比较直观的方法是按照上述介绍的保存和恢复选区的方法，<br>按照需求修改元素添加样式即可。但是这种方法其实细想起来比较复杂，尤其是段落中，<br>存在混杂多种样式，以至于存在样式可以嵌套的情况(比如一段即是加粗又是倾斜的文字)，<br>维护节点关系和清理空白节点会很繁琐。</p>
+<p>好在浏览器为我们提供了一个方便的接口来实现这样的功能。那就是<code>document.execCommand</code>，<br>这个接口将各种操作抽象成命令的形式。下面展示了实现一些基本功能的方法。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">document</span>.execCommand(<span class="string">'bold'</span>); <span class="comment">// 加粗所选</span></span><br><span class="line"><span class="built_in">document</span>.execCommand(<span class="string">'italic'</span>); <span class="comment">// 倾斜所选</span></span><br><span class="line"><span class="built_in">document</span>.execCommand(<span class="string">'underline'</span>); <span class="comment">// 下划线所选</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">document</span>.execCommand(<span class="string">'createLink'</span>, <span class="literal">true</span>, <span class="string">'http://io-meter.com'</span>); <span class="comment">// 为所选文字加链接</span></span><br><span class="line"><span class="built_in">document</span>.execCommand(<span class="string">'unlink'</span>); <span class="comment">// 取消链接</span></span><br><span class="line"></span><br><span class="line"><span class="built_in">document</span>.execCommand(<span class="string">'formatBlock'</span>, <span class="literal">true</span>, <span class="string">'h1'</span>); <span class="comment">// 将光标所在段落修改为一级标题</span></span><br><span class="line"><span class="built_in">document</span>.execCommand(<span class="string">'formatBlock'</span>, <span class="literal">true</span>, <span class="string">'p'</span>); <span class="comment">// 将光标所在块修改为段落</span></span><br></pre></td></tr></table></figure>
+<p>除此之外，浏览器还提供了一些编辑命令，如<code>copy</code>、<code>cut</code>和<code>paste</code>等。<br>完整的命令列表可以参见<a href="https://developer.mozilla.org/en-US/docs/Web/API/document.execCommand" target="_blank" rel="external">这个文档</a></p>
+<p>需要注意的是，各种浏览器对这些命令的支持也有些不同，因此需要格外注意。<br>了解了这些命令，就具备实现编辑器中修改样式等功能的基本知识了。</p>
+<h2 id="u4FA6_u542C_u4FEE_u6539"><a href="#u4FA6_u542C_u4FEE_u6539" class="headerlink" title="侦听修改"></a>侦听修改</h2><p>在此还需要说一点题外话，在以往要侦听用户对文本的修改，一般是绑定<code>keydown</code>事件，<br>此外考虑到用户还可能选取并拖拽来改变内容，可能还要添加<code>mouseup</code>事件，<br>这种方法是低效且繁琐的，还对元素样式的修改无能为力。</p>
+<p>还好，现代浏览器提供了一种新的机制用来检测内容的修改，那就是 Mutation Observer<br>机制。关于这方面，有一篇很好的文章值得阅读：<br><a href="http://addyosmani.com/blog/mutation-observers/" target="_blank" rel="external">Detect, Undo And Redo DOM Changes With Mutation Observers</a>。</p>
+<h2 id="u603B_u7ED3"><a href="#u603B_u7ED3" class="headerlink" title="总结"></a>总结</h2><p>OK，了解了这些知识，实现一个简单的 Web 文本编辑器是不是也显得不那么难了呢？<br>虽然在这些 API 上不同浏览器还有些差异，但是已经被广泛应用在实现在线文本编辑功能了。</p>
 <p>其实如果只专注于现代浏览器，那么实现如同 Medium 那样漂亮又实用的编辑和写作工具也不是非常困难的事！</p>
 
+      
     </div>
-    <footer>
-        
-  
-  <div class="categories">
-    <a href="/categories/web/">web</a>
-  </div>
-
-        
-  
-  <div class="tags">
-    <a href="/tags/contenteditable/">contenteditable</a>, <a href="/tags/selection/">selection</a>, <a href="/tags/html5/">html5</a>, <a href="/tags/editor/">editor</a>, <a href="/tags/online editor/">online editor</a>, <a href="/tags/completion/">completion</a>
-  </div>
-
-        
-<div class="recent-posts">
-  <h3 class="title">Recent Posts</h3>
-  <ul>
-    
-      <li>
-        <a href="/2015/05/04/recently-works/">最近的一点生活总结</a>
-      </li>
-    
-      <li>
-        <a href="/2014/12/31/sketch-rendering/">使用 WebGL 实现素描效果的渲染</a>
-      </li>
-    
-      <li>
-        <a href="/2014/10/24/develop-for-yosemite-some-tips/">Develop for Yosemite: 几个小技巧</a>
-      </li>
-    
-      <li>
-        <a href="/2014/10/03/when-webgl-meets-device-motion/">When WebGL Meets Device Motion</a>
-      </li>
-    
-      <li>
-        <a href="/2014/09/01/contenteditable-and-selection/">在线文本编辑器的基本实现原理</a>
-      </li>
-    
-  </ul>
-</div>
-
-
-        
-<div class="follow-me">
-  <h3 class="title">Follow Me</h3>
-  <div class="links">
-    
-    <a href="https://twitter.com/ant_sz">
-        <i class="twitter"></i>
-    </a>
-    
-    
-    <a href="https://github.com/shanzi">
-        <i class="github"></i>
-    </a>
-    
-    
-    <a href="https://plus.google.com/+ChaseZhang">
-        <i class="gplus"></i>
-    </a>
-    
-    
-    <a href="https://www.facebook.com/yunerrun">
-        <i class="facebook"></i>
-    </a>
-    
-    </div>
-</div>
-
+    <footer class="article-footer">
+      <a data-url="http://yoursite.com/2014/09/01/contenteditable-and-selection/" data-id="cijh6yv9e0000qxr26xq5iaey" class="article-share-link">Share</a>
+      
+      
+  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/completion/">completion</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/contenteditable/">contenteditable</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/editor/">editor</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/html5/">html5</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/online-editor/">online editor</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/selection/">selection</a></li></ul>
 
     </footer>
   </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2014/10/03/when-webgl-meets-device-motion/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Newer</strong>
+      <div class="article-nav-title">
+        
+          When WebGL Meets Device Motion
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2014/07/30/go's-package-management/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">Older</strong>
+      <div class="article-nav-title">Go 语言的包依赖管理</div>
+    </a>
+  
+</nav>
+
+  
 </article>
 
-
-<section id="comment">
-  <h1 class="title">Comments</h1>
-
-  
-  <div id="disqus_thread">
-    <noscript>Please enable JavaScript to view the <a href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
-  </div>
-  
 </section>
-
-</div>
-    <div class="clearfix"></div>
-    <aside id="sidebar">
-  <div class="widget search">
-  <form action="//google.com/search" method="get" accept-charset="utf-8">
-    <input type="search" name="q" results="0" placeholder="Search">
-    <input type="hidden" name="q" value="site:io-meter.com">
-  </form>
-</div>
-
-
+        
+          <aside id="sidebar">
   
-<div class="widget tag">
-  <h3 class="title">Categories</h3>
-  <ul class="entry">
-  
-    <li><a href="/categories/Mastering Paper/">Mastering Paper</a><small>1</small></li>
-  
-    <li><a href="/categories/Math/">Math</a><small>1</small></li>
-  
-    <li><a href="/categories/essay/">essay</a><small>6</small></li>
-  
-    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
-  
-    <li><a href="/categories/osx/">osx</a><small>1</small></li>
-  
-    <li><a href="/categories/review/">review</a><small>1</small></li>
-  
-    <li><a href="/categories/web/">web</a><small>6</small></li>
-  
-  </ul>
-</div>
-
-
-  
-<div class="widget tagcloud">
-  <h3 class="title">Tags</h3>
-  <div class="entry">
-    <a href="/tags/Algorithm/" style="font-size: 10.00px;">Algorithm</a><a href="/tags/Apple/" style="font-size: 10.00px;">Apple</a><a href="/tags/Bezier Path/" style="font-size: 10.00px;">Bezier Path</a><a href="/tags/Cocoa/" style="font-size: 10.00px;">Cocoa</a><a href="/tags/Functional Programing/" style="font-size: 10.00px;">Functional Programing</a><a href="/tags/GLSL/" style="font-size: 10.00px;">GLSL</a><a href="/tags/GSoC/" style="font-size: 10.00px;">GSoC</a><a href="/tags/Git/" style="font-size: 10.00px;">Git</a><a href="/tags/Go/" style="font-size: 13.33px;">Go</a><a href="/tags/Interface Builder/" style="font-size: 10.00px;">Interface Builder</a><a href="/tags/NSControl/" style="font-size: 13.33px;">NSControl</a><a href="/tags/OSX/" style="font-size: 16.67px;">OSX</a><a href="/tags/Objective-C/" style="font-size: 13.33px;">Objective-C</a><a href="/tags/SVG/" style="font-size: 10.00px;">SVG</a><a href="/tags/Swift/" style="font-size: 10.00px;">Swift</a><a href="/tags/Three.js/" style="font-size: 10.00px;">Three.js</a><a href="/tags/Xcode/" style="font-size: 10.00px;">Xcode</a><a href="/tags/accelerate meter/" style="font-size: 10.00px;">accelerate meter</a><a href="/tags/bezier path/" style="font-size: 13.33px;">bezier path</a><a href="/tags/blender/" style="font-size: 13.33px;">blender</a><a href="/tags/cocoa/" style="font-size: 13.33px;">cocoa</a><a href="/tags/completion/" style="font-size: 10.00px;">completion</a><a href="/tags/contenteditable/" style="font-size: 10.00px;">contenteditable</a><a href="/tags/design/" style="font-size: 10.00px;">design</a><a href="/tags/desktop/" style="font-size: 10.00px;">desktop</a><a href="/tags/develop/" style="font-size: 10.00px;">develop</a><a href="/tags/device motion/" style="font-size: 10.00px;">device motion</a><a href="/tags/distribute storage/" style="font-size: 10.00px;">distribute storage</a><a href="/tags/drawing/" style="font-size: 20.00px;">drawing</a><a href="/tags/editor/" style="font-size: 10.00px;">editor</a><a href="/tags/export/" style="font-size: 10.00px;">export</a><a href="/tags/font/" style="font-size: 13.33px;">font</a><a href="/tags/fontawesome/" style="font-size: 10.00px;">fontawesome</a><a href="/tags/go/" style="font-size: 10.00px;">go</a><a href="/tags/golang/" style="font-size: 10.00px;">golang</a><a href="/tags/html/" style="font-size: 10.00px;">html</a><a href="/tags/html5/" style="font-size: 10.00px;">html5</a><a href="/tags/iOS/" style="font-size: 10.00px;">iOS</a><a href="/tags/iOS 8/" style="font-size: 10.00px;">iOS 8</a><a href="/tags/iPad/" style="font-size: 16.67px;">iPad</a>
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Categories</h3>
+    <div class="widget">
+      <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/Mastering-Paper/">Mastering Paper</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/Math/">Math</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/essay/">essay</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/iconfontr/">iconfontr</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/osx/">osx</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/review/">review</a></li><li class="category-list-item"><a class="category-list-link" href="/categories/web/">web</a></li></ul>
+    </div>
   </div>
-</div>
 
 
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tags</h3>
+    <div class="widget">
+      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/Algorithm/">Algorithm</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Apple/">Apple</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Bezier-Path/">Bezier Path</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Cocoa/">Cocoa</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Functional-Programing/">Functional Programing</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GLSL/">GLSL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GSoC/">GSoC</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Git/">Git</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Go/">Go</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Interface-Builder/">Interface Builder</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/NSControl/">NSControl</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/OSX/">OSX</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Objective-C/">Objective-C</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/SVG/">SVG</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Swift/">Swift</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Three-js/">Three.js</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Xcode/">Xcode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/accelerate-meter/">accelerate meter</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/bezier-path/">bezier path</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/blender/">blender</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/cocoa/">cocoa</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/completion/">completion</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/contenteditable/">contenteditable</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/design/">design</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/desktop/">desktop</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/develop/">develop</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/device-motion/">device motion</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/distribute-storage/">distribute storage</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/drawing/">drawing</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/editor/">editor</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/export/">export</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/font/">font</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/fontawesome/">fontawesome</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/go/">go</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/golang/">golang</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/html/">html</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/html5/">html5</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/iOS/">iOS</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/iOS-8/">iOS 8</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/iPad/">iPad</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/icon/">icon</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/icon-font/">icon font</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/icon-fontr/">icon fontr</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/iconfontr/">iconfontr</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/image/">image</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/indexing/">indexing</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/io-meter/">io-meter</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/ionicons/">ionicons</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/life/">life</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/linux/">linux</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mac/">mac</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/math/">math</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/mobile/">mobile</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/online-editor/">online editor</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/opensource/">opensource</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/osx/">osx</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/package/">package</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/paper/">paper</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/pencil/">pencil</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/programing/">programing</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/rendering/">rendering</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/review/">review</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/rpc/">rpc</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/selection/">selection</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/server/">server</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/shader/">shader</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/sketch/">sketch</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/stylus/">stylus</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/summary/">summary</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/svg/">svg</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/swift/">swift</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/tips/">tips</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/web/">web</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/webGL/">webGL</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/webgl/">webgl</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/xcode/">xcode</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/zocial/">zocial</a></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/吐槽/">吐槽</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Tag Cloud</h3>
+    <div class="widget tagcloud">
+      <a href="/tags/Algorithm/" style="font-size: 10px;">Algorithm</a> <a href="/tags/Apple/" style="font-size: 10px;">Apple</a> <a href="/tags/Bezier-Path/" style="font-size: 10px;">Bezier Path</a> <a href="/tags/Cocoa/" style="font-size: 10px;">Cocoa</a> <a href="/tags/Functional-Programing/" style="font-size: 10px;">Functional Programing</a> <a href="/tags/GLSL/" style="font-size: 10px;">GLSL</a> <a href="/tags/GSoC/" style="font-size: 10px;">GSoC</a> <a href="/tags/Git/" style="font-size: 10px;">Git</a> <a href="/tags/Go/" style="font-size: 13.33px;">Go</a> <a href="/tags/Interface-Builder/" style="font-size: 10px;">Interface Builder</a> <a href="/tags/NSControl/" style="font-size: 13.33px;">NSControl</a> <a href="/tags/OSX/" style="font-size: 16.67px;">OSX</a> <a href="/tags/Objective-C/" style="font-size: 13.33px;">Objective-C</a> <a href="/tags/SVG/" style="font-size: 10px;">SVG</a> <a href="/tags/Swift/" style="font-size: 10px;">Swift</a> <a href="/tags/Three-js/" style="font-size: 10px;">Three.js</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/accelerate-meter/" style="font-size: 10px;">accelerate meter</a> <a href="/tags/bezier-path/" style="font-size: 13.33px;">bezier path</a> <a href="/tags/blender/" style="font-size: 13.33px;">blender</a> <a href="/tags/cocoa/" style="font-size: 13.33px;">cocoa</a> <a href="/tags/completion/" style="font-size: 10px;">completion</a> <a href="/tags/contenteditable/" style="font-size: 10px;">contenteditable</a> <a href="/tags/design/" style="font-size: 10px;">design</a> <a href="/tags/desktop/" style="font-size: 10px;">desktop</a> <a href="/tags/develop/" style="font-size: 10px;">develop</a> <a href="/tags/device-motion/" style="font-size: 10px;">device motion</a> <a href="/tags/distribute-storage/" style="font-size: 10px;">distribute storage</a> <a href="/tags/drawing/" style="font-size: 20px;">drawing</a> <a href="/tags/editor/" style="font-size: 10px;">editor</a> <a href="/tags/export/" style="font-size: 10px;">export</a> <a href="/tags/font/" style="font-size: 13.33px;">font</a> <a href="/tags/fontawesome/" style="font-size: 10px;">fontawesome</a> <a href="/tags/go/" style="font-size: 10px;">go</a> <a href="/tags/golang/" style="font-size: 10px;">golang</a> <a href="/tags/html/" style="font-size: 10px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/iOS/" style="font-size: 10px;">iOS</a> <a href="/tags/iOS-8/" style="font-size: 10px;">iOS 8</a> <a href="/tags/iPad/" style="font-size: 16.67px;">iPad</a> <a href="/tags/icon/" style="font-size: 10px;">icon</a> <a href="/tags/icon-font/" style="font-size: 13.33px;">icon font</a> <a href="/tags/icon-fontr/" style="font-size: 10px;">icon fontr</a> <a href="/tags/iconfontr/" style="font-size: 16.67px;">iconfontr</a> <a href="/tags/image/" style="font-size: 10px;">image</a> <a href="/tags/indexing/" style="font-size: 10px;">indexing</a> <a href="/tags/io-meter/" style="font-size: 10px;">io-meter</a> <a href="/tags/ionicons/" style="font-size: 10px;">ionicons</a> <a href="/tags/life/" style="font-size: 10px;">life</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/mac/" style="font-size: 10px;">mac</a> <a href="/tags/math/" style="font-size: 10px;">math</a> <a href="/tags/mobile/" style="font-size: 10px;">mobile</a> <a href="/tags/online-editor/" style="font-size: 10px;">online editor</a> <a href="/tags/opensource/" style="font-size: 10px;">opensource</a> <a href="/tags/osx/" style="font-size: 13.33px;">osx</a> <a href="/tags/package/" style="font-size: 10px;">package</a> <a href="/tags/paper/" style="font-size: 13.33px;">paper</a> <a href="/tags/pencil/" style="font-size: 10px;">pencil</a> <a href="/tags/programing/" style="font-size: 10px;">programing</a> <a href="/tags/rendering/" style="font-size: 10px;">rendering</a> <a href="/tags/review/" style="font-size: 10px;">review</a> <a href="/tags/rpc/" style="font-size: 10px;">rpc</a> <a href="/tags/selection/" style="font-size: 10px;">selection</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/shader/" style="font-size: 10px;">shader</a> <a href="/tags/sketch/" style="font-size: 10px;">sketch</a> <a href="/tags/stylus/" style="font-size: 10px;">stylus</a> <a href="/tags/summary/" style="font-size: 10px;">summary</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/swift/" style="font-size: 10px;">swift</a> <a href="/tags/tips/" style="font-size: 10px;">tips</a> <a href="/tags/web/" style="font-size: 20px;">web</a> <a href="/tags/webGL/" style="font-size: 13.33px;">webGL</a> <a href="/tags/webgl/" style="font-size: 10px;">webgl</a> <a href="/tags/xcode/" style="font-size: 10px;">xcode</a> <a href="/tags/zocial/" style="font-size: 10px;">zocial</a> <a href="/tags/吐槽/" style="font-size: 10px;">吐槽</a>
+    </div>
+  </div>
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Archives</h3>
+    <div class="widget">
+      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2015/05/">May 2015</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/12/">December 2014</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/10/">October 2014</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/09/">September 2014</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/07/">July 2014</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/06/">June 2014</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/05/">May 2014</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/04/">April 2014</a></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2014/02/">February 2014</a></li></ul>
+    </div>
+  </div>
+
+
+  
+    
+  <div class="widget-wrap">
+    <h3 class="widget-title">Recents</h3>
+    <div class="widget">
+      <ul>
+        
+          <li>
+            <a href="/2015/05/04/recently-works/">最近的一点生活总结</a>
+          </li>
+        
+          <li>
+            <a href="/2014/12/31/sketch-rendering/">使用 WebGL 实现素描效果的渲染</a>
+          </li>
+        
+          <li>
+            <a href="/2014/10/24/develop-for-yosemite-some-tips/">Develop for Yosemite: 几个小技巧</a>
+          </li>
+        
+          <li>
+            <a href="/2014/10/03/when-webgl-meets-device-motion/">When WebGL Meets Device Motion</a>
+          </li>
+        
+          <li>
+            <a href="/2014/09/01/contenteditable-and-selection/">在线文本编辑器的基本实现原理</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+
+  
 </aside>
-    <div class="clearfix"></div>
-    <footer id="footer"><div>
+        
+      </div>
+      <footer id="footer">
   
-  &copy; 2015 Chase Zhang
-  
-</div>
+  <div class="outer">
+    <div id="footer-info" class="inner">
+      &copy; 2016 John Doe<br>
+      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+    </div>
+  </div>
 </footer>
-</div>
+    </div>
+    <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+</nav>
+    
+
 <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
-<script src="/js/jquery.imagesloaded.min.js"></script>
-<script src="/js/gallery.js"></script>
 
 
-<script type="text/javascript">
-var disqus_shortname = 'iometer';
-
-(function(){
-  var dsq = document.createElement('script');
-  dsq.type = 'text/javascript';
-  dsq.async = true;
-  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
-  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-}());
-</script>
+  <link rel="stylesheet" href="/fancybox/jquery.fancybox.css" type="text/css">
+  <script src="/fancybox/jquery.fancybox.pack.js" type="text/javascript"></script>
 
 
+<script src="/js/script.js" type="text/javascript"></script>
 
-<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
-<script src="/fancybox/jquery.fancybox.pack.js"></script>
-<script type="text/javascript">
-(function($){
-  $('.fancybox').fancybox();
-})(jQuery);
-</script>
-
-
-
-
+  </div>
 </body>
-
 </html>

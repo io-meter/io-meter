@@ -1,4 +1,4 @@
-title: Web 设计新趋势: 使用 SVG 代替 Web Icon Font
+title: 'Web 设计新趋势: 使用 SVG 代替 Web Icon Font'
 date: 2014-07-20 16:20:01
 category: web
 tags: [svg, font, web, html, design, drawing]

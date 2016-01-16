@@ -1,4 +1,4 @@
-title: 写个 Icon Font Viewer : 初
+title: '写个 Icon Font Viewer : 初'
 date: 2014-04-12 21:03:28
 tags: [OSX, Objective-C, icon font, icon, font, iconfontr, fontawesome, zocial, ionicons, bezier path]
 category: [iconfontr]
