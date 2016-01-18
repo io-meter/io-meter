@@ -79,3 +79,7 @@ feed:
   path: atom.xml
   limit: 20
   hub:
+
+# Marked
+marked:
+  breaks: false
