@@ -83,3 +83,7 @@ feed:
 # Marked
 marked:
   breaks: false
+
+
+# Disqus
+disqus_shortname: iometer
