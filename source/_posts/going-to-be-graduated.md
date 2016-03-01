@@ -1,7 +1,8 @@
 ---
 title: '就要毕业了!'
 date: 2016-01-18 16:44:58
-tags: [life, essay, summary]
+tags: [life, summary]
+category: essay
 ---
 
 距离上次发表 blog 已经大约七个月过去了，这七个月对于我来说既是非常充实的一段时间，又是一段复杂而失落的日子。
