@@ -70,7 +70,8 @@ theme: io-meter
 ## Docs: https://hexo.io/docs/deployment.html
 deploy:
   type: git
-  repo: git@gitcafe.com:shanzi/shanzi.git
+  branch: coding-pages
+  repo: https://git.coding.net/chasezhang/blog.git
 
 # Feed
 ## Plugin: https://github.com/hexojs/hexo-generator-feed
