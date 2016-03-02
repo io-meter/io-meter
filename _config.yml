@@ -69,9 +69,8 @@ theme: io-meter
 # Deployment
 ## Docs: https://hexo.io/docs/deployment.html
 deploy:
-  type: git
-  branch: coding-pages
-  repo: https://git.coding.net/chasezhang/blog.git
+  type: heroku
+  repo: 'dokku@apps.io-meter.com:blog'
 
 # Feed
 ## Plugin: https://github.com/hexojs/hexo-generator-feed
