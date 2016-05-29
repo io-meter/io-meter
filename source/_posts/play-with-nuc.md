@@ -5,8 +5,8 @@ tags: [NUC, Linux, Docker, Dokku, Splunk, Ubuntu, Intel, IoT, Transmission]
 ---
 
 话说最近入手了一台 Intel NUC 用来做下载机，买回来之后为了更加充分的利用这台小主机的性能，那么呢，我就做了三件小事：
-第一件事就是给 NUC 装上了 Ubuntu 14.04 系统，并配置了 Docker 和 Dokku 的环境；第二件事呢，就是在 Dokku
-里部署了 Transmission 下载服务；第三件事，就是给 NUC 安装了 Splunk 做 Monitor。如果说还有什么其他事情的话，
+第一件事就是给 NUC 装上了 Ubuntu 14.04 系统，并配置了 Docker 和 Dokku 的环境；第二件事呢，部署了 Transmission 下载服务和NFS；
+第三件事，就是给 NUC 安装了 Splunk 做 Monitor。如果说还有什么其他事情的话，
 那就是写了这篇博客，供大家娱乐娱乐，这也是很大的，但是关键还是前面那三件小事儿。很惭愧，只做了一点微小的工作。
 
 <!-- more -->
@@ -35,19 +35,19 @@ tags: [NUC, Linux, Docker, Dokku, Splunk, Ubuntu, Intel, IoT, Transmission]
 自带千兆以太网卡、蓝牙和 WIFI，除此之外还有红外接口等。
 
 在综合以上这些考虑之后，我就念了两句诗，最终购买了配备 i3 CPU 的 NUC6i3SYH 版本。淘宝套餐当中还包括 8G 内存、
-128G SSD 和遥控器。这样以后如果有屏幕或电视的话，NUC 也可以用来 HTPC。
+128G SSD 和遥控器。这样以后如果有屏幕或电视的话，NUC 也可以用来做家用的媒体中心。
 
 # 安装 Ubuntu 14.04 和 Dokku
 
-Ubuntu 14.04 其实并不是 NUC 的首选。事实上，Intel 官方的 Linux 显卡驱动只兼容到 15.10 ，
+Ubuntu 14.04 并不是 NUC 的首选。事实上，Intel 官方的 Linux 显卡驱动只兼容到 15.10 ，
 这导致在 14.04 下的显示性能会比较差。当时我最终还是选用它的原因在于而我希望部署的 Dokku
 目前仍然被 Lock 在作为 LTS 版本的 14.04 上。
 
 为什么一定要考虑 [Dokku](https://github.com/dokku/dokku) 呢？Dokku 是一个极精简的 PaaS 平台，它可以在你的 VPS 和主机上模拟 Heroku
 那样的使用体验——只需要将你写好的代码仓库 push 到主机上，Dokku 就会替你完成一系列部署工作，
-将你的 Web 服务运行在一个 Docker container 当中，并配置好 Nginx 配置，使得你可以方便地自定义域名。
+将你的 Web 服务运行在一个 Docker container 当中并配置好 Nginx，这使得你可以方便地自定义域名。
 再加上 Dokku 提供一系列方便的插件用来管理各种 Service ，比如各种关系型数据库、NoSQL、memcached 等等，
-这些服务都是跑在各自的 Docker 容器内，具有很好的隔离性。Dokku 甚至有一个插件帮你加入和配置 Let's Encrypt 证书。
+这些服务都是跑在各自的 Docker 容器内，具有很好的隔离性。Dokku 甚至有一个插件帮你加入和配置 [Let's Encrypt](https://letsencrypt.org/) 证书。
 这一系列方便的特性使得想要充分利用 NUC 性能部署更多服务的我来说是具有极大吸引力的。
 
 NUC 到货的时候系统是预装的 Windows，想要在没有屏幕的情况下换装成 Ubuntu 还是花费了我一些心思。
@@ -81,7 +81,7 @@ dpkg -i gliderlabs-sigil_0.4.0_amd64.deb sshcommand_0.4.0_amd64.deb sigil_0.4.0_
 注意，在这里最好将 `herokuish` 这个包最后一个安装，这个包实际上是 Dokku 整个功能的核心，它会给 Docker import
 一个叫做 [Herokuish](https://github.com/gliderlabs/herokuish) 的镜像，这个镜像则是另一个类似 PaaS 工具 [Deis](https://deis.io/) 提供的。
 由于众所周知的原因，从 DockerHub 当中导入镜像的速度十分缓慢，因此在这一步很容易出错。建议一定要使用 Tmux 或 Screen
-这样的工具保证进程可以在后台执行。在 `heorkuish` 安装的最后一步会在对应的 Docker Image 之中执行 herokuish install
+这样的工具保证进程可以在后台执行。在 `heorkuish` 安装的最后一步会在对应的 Docker Image 之中执行 `herokuish install`
 命令，这一过程很遗憾也是会因为网络原因失败的。如果你使用的是代理方式翻墙，此时在 Docker 
 当中运行的命令可能无法获得你的代理配置，因此在这一步最好在 VPN 环境下进行操作，或者直接使用下面的命令进入 Docker
 容器手动执行。
@@ -117,7 +117,7 @@ Dokku 的实现原理是什么呢？其实 Dokku 本身只是一系列脚本和�
 都可以无缝拿来使用。唯一的区别是 Dokku 使用 Docker 作为容器而 Heroku 则实用的是自己开发的容器系统。
 
 
-`sshcommand` 也是一个重要的命令，当你使用 `git push` 将代码 Push 到 Dokku 这里时，Dokku 需要使用你的 Public key
+`sshcommand` 也是一个重要的命令，当你使用 `git push` 将代码 Push 到 Dokku 这里时，Dokku 需要使用你的 Public Key
 来验证你的身份。在这一步当中，使用平常使用 Public Key 登录的方法将 `id_rsa.pub` 的内容加到 `.ssh/authorized_keys`
 里是不管用的——`git`使用不同的方法来验证。因此需要使用 sshcommand 来添加公钥。例如:
 
@@ -135,13 +135,14 @@ cat .ssh/id_rsa.pub|sudo sshcommand acl-add dokku chase@chase-nuc
 # Transmission & NFS
 
 配置完 Dokku，要做的第一件事当然就是将 Transmission 部署进去了。[Transmission](https://www.transmissionbt.com)
-是一款知名的 BT 客户端，他的主要特点就是提供了 Web 访问接口，从而很适合用来安装在下载机上作为远程控制的界面。
+是一款知名的 BT 客户端，他的主要特点就是提供了 Web 访问接口，从而很适合用来安装在下载机上进行远程控制。
 把 Transmission 部署在 Docker 里其实不算是罕见的需求了，Github 上已经有一批现成的 Dockerfile。
 参考其中两个，我修改出来一个适合部署在 Dokku 中的版本。因为 Dokku 实际上是允许使用 Dockerfile 进行 Build，
 所以要注意的问题主要只有一下几点：
 
 1. Transmission 默认需要开放 `51413` 端口的 TCP 和 UDP 访问作为 Peer 连入的端口，但是如果直接在 Dockerfile
-里 EXPOSE 出来，Dokku 会自动使用 Nginx 为这些端口设置代理，而 Nginx 是不支持 UDP 代理的
+里 EXPOSE 出来，Dokku 会自动使用 Nginx 为这些端口设置代理，而 Nginx 是不支持 UDP 代理的，
+所以我们并不在 Dockerfile 中指定 Expose 端口
 2. Dokku 会自动为 Build 出来的 Docker Image 添加一个 `PORT` 环境变量，默认会使用 Nginx 将对应域名的 `80`
 端口 Proxy 到 Docker 容器的这个端口，因此我们希望将 Transmission 的 Web Interface 暴露到这里
 3. 很自然地，我们需要为 Transmission 所在的 Docker 容器挂载一些外部文件系统。
@@ -182,7 +183,7 @@ dokku checks:disable [your_app_name]
 最后，只需将仓库 Push 到 Dokku 这里，Transmission 进程就可以跑起来了。
 
 尽管使用上麻烦一点，但是好在我们并不需要频繁地更新我们的 App。Dokku
-会帮我们做好进程的守护工作——在应用挂掉活着系统启动时都会自动帮我们启动进程。
+会帮我们做好进程的守护工作——在应用挂掉或者系统启动时都会自动帮我们启动进程。
 
 下图就是 Transmission Web Interface 部署成功后的样子了，终于可以开心的下载 BT 资源了！
 
@@ -194,7 +195,7 @@ dokku checks:disable [your_app_name]
 安装 NFS 的方法，来自 Digital Ocean 的[这篇文章](https://www.digitalocean.com/community/tutorials/how-to-set-up-an-nfs-mount-on-ubuntu-14-04)
 讲的很好了。简单来说我们只需要通过 `sudo apt-get install nfs-kernel-server` 命令来安装 NFS Server，
 之后再在 `/etc/exports` 文件中配置目录设定即可。需要注意的是，如果想要 Mac 可以挂载 NUC 暴露出来的 NFS，
-必须要添加 `insecure` 选项，否则链接时会失败。我的配置文件内容如下:
+必须要添加 `insecure` 选项，否则会连接失败(尽管可以通过在终端中输入命令成功挂载)。我的配置文件内容如下:
 
 ```
 /var/nfs 192.168.0.0/24(rw,sync,no_subtree_check,insecure)
@@ -204,22 +205,26 @@ dokku checks:disable [your_app_name]
 
 ![NFS](/img/posts/nfs.png)
 
+顺便说一下，NFS 除了这种使用，还可以代替传统的 Volume 挂载方法，作为向 Docker 容器提供储存的一种解决方案。
+此外，大规模分布式使用中，还有 [Flocker](https://github.com/ClusterHQ/flocker) 这种工具。
+不过杀鸡焉用牛刀，在 NUC 上我就选择了简单直接的解决方案。
+
 # Splunk for Monitor
 
 利益相关，这里就稍微介绍一下 [Splunk](http://splunk.com) 吧。一般原始的方式处理 Log 当中的数据，我们都是直接写出简单的脚本来扫描 Log
 文件进行处理。这种方法对于偶尔的需求还是可以处理的，但是一来需要做很多重复操作，二来不适合数据量大以及分布式的应用。
-传统的脚本处理方法也并不怎么用户友好。那么一种面向技术和非技术类用户的产品就应运而生。
+传统的脚本处理方法也并不怎么用户友好。那么一种同时面向技术和非技术类用户的产品就应运而生。
 这样的工具完成了以下几个工作:
 
 1. Log 的收集: 从单机或分布式节点当中收集 Log 数据，发送到处理节点
 2. Log 的索引: 对收集到的 Log 数据建立索引，方便日后查询
-3. Log 的分析: 允许使用一定的接口从索引当中检索结果和数据，并拿来可视化
+3. Log 的分析: 允许使用一定的接口从索引当中检索结果和数据并拿来可视化
 
 Splunk 是目前较为成熟的企业 Log 数据处理工具。与之相似的比较成熟的解决方案就是 [ELK](https://www.elastic.co/products) 了。
-ELK 分别代表 Elasticsearch、Logstash 和 Kibana，这三个组件分别完成了索引、Log 收集和可视化三部分的工作。
-目前是炙手可热的相关开源技术栈，一般的互联网企业经常会选择这种解决放干，可以说对 Splunk 的产品造成了很大的威胁。
+ELK 分别代表 Elasticsearch、Logstash 和 Kibana，这三个组件分别完成了索引、Log 收集和可视化三部分的工作，
+是目前炙手可热的开源解决方案。互联网企业很多都选择了这种开源的技术，可以说对 Splunk 的产品造成了很大的威胁。
 
-Splunk 的免费版本一天只能处理 500M 的数据量，对于 NUC 上的使用已经足够了。Splunk 作为企业应用，
+回到 Splunk，尽管它的免费版本一天只能处理 500M 的数据量，但对于 NUC 上的使用已经足够了。Splunk 作为企业应用，
 总体来说使用体验和部署的友好程度还是不错的。从[这里](https://www.splunk.com/en_us/download/splunk-enterprise.html)
 下载 Splunk 对应 Linux 的安装包，安装或解压到 `/opt/splunk` 即可。安装结束之后我们需要第一次运行一下
 `/opt/splunk/bin/splunk` 程序， 这一步 Splunk 会要求我们接受 License 等，我们用下面一条命令全部跳过:
@@ -240,8 +245,8 @@ Splunk 还支持 Realtime 的数据展示，这正是我们所需要的。
 
 我的计划是将 Splunk 作为系统的 Monitor。让他可以显示当前 CPU、内存和硬盘等的使用情况。原理很简单，
 既然 Splunk 是一个 Log 处理工具，那我们以一定的时间间隔将 CPU 占用、内存占用等情况以 Log 的形式打印出来，
-这样 Splunk 不久可以处理了么？事实上 Splunk 官方就提供一个 [Splunk App for \*NIX](https://splunkbase.splunk.com/app/273/)
-给我们提供了一个(很丑的) Web 界面来配置这些东西。值得注意的是，在使用之前必须通过 `sudo apt-get install sysstat`
+这样 Splunk 不久可以处理了么？事实上 Splunk 官方就有一个 [Splunk App for \*NIX](https://splunkbase.splunk.com/app/273/)
+为我们提供了一个(很丑的) Web 界面来配置这些东西。值得注意的是，在使用之前必须通过 `sudo apt-get install sysstat`
 安装必须的命令。
 
 下图展示了使用 SPL 进行检索的示意图，使用 Log 检索工具，我们就不用每次编写脚本来查询我们在 Log 当中感兴趣的点，
@@ -256,10 +261,20 @@ ssh 次数的每日热度图。最终结果如下:
 
 ![Splunk Dashboard](/img/posts/splunk-dashboard.png)
 
+最后我还将 Splunk 配置在了 Nginx 之后使用 VHOST 访问，由于 Splunk 默认是在 `0.0.0.0` 上绑定自己的 Web
+服务的，因此外界还可以直接访问，这是我不希望的。因此通过修改 `/opt/splunk/etc/system/local/web.conf`
+配置，填入一下内容就可以改变 Splunk Web 服务绑定的 Host 地址了。
+
+```
+[settings]
+enableSplunkWebSSL = 0
+server.socket_host = 127.0.0.1 
+```
+
 # 总结
 
-我的 Intel NUC 买回来两周，终于有时间好好把玩了一下。目前对机器性能的利用率仍然很低，
-未来还要好好想想有什么有趣的应用才行啊。总体看来，Intel x86 架构的 Mini PC 虽然价格较贵，
-但是从性能和适用性上来讲还是比 ARM 开发版和路由器等更强一点，简单来说就是像我这样不怎么有时间折腾的人合适的选择。
+我的 Intel NUC 买回来两周，终于有时间好好把玩一下了。目前部署的服务对机器性能的利用率仍然很低，
+未来还要好好想想有什么有趣的应用才行。总体看来，Intel x86 架构的 Mini PC 虽然价格较贵，
+但是从性能和适用性上来讲还是比 ARM 开发版和路由器等更强一点，简单来说就是像我这样不怎么有时间折腾的人的选择。
 当然诸如树莓派这种开发板添置各种有趣的传感器更为方便，很适合作为 Internet of Things 的一个处理节点，
-以后如果有时间我也有兴趣研究一下。
+以后如果有时间也应该研究一下。
