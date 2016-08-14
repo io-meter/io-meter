@@ -23,6 +23,9 @@ tags: [golang, programming, wu, filesystem, watch, utility, os, cli]
 因此这次以更加“正确”的方法实现了 wu 这个小工具，在此将从构思到实现各方面的思考记录一些下来，
 也算是分享一点经验。在这篇文章中，我们会谈到`os/exec`、`flag`、`time`、`encoding/json`、`os/signal`等库的使用。
 
+wu 的代码已经[开源在 GitHub 上](https://github.com/shanzi/wu/)并提供 macOS 和 Linux 平台下
+[编译好的可执行文件](https://github.com/shanzi/wu/releases)。
+
 ## 构思和准备
 
 在开始着手实现之前，对于要写什么和怎么实现等方面都进行了一些思考。简单来说，
@@ -551,3 +554,5 @@ Go 语言在很多方面的设计上确实有独到之处，比如使用通道�
 
 我个人使用 Go 语言的体验还是不错的，接下来一段时间仍将在这门语言上在做一些研究。
 
+最后，如果你对 wu 的详细实现感兴趣，它的代码已经[开源在 GitHub 上](https://github.com/shanzi/wu)，
+我还上传了编译好的可执行文件[可供下载](https://github.com/shanzi/wu/releases)，欢迎 Bug 反馈和代码贡献。
