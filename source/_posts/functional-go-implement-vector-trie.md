@@ -15,7 +15,7 @@ category: 'Functional Go'
 
 1. [持久化数据结构简介](https://io-meter.com/2016/09/03/Functional-Go-persist-datastructure-intro/)
 2. [Vector Trie 的实现](https://io-meter.com/2016/09/15/functional-go-implement-vector-trie/) (本文)
-3. [Transient 及持久化](https://io-meter.com/2016/09/15/functional-go-implement-vector-trie/) 
+3. [Transient 及持久化](https://io-meter.com/2016/10/01/Functional-Go-Transient-and-Persistent/) 
 
 首先我们来回顾一下 Vector Trie 的设计思路，为了代替 ArrayList 这种数据结构以及兼顾高性能的随机访问和内存使用，
 Vector Trie 主要采用了以下几种设计：

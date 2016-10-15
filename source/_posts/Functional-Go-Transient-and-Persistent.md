@@ -14,7 +14,7 @@ category: 'Functional Go'
 
 1. [持久化数据结构简介](https://io-meter.com/2016/09/03/Functional-Go-persist-datastructure-intro/)
 2. [Vector Trie 的实现](https://io-meter.com/2016/09/15/functional-go-implement-vector-trie/)
-3. [Transient 及持久化](https://io-meter.com/2016/09/15/functional-go-implement-vector-trie/) (本文)
+3. [Transient 及持久化](https://io-meter.com/2016/10/01/Functional-Go-Transient-and-Persistent/) (本文)
 
 在之前的文章中，我们已经看到了如何实现一个 Vector Trie，也知道如何使用 Vector Trie 来实现共享数据结构的持久化 List：
 在每次修改时，我们复制从根节点到被修改节点路径上的所有节点，并使用得到的新的 Root 节点构造一个新的 List 的 HEAD

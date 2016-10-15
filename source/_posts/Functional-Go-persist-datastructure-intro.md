@@ -15,7 +15,7 @@ category: 'Functional Go'
 
 1. [持久化数据结构简介](https://io-meter.com/2016/09/03/Functional-Go-persist-datastructure-intro/) (本文)
 2. [Vector Trie 的实现](https://io-meter.com/2016/09/15/functional-go-implement-vector-trie/)
-3. [Transient 及持久化](https://io-meter.com/2016/09/15/functional-go-implement-vector-trie/) 
+3. [Transient 及持久化](https://io-meter.com/2016/10/01/Functional-Go-Transient-and-Persistent/) 
 
 函数式编程不是新概念，像 Haskell、Clojure、Scala 等函数式／类函数式编程语言也已经出现和存在了很长时间，
 很多函数式编程的概念现今已经被应用在很多其他领域，比如 Facebook 在 [React](https://facebook.github.io/react/)
