@@ -120,7 +120,7 @@ gvm install go1 # 安装 go1 版本
 gvm use go1     # 修改环境变量使用 go1 版本的 Go
 ```
 
-##总结
+## 总结
 
 是否有必要使用多个 Workspace 仍然具有争议，譬如这个 StackOverflow
 上的[相关问答](http://stackoverflow.com/questions/20722502/whats-a-good-best-practice-with-go-workspaces)中，
