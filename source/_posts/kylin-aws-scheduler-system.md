@@ -317,3 +317,7 @@ Kylin 构建任务产生的中间表或过期的表会遗留在 HBase 当中。�
 
 就我个人来讲，在加入 Strikingly 转向数据平台相关的工作之后，接触并深入学习了 Scala、Hadoop、Kylin、HBase、Akka、AWS
 等多种技术和工具，可谓是收获颇丰。希望以后能继续在数据平台这一方向取得更多进步。
+
+最后，我司的数据平台工程师仍然有职位空缺，
+可以点击[这里](https://github.com/strikingly/hiring/blob/master/job-descriptions/data-platform-engineer.md)查看 JD
+和投递简历。
