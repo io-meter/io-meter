@@ -69,7 +69,7 @@ theme: io-meter
 # Deployment
 ## Docs: https://hexo.io/docs/deployment.html
 deploy:
-  type: heroku
+  type: git
   repo: 'dokku@apps.io-meter.com:blog'
 
 # Feed
