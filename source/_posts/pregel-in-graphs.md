@@ -1,5 +1,5 @@
 ---
-title: '图解图算法 Pregel: 模型简介和实战案例'
+title: '图解图算法 Pregel: 模型简介与实战案例'
 date: 2018-03-23 22:29:15
 mathjax: true
 tags: [Pregel, Google, Algorithm, Distributed System, Graph Computing, PageRank, Connected Components, User Tracking]
