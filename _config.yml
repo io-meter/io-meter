@@ -71,7 +71,7 @@ theme: io-meter
 deploy:
   type: git
   repo: 'git@github.com:io-meter/io-meter.git'
-  branch: gh-pages
+  branch: master 
 
 # Feed
 ## Plugin: https://github.com/hexojs/hexo-generator-feed
