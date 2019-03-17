@@ -1,8 +1,8 @@
 ---
-title: Streaming SQL 的执行原理与 Flink 的实现
+title: Stream SQL 的执行原理与 Flink 的实现
 date: 2019-03-16 19:45:31
 mathjax: true
-tags: [Streaming SQL, Incremental SQL, Materialized View, SQL, Flink, Apache Flink, ETL, Big Data]
+tags: [Stream SQL, Incremental SQL, Materialized View, SQL, Flink, Apache Flink, ETL, Big Data]
 ---
 
 在数据仓库应用中，执行 ETL 过程是一种常见的需求。我们希望通过 ETL 过程预处理我们的原始数据，
@@ -12,9 +12,9 @@ tags: [Streaming SQL, Incremental SQL, Materialized View, SQL, Flink, Apache Fli
 
 <!-- more -->
 
-伴随着流处理系统的发展，SQL 特别是 Streaming SQL 系统也渐渐流行起来。这可能得益于 SQL
+伴随着流处理系统的发展，SQL 特别是 Stream SQL 系统也渐渐流行起来。这可能得益于 SQL
 是一门已经被学界和工业界充分研究过的查询语言。 尽管 SQL 可以认为是图灵完备的，但其相较于更加通用的一些计算模型，
-其表现力和应用范围是受限的。在这篇文章中将讨论一下 Streaming SQL 实现原理、应用场景和能力范围。
+其表现力和应用范围是受限的。在这篇文章中将讨论一下 Stream SQL 实现原理、应用场景和能力范围。
 
 一般来讲，现实应用中各个计算模型能力范围可以表示成如下图所示。
 
@@ -22,12 +22,12 @@ tags: [Streaming SQL, Incremental SQL, Materialized View, SQL, Flink, Apache Fli
 
 尽管已经知道这件事情，我们仍然对如下一些问题感兴趣：
 
-1. SQL 和 Streaming SQL 的能力的边界在哪里？给定任意一个 SQL 查询，我们是否可以判断其能否使用 Streaming SQL 执行？
+1. SQL 和 Stream SQL 的能力的边界在哪里？给定任意一个 SQL 查询，我们是否可以判断其能否使用 Streaming SQL 执行？
 2. 如果一条 SQL 可以使用流式处理来执行，具体要如何实现？我们格外感兴趣的是 Group By 和 Join 操作的实现。
-3. 在了解过 Streaming SQL 的基本原理之后，我们进一步感兴趣的问题是现存的系统(特别是 Flink)的相关实现细节。
+3. 在了解过 Stream SQL 的基本原理之后，我们进一步感兴趣的问题是现存的系统(特别是 Flink)的相关实现细节。
 
-接下来的文章我们就来讨论这些问题。在[下一章](#u589E_u91CF_SQL__u67E5_u8BE2_u7B97_u6CD5)首先来介绍诸如 Flink 这类系统所采用的实现 Streaming SQL 查询的理论，
-在流式处理与时间控制这一章，我们将讨论 Streaming 处理系统的一些基本的概念和如何操作时间。最后，
+接下来的文章我们就来讨论这些问题。在[下一章](#u589E_u91CF_SQL__u67E5_u8BE2_u7B97_u6CD5)首先来介绍诸如 Flink 这类系统所采用的实现 Stream SQL 查询的理论，
+在流式处理与时间控制这一章，我们将讨论 Stream 处理系统的一些基本的概念和如何操作时间。最后，
 我们将会讨论 Flink 的能力与局限，致力于对 Flink 执行相关任务方法的进行一个简单刻画。特别地，我们会花费一些篇幅在 Flink
 内部状态的管理。
 
@@ -35,7 +35,7 @@ tags: [Streaming SQL, Incremental SQL, Materialized View, SQL, Flink, Apache Fli
 
 一般来讲，给定一条 SQL 如果其源数据表中有一些数据发生了改变，我们需要重新全量执行这条 SQL 才能得到更新过的结果。
 增量 SQL 查询则意味着我们可以只依赖源数据的改变量，局部地执行查询并更新原来的结果。使用增量模型，
-我们往往可以得到更快的执行方案。很显然，Streaming SQL 执行就是增量 SQL 查询：新到达的数据就是一张“源数据表”
+我们往往可以得到更快的执行方案。很显然，Stream SQL 执行就是增量 SQL 查询：新到达的数据就是一张“源数据表”
 当中新加入的数据项。
 
 为了介绍增量 SQL 查询算法，首先来看一些术语的解释：
@@ -53,7 +53,7 @@ tags: [Streaming SQL, Incremental SQL, Materialized View, SQL, Flink, Apache Fli
 
 物化视图的概念最早由 Oracle 和 SQL Server 等商业数据库作为索引的一种补充而引入。
 学术界和工业界至今已经积累了很多相关研究，从而形成了一整套方法论。
-很多现代的流式处理系统也采用了这些方案：Streaming SQL 是物化视图维护问题的一个子问题。
+很多现代的流式处理系统也采用了这些方案：Stream SQL 是物化视图维护问题的一个子问题。
 
 为了阐释为什么物化视图是一种有效地加速查询的功能，我们先来花一些时间在 SQL 查询的优化与执行规划问题上。
 
@@ -178,7 +178,7 @@ Sort Join 一般可以支持非常大的数据范围。在现代数据库的优�
 并将结果保存在内部状态中。这样查询虽然输出了近似结果，但是在时间和空间上都获得了优化
 4. 限制或扩充语义。一方面可以对 SQL 在某些方面的能力进行限制，从而防止全量查询的发生。
 另一方面可以增强 SQL 的建模能力，加入诸如 Window 之类的概念，使得用户可以更好地描述自己的需求，
-并将相关查询的扫描范围限制在一定的规模。这种方式往往常用于 Streaming SQL，在之后会进一步介绍相关内容
+并将相关查询的扫描范围限制在一定的规模。这种方式往往常用于 Stream SQL，在之后会进一步介绍相关内容
 
 在上述各种方案都无法有效解决问题的时候，一种方法就是完全退化为全量刷新。
 这是因为某些场景下增量查询的执行可能比全量刷新具有更高的成本，这时根据 SQL 的成本估算选择全量刷新执行是更明智的。
@@ -327,12 +327,12 @@ $t\_{ack}$ 和系统的其他环境参数 $Env$ 所决定的。算子决定水�
 
 对于激发器、水印、窗口和句点这些概念，十分建议进一步阅读如下文章和论文:
 
-1. [Streaming 101: The world beyond batch](https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-101)
-2. [Streaming 102: The world beyond batch](https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-102)
+1. [Stream 101: The world beyond batch](https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-101)
+2. [Stream 102: The world beyond batch](https://www.oreilly.com/ideas/the-world-beyond-batch-streaming-102)
 3. [The Dataflow Model: A Practical Approach to Balancing Correctness, Latency, and Cost in Massive-Scale, Unbounded,
 Out-of-Order Data Processing](https://ai.google/research/pubs/pub43864)
 
-### Streaming Join 的语义
+### Stream Join 的语义
 
 了解完流式处理当中的时间处理，接下来我们总结一下在流式系统当中实现 Join 的语义。
 显而易见，由于 Stream 都是无边界的数据，传统数据表当中的 Join 概念在流处理系统当中可能不完全适用。
@@ -435,7 +435,7 @@ Flink 将记录发送进度的标志一并保存在算子状态中并交由 Chec
 
 值得高兴的是，Kafka 恰好满足上述条件。Flink 也提供了使用 Kafka 实现严格单次发送的 Connector。
 
-### Streaming SQL
+### Stream SQL
 
 在事件驱动模型上，Flink 实现了流式处理和批量处理，并在这基础上进一步提供了 Table API 和 SQL 的支持。
 其 Table API 和 SQL 基本上实现了之前提到的物化视图增量更新算法。特别地，Flink 还使用了 Apache Calcite
@@ -467,11 +467,11 @@ Table API 要比直接输入 SQL 查询更方便些。这是因为 SQL 解析器
 
 ## 总结
 
-在本文中，我们介绍了 Streaming SQL 查询执行的基本原理。
+在本文中，我们介绍了 Stream SQL 查询执行的基本原理。
 介绍了物化视图增量维护的算法并指出流式 SQL 处理实际上是物化视图增量维护的子问题。
 我们还介绍了一些常见的流式处理的概念并结合 Apache Flink 对这些技术原理的实现进行了描述。
 
-我们可以看到，现阶段大多数 Streaming SQL 系统在实现功能和语义上仍然还有局限。
+我们可以看到，现阶段大多数 Stream SQL 系统在实现功能和语义上仍然还有局限。
 完全实现任意 SQL 查询高效增量执行仍又不可及。尽管如此，针对特定的查询需求和模式引入特别的实现方法和扩展新的语义，
 现在的流式 SQL 系统已经可以覆盖相当宽广的需求。
 
