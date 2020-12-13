@@ -4,7 +4,7 @@
   <subtitle><![CDATA[Programic Creativity]]></subtitle>
   <link href="/atom.xml" rel="self"/>
   <link href="https://io-meter.com/"/>
-  <updated>2020-12-13T08:22:41.199Z</updated>
+  <updated>2020-12-13T08:55:25.098Z</updated>
   <id>https://io-meter.com/</id>
   
   <author>
@@ -19,7 +19,7 @@
     <link href="https://io-meter.com/2020/12/12/nvm-store/"/>
     <id>https://io-meter.com/2020/12/12/nvm-store/</id>
     <published>2020-12-12T05:25:12.000Z</published>
-    <updated>2020-12-13T08:22:41.199Z</updated>
+    <updated>2020-12-13T08:55:25.098Z</updated>
     <content type="html"><![CDATA[<p>前段时间因兴趣使然，参加了第二届阿里数据库大赛，并成功冲入决赛。
 本届数据库大赛的题目是在Intel提供的持久化内存（Persistent Memory）上实现一套KV Store。
 持久化内存一直是数据库研究的一个新兴研究方向，十分高兴这次有机会在真正的持久化内存上实现系统并测试。
@@ -235,6 +235,7 @@ x86系统采用的<a href="https://en.wikipedia.org/wiki/MESIF_protocol">MESIF p
 竟然会互相干扰并导致性能退化！可以说涉及到系统调用、TLB、指令集和CPU Cache级别的性能优化技巧让我大开眼界。</p>
 <p>编写如此接近硬件的程序让我对C++（以及其他系统编程语言）和高性能编程产生了浓厚的兴趣。
 希望未来还可以在这个方向上继续学习。</p>
+<p>最后，我们实现的KV Store<a href="https://github.com/shanzi/NvmEngine">在Github上开源</a>，以供参考。</p>
 ]]></content>
     <summary type="html">
     <![CDATA[<p>前段时间因兴趣使然，参加了第二届阿里数据库大赛，并成功冲入决赛。
