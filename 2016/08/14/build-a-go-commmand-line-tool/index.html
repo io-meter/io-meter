@@ -1,0 +1,459 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>用 Go 写个小工具：wu 的炼成 | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="最近使用 Golang 编写完成了一个命令行下的小工具: wu，
+这个小工具的主要用途是监视文件改动并执行指定的命令。尽管有点重新发明轮子的嫌疑，
+但是设计和实现它的过程中我还是有不少收获的。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="用 Go 写个小工具：wu 的炼成"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content=""/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a target="_blank" rel="noopener" href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2016/08/14/build-a-go-commmand-line-tool/" target="_blank">用 Go 写个小工具：wu 的炼成</a></h1>
+
+
+      
+        <time datetime="2016-08-14T10:02:47.000Z">2016-08-14</time>
+      
+    </header>
+    <div class="entry">
+      <p>最近使用 Golang 编写完成了一个命令行下的小工具: <a href="https://github.com/shanzi/wu" target="_blank" rel="noopener">wu</a>，
+这个小工具的主要用途是监视文件改动并执行指定的命令。尽管有点重新发明轮子的嫌疑，
+但是设计和实现它的过程中我还是有不少收获的。</p>
+<a id="more"></a>
+<p>我很早就对 Golang 有兴趣了，之前在没有经过系统学习的情况下跌跌撞撞地完成了一个很小的应用，
+并最终总结成 <a href="https://io-meter.com/2014/07/09/simple-git-http-server/">自己动手写 Git HTTP Server</a> 这篇文章，
+之后又稍微研究和总结了一下现有的 <a href="https://io-meter.com/2014/07/30/go&#39;s-package-management/">Go 语言的包依赖管理</a>。</p>
+<p>自那以后，Go 语言又有了一些新的进展，比如从 1.6 版本引入的 <code>vendor</code> 的概念， 
+算是在解决包管理问题上的出现新趋势，也催生出 <a href="https://github.com/kardianos/govendor" target="_blank" rel="noopener">govendor</a>
+这样新的工具出来。</p>
+<p>不过包管理并不是这篇文章想要主要讨论的问题。此前，通过 <a href="http://www.gopl.io/" target="_blank" rel="noopener">The Go Programming Language</a>
+这本书，我系统地对 Go 语言各个方面的使用以及部分设计和实践有了更全面的了解，
+因此这次以更加“正确”的方法实现了 wu 这个小工具，在此将从构思到实现各方面的思考记录一些下来，
+也算是分享一点经验。在这篇文章中，我们会谈到<code>os/exec</code>、<code>flag</code>、<code>time</code>、<code>encoding/json</code>、<code>os/signal</code>等库的使用。</p>
+<p>wu 的代码已经<a href="https://github.com/shanzi/wu/" target="_blank" rel="noopener">开源在 GitHub 上</a>并提供 macOS 和 Linux 平台下
+<a href="https://github.com/shanzi/wu/releases" target="_blank" rel="noopener">编译好的可执行文件</a>。</p>
+<h2 id="u6784_u601D_u548C_u51C6_u5907"><a href="#u6784_u601D_u548C_u51C6_u5907" class="headerlink" title="构思和准备"></a>构思和准备</h2><p>在开始着手实现之前，对于要写什么和怎么实现等方面都进行了一些思考。简单来说，
+我首先确定了想要写一个通过监听文件系统修改，从而可以自动重启命令的工具。
+写这样一个工具的原因是部分 Light weight 的 web framework 并没有内置自动重新加载的功能。
+这样每次修改完代码就需要手动的结束原来的 Server 并重新启动。写一个小工具来自动化这一过程看起来是个不错的主意。</p>
+<p>在进一步的构思之前，我简单的进行了一些检索，参考了一些同类的工具（主要是 NodeJS 社区内的一些解决方案），
+确定了一些实现的目标：</p>
+<ol>
+<li>这个工具应该非常简单和轻量，它所完成的事情就应该是简单的监视文件和执行命令，
+最多添加一些简单的配置，不应需要繁复的设置</li>
+<li>这个工具应该具有最少的依赖，相比于 Gulp 和 Grunt 等 NodeJS 的解决方案，
+这一工具应该可以说以便携式可执行文件的方式分发，这也是选择 Go 来实现的一个优势</li>
+<li>可配置，应该有一个简单的配置文件，使得用户可以记录下来执行的选项，从而不需要每次敲打复杂的命令</li>
+</ol>
+<p>以上三点决定了 wu 的大部分设计，除此之外，在实现之前我也预先考虑了一下可能遇到的问题：</p>
+<ol>
+<li>进程通讯的问题：因为 wu 本质上是需要通过启动子进程来运行命令的，因此就需要考虑如何与子进程进行通讯，
+如何获得子进程运行的状态，如何强制结束子进程等等问题都需要事先进行一定的研究</li>
+<li>并发和并行的问题：除了需要启动和维护子进程，我们的工具还要侦听文件系统的改变，
+随着用户的操作很多事件会并发的产生，如何正确地处理这些并发也是一个重要的问题。
+幸好我们是在使用 Golang 解决这一问题，在很多地方 Go 语言确实为并发控制提供了很棒的解决方案。</li>
+<li>多个文件同时写入问题：这个问题和并发问题比较类似，因为用户可能同时写入多个文件，
+这时激发多次进程重启绝不是我们想要的结果。把一段时间内接受到的写入事件合并成一个来处理是一种可能的解决方案。</li>
+</ol>
+<p>我们的应用的主要流程大体上可以用下图表示：</p>
+<p><img src="/img/posts/wu-main-loop.png" alt="Main Loop"></p>
+<p>从图中可以看出应用的主循环是不断的 Start 和 Terminate 子进程的过程。其中只有红色的<code>Wait and gather changed files</code>
+步骤会处理文件系统传来的信号，这一步骤也是阻塞的，也就是说如果如果没有信号出现，应用会一直停留在这一步。
+我们在这里可以做一个等待，也就是说可以给这一步设定一个最短运行事件，让程序将这一段时间出现的所有文件处理事件都捕捉下来，
+从而避免一次保存多个文件导致的重复执行。反过来，在这个阶段之后接收到的文件修改事件将会被留到下一个循环当中处理。
+Go 语言的 channel 设计可以让我们方便地做到这一点。</p>
+<h3 id="u6587_u4EF6_u7CFB_u7EDF_u4FA6_u542C"><a href="#u6587_u4EF6_u7CFB_u7EDF_u4FA6_u542C" class="headerlink" title="文件系统侦听"></a>文件系统侦听</h3><p>除了预先考虑一些可能会遇到的问题，我们还要对实现要用到的工具做一个预先的调查。
+其中最重要的当然是文件系统改变如何进行侦听的问题。在这里我们使用了一个提供了 Go 语言接口库
+<a href="https://github.com/fsnotify/fsnotify" target="_blank" rel="noopener">fsnotify</a>，使用之前我们需要使用<code>go get</code>命令先将对应包下载到本地环境中。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">go get github.com/fsnotify/fsnotify</span><br></pre></td></tr></table></figure>
+<p>这个工具提供了获得文件修改事件的一个较为底层的访问接口，当指定侦听的文件或文件夹之后，
+我们可以获得一个 channel 用来接收事件。fsnotify 的一点不足在于侦听文件夹并不会递归进行，
+也就是当使用它侦听了某一文件夹时，这个文件夹子目录下的修改并不会被捕捉到，因此我们必须手动完成这一工作。</p>
+<h3 id="u8FD0_u884C_u5B50_u8FDB_u7A0B"><a href="#u8FD0_u884C_u5B50_u8FDB_u7A0B" class="headerlink" title="运行子进程"></a>运行子进程</h3><p>解决的监视文件系统修改的问题，就要考虑如何该进行子进程的启动、守护和结束控制的方法了。
+Go 语言的标准库<code>os/exec</code>完全提供了我们所需的接口。我们使用:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cmd := exec.Command(name, args...)</span><br></pre></td></tr></table></figure>
+<p>可以获得一个 Command 对象，通过调用<code>cmd.Start()</code>方法就可以启动子进程。我们有两种方法结束子进程，
+一个是通过<code>cmd.Process.Signal</code>方法为进程发送一个终止信号，比如<code>SIGINT</code>或<code>SIGQUIT</code>，
+但是有的程序可能会忽略这些信号继续运行，因此一个必要的逻辑就是在一个 Timeout 之后应用还没有结束，
+我们需要通过发送<code>SIGTERM</code>或<code>SIGKILL</code>信号强制终止进程。在最初的实现中，我使用了<code>cmd.Process.Kill()</code>
+方法来结束进程，却发现了一些意外的问题，在后文中会详细的介绍遇到的问题及其解决方案。</p>
+<h3 id="u547D_u4EE4_u884C_u53C2_u6570_u89E3_u6790"><a href="#u547D_u4EE4_u884C_u53C2_u6570_u89E3_u6790" class="headerlink" title="命令行参数解析"></a>命令行参数解析</h3><p>接下来就是用户交互的方式了。尽管我们的 App 是一个极简的设计，但是还是要给用户一些命令行的接口，
+Go 语言的标准库提供了<code>flag</code>库方便我们完成这一任务。<code>flag</code>的功能非常简单，他有两种的使用方式，
+一种是在<code>main</code>包的包层级声明指针变量作为接受参数值的位置:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">var value = flag.String(&quot;option&quot;, &quot;default value&quot;, &quot;help text&quot;)</span><br></pre></td></tr></table></figure>
+<p>这种方法的内部原理是 flag 在内部声明了一个变量并返回了他的指针。同样，
+<code>flag</code>包也会在全局的一个单例对象上保存一个对这一变量的引用。当<code>flag.Parse()</code>被执行时，
+保存在单例对象上的所有变量会被赋予解析出来的值。因为我们得到的是变量的一个指针，
+因此当我们使用<code>*value</code>来获得变量值的时候，将会获得<code>flag</code>内部解析出来的值。</p>
+<p>如果觉得每次都需要用取指针值操作<code>*value</code>来获得变量值的话，我们可以通过在<code>main</code>包中的
+<code>init</code>方法中获取值的方法来实现同样的功能。比如说:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">var value string</span><br><span class="line">func init() &#123;</span><br><span class="line">    flag.StringVar(&amp;value, &quot;option&quot;, &quot;default value&quot;, &quot;help text&quot;)    </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可见，我们传给<code>StringVar</code>的仍然是<code>value</code>变量的指针，<code>StringVar</code>在内部实际进行的是跟以前类似的操作，
+最终当我们执行<code>flag.Parse()</code>后，<code>value</code>的值也会被变成解析出来的值。这里我们可以看到，
+指针的存在使得一些原来可能很难表现的操作变得简单，但是同时也产生了很多的副作用。
+比如说，在并发程序中，因为一个变量的引用被传递到多个未知的地方，一段简单的函数的运行过程当中，
+变量的值可能会发生意想不到的改变，因而造成了预期之外的结果。在我们实现这一工具的过程当中也会遇到类似的问题需要解决。</p>
+<p>好在<code>flag</code>操作本身比较简单，也不会并发和重复，这样使用还是安全的。另外，上述情况中我们都是在<code>main</code>
+函数执行之前进行<code>flag</code>参数的声明工作，这是为了确保<code>main</code>函数一开始执行<code>flag.Parse</code>的时候，所有参数已经声明完毕。
+我们自然也可以在函数里再进行这些工作，只要能确保执行的顺序即可。此外，如果你在同一个包的多个文件里声明了多个<code>init</code>函数，
+这些函数虽然都会被执行，但是执行的顺序是未定义的行为，这也是需要注意的地方。</p>
+<h3 id="u65F6_u95F4"><a href="#u65F6_u95F4" class="headerlink" title="时间"></a>时间</h3><p>接下来是<code>time</code>库的一点介绍，我们使用<code>time</code>库来实现<code>sleep</code>和<code>wait</code>的功能。简单来说，如果想要阻塞一个 goroutine 一段时间，
+<code>time.Sleep(duration)</code>和<code>&lt;-time.After(duration)</code>两种方法都可以使用。请注意第二种方法中的<code>&lt;-</code>，
+<code>time.After</code>方法实际上返回一个<code>&lt;-chan struct{}</code>，这个通道会在给定事件之后接受到一个消息，因此当你一开始使用<code>&lt;-</code>
+操作符试图从通道中取消息时，通道会被阻塞，从而获得与<code>Sleep</code>一样的效果。这个方法实际上是非常有用的——尤其是跟
+<code>select</code>语句配合使用的。当然<code>time</code>库还提供了<code>time.Tick</code>等多种方法，可供我们获得各种各样基于时间信号的通道。</p>
+<h3 id="JSON__u8BFB_u5199"><a href="#JSON__u8BFB_u5199" class="headerlink" title="JSON 读写"></a>JSON 读写</h3><p>为了引进配置文件功能，我们还引入了<code>encoding/json</code>库，在这一工具当中，我们只使用了非常简单的<code>Decode</code>和<code>Encode</code>功能。
+要<code>Decode</code>一个文件当中包含的 JSON，使用下面的方法:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">func readJSON(filename string) SomeType &#123;</span><br><span class="line">    file, err := os.Open(filename)</span><br><span class="line">    defer file.Close()</span><br><span class="line"></span><br><span class="line">    if err == nil &#123;</span><br><span class="line">    var obj SomeType</span><br><span class="line">    if err := json.NewDecoder(file).Decode(&amp;obj); err != nil &#123;</span><br><span class="line">        // Fatal</span><br><span class="line">    &#125;</span><br><span class="line">    return obj</span><br><span class="line">    &#125;</span><br><span class="line">    // Fatal</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>由于我们希望输出的 Config 文件的 JSON 是有缩进的，在写入时我们使用<code>json.MarshalIntent</code>方法将 JSON
+输出到<code>[]byte</code>中，再直接用<code>file</code>的<code>Write</code>方法写入文件。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">func writeJson(filename string, obj SomeType) &#123;</span><br><span class="line">    file, err := os.Create(filename)</span><br><span class="line">    defer file.Close()</span><br><span class="line">    </span><br><span class="line">    if err != nil &#123;</span><br><span class="line">    // Fatal</span><br><span class="line">    &#125;</span><br><span class="line">    if bytes, err := json.MarsalIntent(conf, &quot;&quot;, &quot;  &quot;); err == nil &#123;</span><br><span class="line">    file.Write(bytes)</span><br><span class="line">    &#125; else &#123;</span><br><span class="line">    // Fatal</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>其中，<code>SomeType</code>是一个为接受 JSON 数据而定义的<code>strunt{}</code>，值得注意的是，只有 Public 的元素才能被<code>encoding/json</code>
+库读出和写入。</p>
+<h2 id="POSIX_Signal__u5904_u7406"><a href="#POSIX_Signal__u5904_u7406" class="headerlink" title="POSIX Signal 处理"></a>POSIX Signal 处理</h2><p>最后一个值得注意的地方就是，如果用户通过<code>CTRL-C</code>向我们发送了终止进程的信号的话，我们如何才能优雅地结束程序。
+不做任何操作的情况下程序可能会立刻停止，从而导致我们启动的子进程仍然在持续运行，从而形成了无人监管的幽灵进程。
+因此我们有必要捕捉应用程序接受到的 Interrupt 信号，从而可以在此后执行一定的清理操作并终止子进程。</p>
+<p>这一点可以通过<code>os/signal</code>库完成，下面的代码给出了一个简单的例子:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">func main() &#123;</span><br><span class="line">    ch := make(chan os.Signal)</span><br><span class="line">    signal.Notify(ch, os.Interrupt)</span><br><span class="line"></span><br><span class="line">    for sig := range ch &#123;</span><br><span class="line">    // Signal received!</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="u5B9E_u73B0_u4E0E_u8C03_u8BD5"><a href="#u5B9E_u73B0_u4E0E_u8C03_u8BD5" class="headerlink" title="实现与调试"></a>实现与调试</h2><p>经过多方研究做好了充分的准备之后，我们终于可以着手编写我们的主程序了。在下面的实现当中，
+我们将会大量使用通道(channel)作为 goroutine 之间通讯和同步的工具。同时我们也用到了一些 Go 
+语言的使用模式和最佳实践。</p>
+<h3 id="Runner__u7684_u5B9E_u73B0"><a href="#Runner__u7684_u5B9E_u73B0" class="headerlink" title="Runner 的实现"></a>Runner 的实现</h3><p>首先的需求就是，我们希望以面向对象的方式将我们的主运行循环包装成对象，这样当我们通过<code>os/signal</code>
+捕捉到用户传来的信号时，就可以通过一个方法来执行退出循环的方法。同样我们也需要一个结构体来保存进行执行的状态，
+比如说保留一个对执行 Command 的引用等。</p>
+<p>在这里我们要使用到一个简单的模式，那就是如何模仿一般面向对象当中的构造函数模式。总所周知，
+由于 Go 语言面向对象的实现模式不同，我们没法强制用户在新建对象和结构体的时候一定要执行我们指定的某一函数。
+比如说用户总可以通过<code>SomeType{&quot;some&quot;, &quot;params&quot;}</code>字面量的形式来生成新的<code>struct{}</code>对象。
+这在需要对结构体字段正确性进行验证或对某些字段进行自动初始化的时候很不方便。</p>
+<p>然而如果更换一个思路，我们其实可以保证用户新建对象时一定要通过构造函数进行。最简单的方法就是通过定义子包来进行访问控制。
+我们知道，在一个包中小写字母开通的类型、函数和变量外部都不可以访问，因此通过如下步骤我们就可以模仿传统的构造函数模式了:</p>
+<ol>
+<li>定义一个子包，比如<code>github.com/shanzi/wu/runner</code></li>
+<li>在子包中定义一个公共的接口，比如<code>Runner</code></li>
+<li>在子包中定义一个私有的结构体类型，比如<code>runner</code></li>
+<li>为公共的接口<code>Runner</code>声明一个构造函数，这个构造函数返回私有的结构体类型<code>runner</code></li>
+</ol>
+<p>由于<code>Runner</code>是一个接口(<code>interface</code>)，它为外界提供了一个类似鸭子类型的方法提示。在 Go 语言的设计当中，
+一个类型服从一个接口并不需要显式地声明出来——只要类型提供了接口所声明的所有方法即可。
+这一有趣的设定使得外界可以通过接口的定义在一定成都上窥探出所接受到的对象的内部结构而不需要知道对象具体的类型，
+因此如果我们在<code>Runner</code>的构造函数中放回一个<code>runner</code>对象的时候，外界就将<code>runner</code>当作<code>Runner</code>所定义的那样使用，
+从而实现了暴露<code>runner</code>所提供的方法的目的。反过来，因此<code>runner</code>是私有的结构体，外界也不能直接访问和构造出它的对象来。</p>
+<p>由于 Go 语言的接口只能定义方法，如果外界想要获得结构体的属性，就必须通过<code>Getter</code>和<code>Setter</code>方法。
+在我们的设计中，希望将应用侦听的目录路径、侦听的文件匹配模式和命令暴露出来，因此定义了如下的接口和结构体:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">type Runner interface &#123;</span><br><span class="line">    Path() string</span><br><span class="line">    Patterns() []string</span><br><span class="line">    Command() command.Command</span><br><span class="line">    Start()</span><br><span class="line">    Exit()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">type runner struct &#123;</span><br><span class="line">    path     string</span><br><span class="line">    patterns []string</span><br><span class="line">    command  command.Command</span><br><span class="line"></span><br><span class="line">    abort chan struct&#123;&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func New(path string, patterns []string, command command.Command) Runner &#123;</span><br><span class="line">    return &amp;runner&#123;</span><br><span class="line">        path:     path,</span><br><span class="line">        patterns: patterns,</span><br><span class="line">        command:  command,</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>注意到，我们在<code>runner</code>结构体当中添加了一个没有暴露的<code>abort</code>通道，这个通道配合<code>select</code>
+将会为我们提供一个优雅地结束 goroutine 的方法: 由于我们并不能从外部强制结束另一运行当中的 goroutine，
+因此我们需要通过通道传递信号来通知 goroutine 结束运行。在介绍这个以前，我们先来看 <code>Start</code> 方法的实现:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">func (r *runner) Start() &#123;</span><br><span class="line">    r.abort = make(chan struct&#123;&#125;)</span><br><span class="line">    changed, err := watch(r.path, r.abort)</span><br><span class="line">    if err != nil &#123;</span><br><span class="line">        log.Fatal(&quot;Failed to initialize watcher:&quot;, err)</span><br><span class="line">    &#125;</span><br><span class="line">    matched := match(changed, r.patterns)</span><br><span class="line">    log.Println(&quot;Start watching...&quot;)</span><br><span class="line"></span><br><span class="line">    // Run the command once at initially</span><br><span class="line">    r.command.Start(200 * time.Millisecond)</span><br><span class="line">    for fp := range matched &#123;</span><br><span class="line">        files := gather(fp, matched, 500*time.Millisecond)</span><br><span class="line"></span><br><span class="line">        // Terminate previous running command</span><br><span class="line">        r.command.Terminate(2 * time.Second)</span><br><span class="line"></span><br><span class="line">        log.Println(&quot;File changed:&quot;, strings.Join(files, &quot;, &quot;))</span><br><span class="line"></span><br><span class="line">        // Run new command</span><br><span class="line">        r.command.Start(200 * time.Millisecond)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到，<code>Start</code>函数其实包含了我们应用主循环的全部内容，它首先构造一个新的<code>abort</code>通道，
+传递进入<code>watch</code>函数调用<code>fsnotify</code>开始监听工作，然后通过<code>range</code>开始我们的主循环。
+在这里<code>changed</code>和<code>matched</code>都是新生成的通道，<code>changed</code>输出对当前目录下所有文件监听获得的事件，
+<code>matched</code>输出将<code>changed</code>当中事件以文件模式匹配过滤后的机构。在这里我们对通道的使用非常像 Python
+当中的生成器。不但如此，我们通过将通道串联起来，还可以进行逐级过滤，从而在最后只获得我们关心的内容。
+在这里通道不但可以被看作生成器，也可以被看作有些编程语言提供的 Lazy Sequence (惰性求值列表)。
+实际上，很多 Gopher 直接将 Channel 当成一个高效且线程安全的队列使用。这种生成器/过滤器也是一种常用的模式。</p>
+<p>回到我们的<code>watch</code>函数，我们将从这一函数的实现中看到<code>abort</code>通道是如何发挥作用的。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line">func watch(path string, abort &lt;-chan struct&#123;&#125;) (&lt;-chan string, error) &#123;</span><br><span class="line">    watcher, err := fsnotify.NewWatcher()</span><br><span class="line">    if err != nil &#123;</span><br><span class="line">        return nil, err</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    for p := range list(path) &#123;</span><br><span class="line">        err = watcher.Add(p)</span><br><span class="line">        if err != nil &#123;</span><br><span class="line">            log.Printf(&quot;Failed to watch: %s, error: %s&quot;, p, err)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    out := make(chan string)</span><br><span class="line">    go func() &#123;</span><br><span class="line">        defer close(out)</span><br><span class="line">        defer watcher.Close()</span><br><span class="line">           for &#123;</span><br><span class="line">            select &#123;</span><br><span class="line">            case &lt;-abort:</span><br><span class="line">                // Abort watching</span><br><span class="line">                err := watcher.Close()</span><br><span class="line">                if err != nil &#123;</span><br><span class="line">                    log.Fatalln(&quot;Failed to stop watch&quot;)</span><br><span class="line">                &#125;</span><br><span class="line">                return</span><br><span class="line">            case fp := &lt;-watcher.Events:</span><br><span class="line">                if fp.Op == fsnotify.Create &#123;</span><br><span class="line">                    info, err := os.Stat(fp.Name)</span><br><span class="line">                    if err == nil &amp;&amp; info.IsDir() &#123;</span><br><span class="line">                        // Add newly created sub directories to watch list</span><br><span class="line">                        watcher.Add(fp.Name)</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">                out &lt;- fp.Name</span><br><span class="line">            case err := &lt;-watcher.Errors:</span><br><span class="line">                log.Println(&quot;Watch Error:&quot;, err)</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;()</span><br><span class="line"></span><br><span class="line">    return out, nil</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>我们可以看到，在<code>watch</code>函数中，我们开启了一个新的 goroutine，在这个 goroutine 当中我们进行了以下工作:</p>
+<ol>
+<li>如果 abort 通道返回，结束监听，函数返回</li>
+<li>如果有文件事件产生，进行初步过滤和处理，对于新建的文件夹，要在这里显式加入侦听当中</li>
+<li>发现文件错误，通过 Log 打印出来并忽略</li>
+</ol>
+<p>我们把这个<code>select</code>语句包含在一个永真<code>for</code>循环中，这样除非<code>abort</code>信号获得消息，其他的消息处理之后就会立即进入新的循环。</p>
+<p>看过了<code>Start</code>函数，我们来看<code>Exit</code>函数的实现:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">func (r *runner) Exit() &#123;</span><br><span class="line">        log.Println()</span><br><span class="line">        log.Println(&quot;Shutting down...&quot;)</span><br><span class="line"></span><br><span class="line">        r.abort &lt;- struct&#123;&#125;&#123;&#125;</span><br><span class="line">        close(r.abort)</span><br><span class="line">        r.command.Terminate(2 * time.Second)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到，除了一些打 Log 的工作，<code>Exit</code>函数的主要工作就是向<code>abort</code>通道中传递信息并关闭它。最后结束我们的 Command。</p>
+<p>在这里必须简单提到一点，对于这种传递的消息不包含信息量而只有消息的到达本身有含义的通道为什么我们要通过传递<code>struct{}</code>
+类型而不是写起来更短的<code>int</code>或者<code>bool</code>来完成呢？这是因为在 Go 语言中只有<code>struct{}{}</code>是不占用空间的——他的<code>size</code>是<code>0</code>。
+其他任何类型都不能保证除了通道内部本身的空间使用之外不添加新的空间占用。因此无论是这种通道，还是我们希望使用<code>map</code>
+模拟集合，都应该用<code>struct{}{}</code>做为值的类型。</p>
+<h2 id="Command__u7684_u5B9E_u73B0"><a href="#Command__u7684_u5B9E_u73B0" class="headerlink" title="Command 的实现"></a>Command 的实现</h2><p>为了方便我们对子进程的管理，wu 的实现当中，我们还将 Command 相关的操作封装到了<code>github.com/shanzi/wu</code>包当中，
+下面给出了 Command 包定义的接口和构造函数的定义是:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">type Command interface &#123;</span><br><span class="line">        String() string</span><br><span class="line">        Start(delay time.Duration)</span><br><span class="line">        Terminate(wait time.Duration)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">type command struct &#123;</span><br><span class="line">        name   string</span><br><span class="line">        args   []string</span><br><span class="line">        cmd    *exec.Cmd</span><br><span class="line">        mutex  *sync.Mutex</span><br><span class="line">        exited chan struct&#123;&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func New(cmdstring []string) Command &#123;</span><br><span class="line">        if len(cmdstring) == 0 &#123;</span><br><span class="line">                return Empty()</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        name := cmdstring[0]</span><br><span class="line">        args := cmdstring[1:]</span><br><span class="line"></span><br><span class="line">        return &amp;command&#123;</span><br><span class="line">                name,</span><br><span class="line">                args,</span><br><span class="line">                nil,</span><br><span class="line">                &amp;sync.Mutex&#123;&#125;,</span><br><span class="line">                nil,</span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到，在结构体当中，我们除了保存一些传进来的参数，还用<code>cmd</code>字段保存了当前运行的 Command 的引用，
+此外，因为多个方法可能会并发地修改结构体中元素的值，我们使用<code>sync</code>类提供的<code>Mutex</code>锁来实现对象的互斥访问。
+最后还保留了一个 Channel 用来在进程结束之后获得通知。</p>
+<p>Command 的<code>Start</code>方法是 wu 当中最复杂的一部分，它首先会强制<code>Sleep</code>一段时间，以免子进程在很短的时间里被重复启动，
+此后通过<code>mutex</code>加锁获得对<code>command</code>结构体对象修改的权限，随后构造和启动子进程，并在新的 goroutine 里通过<code>cmd.Wait()</code>
+来等待进程结束。当进程结束之后将会打印 Log 并通过<code>exited</code>通道发布结束消息。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line">func (c *command) Start(delay time.Duration) &#123;</span><br><span class="line">        time.Sleep(delay) // delay for a while to avoid start too frequently</span><br><span class="line"></span><br><span class="line">        c.mutex.Lock()</span><br><span class="line">        defer c.mutex.Unlock()</span><br><span class="line"></span><br><span class="line">        if c.cmd != nil &amp;&amp; !c.cmd.ProcessState.Exited() &#123;</span><br><span class="line">                log.Fatalln(&quot;Failed to start command: previous command hasn&apos;t exit.&quot;)</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        cmd := exec.Command(c.name, c.args...)</span><br><span class="line"></span><br><span class="line">        cmd.Stdin = os.Stdin</span><br><span class="line">        cmd.Stdout = os.Stdout</span><br><span class="line">        cmd.Stderr = os.Stdout // Redirect stderr of sub process to stdout of parent</span><br><span class="line"></span><br><span class="line">        // Make process group id available for the command to run</span><br><span class="line">        cmd.SysProcAttr = &amp;syscall.SysProcAttr&#123;Setpgid: true&#125;</span><br><span class="line"></span><br><span class="line">        log.Println(&quot;- Running command:&quot;, c.String())</span><br><span class="line"></span><br><span class="line">        err := cmd.Start()</span><br><span class="line">        exited := make(chan struct&#123;&#125;)</span><br><span class="line"></span><br><span class="line">        if err != nil &#123;</span><br><span class="line">                log.Println(&quot;Failed:&quot;, err)</span><br><span class="line">        &#125; else &#123;</span><br><span class="line">                c.cmd = cmd</span><br><span class="line">                c.exited = exited</span><br><span class="line"></span><br><span class="line">                go func() &#123;</span><br><span class="line">                        defer func() &#123;</span><br><span class="line">                                exited &lt;- struct&#123;&#125;&#123;&#125;</span><br><span class="line">                                close(exited)</span><br><span class="line">                        &#125;()</span><br><span class="line"></span><br><span class="line">                        cmd.Wait()</span><br><span class="line">                        if cmd.ProcessState.Success() &#123;</span><br><span class="line">                                log.Println(&quot;- Done.&quot;)</span><br><span class="line">                        &#125; else &#123;</span><br><span class="line">                                log.Println(&quot;- Terminated.&quot;)</span><br><span class="line">                        &#125;</span><br><span class="line">                &#125;()</span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Command 的<code>Terminate</code>方法也利用到了<code>select</code>语句，它的主要逻辑是，先给子进程发送<code>SIGINT</code>信号促使子进程自然退出，
+此后用<code>select</code>同时侦听<code>exited</code>通道和<code>time.After(wait)</code>通道，以便在<code>SIGINT</code>失效的情况下设法强制退出。
+前面提到过，<code>time.After(wait)</code>会返回一个在给定时间后发送消息的通道，这里使用<code>select</code>从两个通道当中选择先得到的消息，
+因此当<code>wait</code>时间过后<code>exited</code>还没有消息传来，就会进入强制退出的分支。这就是一般在 Go 语言中实现 Timeout
+的模式或者说方法。</p>
+<p>目前为止，已经将 wu 的主要代码逻辑介绍完了，在之后的调试当中，主要发现和修正了两个比较严重且有代表性的问题，
+那就是空命令的问题和结束命令的问题。</p>
+<h3 id="Empty_Command"><a href="#Empty_Command" class="headerlink" title="Empty Command"></a>Empty Command</h3><p>第一个问题在于，如果用户没有给定运行的 Command 程序应该如何处理的问题。在 wu 里，我选择了什么也不做。
+在这里，我们并没有通过分支语句来在函数中进行判断。得益于 Go 语言接口类型的设计，我们并不一定要在<code>Command
+构造函数里返回</code>command<code>结构体——任何服从</code>Runner`接口的类型皆可。为此，我们可以使用最简单的方式定义一个空的 Command 类。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">// An empty command is a command that do nothing</span><br><span class="line">type empty string</span><br><span class="line"></span><br><span class="line">func Empty() Command &#123;</span><br><span class="line">        return empty(&quot;Empty command&quot;)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (c empty) String() string &#123;</span><br><span class="line">        return string(c)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (c empty) Start(delay time.Duration) &#123;</span><br><span class="line">        // Start an empty command just do nothing but delay for given duration</span><br><span class="line">        &lt;-time.After(delay)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">func (c empty) Terminate(wait time.Duration) &#123;</span><br><span class="line">        // Terminate empty command just return immediately without any error</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Kill_Command"><a href="#Kill_Command" class="headerlink" title="Kill Command"></a>Kill Command</h3><p>之前提到过，<code>os/exec</code>包中的<code>Command</code>类其实可以通过<code>cmd.Process.Kill()</code>方法来结束。在一般的执行当中都取得了成功。
+但是我却发现当使用<code>wu go run main.go</code>启动一个 Web Server 时，在文件修改后旧的子进程总是不能被正确地结束。
+显示发送<code>SIGINT</code>没有效果，之后执行了<code>Kill</code>函数之后，尽管<code>go run</code>命令退出，但是 Web Server 仍然在运行，
+因此导致了端口占用的问题，使得新的 Command 执行失败。</p>
+<p>经过检索后发现，这是因为<code>go run</code>命令实际上相当于<code>build</code>和执行两条命令，它本身也是通过子进程来运行编译好的新进程，
+因此当信号发送给<code>go run</code>时，它运行的子进程本身没有收到<code>SIGINT</code>因此并不会退出。<code>go run</code>也因为一直等待子进程而保持运行。
+最后当执行<code>Kill</code>函数之后，只有<code>go run</code>命令被结束，而他的子进程仍然在执行当中。</p>
+<p>知道原因之后就可以提出解决方案了，首先在执行 Command 之前，我们要强制新的 Command 和他的子进程可以获得 Group PID。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">// Make process group id available for the command to run</span><br><span class="line">cmd.SysProcAttr = &amp;syscall.SysProcAttr&#123;Setpgid: true&#125;</span><br></pre></td></tr></table></figure>
+<p>此后，我们需要自己实现一个<code>kill</code>函数，为整个子进程组都发送同样的信号:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">func (c *command) kill(sig syscall.Signal) error &#123;</span><br><span class="line">        cmd := c.cmd</span><br><span class="line">        pgid, err := syscall.Getpgid(cmd.Process.Pid)</span><br><span class="line">        if err == nil &#123;</span><br><span class="line">                return syscall.Kill(-pgid, sig)</span><br><span class="line">        &#125;</span><br><span class="line">        return err</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>由此，我们模拟了用户在按下<code>CTRL-C</code>后 Shell 的行: 为整个进程组发送结束信号。这样，我们运行的 Command
+就可以保证被正确结束了。当然，这一套操作只在 *NIX 操作系统上可用。在 Windows 上并没有这样的信号机制——
+还好，wu 并不需要支持 Windows。</p>
+<h2 id="u603B_u7ED3"><a href="#u603B_u7ED3" class="headerlink" title="总结"></a>总结</h2><p><img src="/img/posts/wu-screenshot.png" alt="Screen Shot"></p>
+<p>wu 是我完成的又一个有点规模的 Go 语言的应用。由于这次对于 Channel 和 Go 的一些理念有了更深的认识，
+编写代码也更加顺畅，也更能体会出一歇 Go 设计上的优点了。</p>
+<p>Go 语言在很多方面的设计上确实有独到之处，比如使用通道作为并发同步的工具，而 Channel 的作用又不仅限于此，
+它还可以用来模拟队列、生成器、惰性列表，用来实现多级过滤模式等等。Go 语言的接口和面向对象的设计在很多时候也非常灵活。</p>
+<p>然而，没有范型使得容器类难以实现，没有异常捕捉使得很多函数调用有点啰嗦等问题也确实为代码的编写引入了一些麻烦。
+虽然引入了 Vendor ，支持<code>internal</code>包的概念，但是总体来说 Go 语言在包管理上仍然有很大的提升空间。</p>
+<p>我个人使用 Go 语言的体验还是不错的，接下来一段时间仍将在这门语言上在做一些研究。</p>
+<p>最后，如果你对 wu 的详细实现感兴趣，它的代码已经<a href="https://github.com/shanzi/wu" target="_blank" rel="noopener">开源在 GitHub 上</a>，
+我还上传了编译好的可执行文件<a href="https://github.com/shanzi/wu/releases" target="_blank" rel="noopener">可供下载</a>，欢迎 Bug 反馈和代码贡献。</p>
+
+    </div>
+    <footer>
+        
+        
+  
+  <div class="tags">
+    <a href="/tags/golang/">golang</a>, <a href="/tags/programming/">programming</a>, <a href="/tags/wu/">wu</a>, <a href="/tags/filesystem/">filesystem</a>, <a href="/tags/watch/">watch</a>, <a href="/tags/utility/">utility</a>, <a href="/tags/os/">os</a>, <a href="/tags/cli/">cli</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2020/12/12/nvm-store/">Nvm Store: 第二届阿里数据库大赛参赛记录</a>
+      </li>
+    
+      <li>
+        <a href="/2020/02/24/how-to-architect-a-query-compiler/">SIGMOD 16 | How to Architect a Query Compiler</a>
+      </li>
+    
+      <li>
+        <a href="/2020/01/04/olap-distributed/">OLAP 任务的并发执行与调度</a>
+      </li>
+    
+      <li>
+        <a href="/2019/03/16/streaming-incremental-sql-execution/">Stream SQL 的执行原理与 Flink 的实现</a>
+      </li>
+    
+      <li>
+        <a href="/2018/11/01/sql-query-optimization-volcano/">SQL 查询优化原理与 Volcano Optimizer 介绍</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a target="_blank" rel="noopener" href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Functional-Go/">Functional Go</a><small>4</small></li>
+  
+    <li><a href="/categories/Mastering-Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>9</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/AWS/" style="font-size: 10px;">AWS</a> <a href="/tags/Algorithm/" style="font-size: 17.5px;">Algorithm</a> <a href="/tags/Apache-Flink/" style="font-size: 10px;">Apache Flink</a> <a href="/tags/Apple/" style="font-size: 10px;">Apple</a> <a href="/tags/Bezier-Path/" style="font-size: 10px;">Bezier Path</a> <a href="/tags/Big-Data/" style="font-size: 12.5px;">Big Data</a> <a href="/tags/Cascades/" style="font-size: 10px;">Cascades</a> <a href="/tags/Closure/" style="font-size: 10px;">Closure</a> <a href="/tags/Cloud/" style="font-size: 10px;">Cloud</a> <a href="/tags/Cocoa/" style="font-size: 10px;">Cocoa</a> <a href="/tags/Connected-Components/" style="font-size: 10px;">Connected Components</a> <a href="/tags/Data-structure/" style="font-size: 10px;">Data structure</a> <a href="/tags/Designing-Data-Intensive-Applications/" style="font-size: 10px;">Designing Data-Intensive Applications</a> <a href="/tags/Designing-Paradigm/" style="font-size: 10px;">Designing Paradigm</a> <a href="/tags/Distributed-System/" style="font-size: 12.5px;">Distributed System</a> <a href="/tags/Docker/" style="font-size: 10px;">Docker</a> <a href="/tags/Dokku/" style="font-size: 10px;">Dokku</a> <a href="/tags/EMR/" style="font-size: 10px;">EMR</a> <a href="/tags/ES6/" style="font-size: 10px;">ES6</a> <a href="/tags/ETL/" style="font-size: 10px;">ETL</a> <a href="/tags/Flink/" style="font-size: 10px;">Flink</a> <a href="/tags/Functional-Programing/" style="font-size: 10px;">Functional Programing</a> <a href="/tags/Functional-Programming/" style="font-size: 10px;">Functional Programming</a> <a href="/tags/GLSL/" style="font-size: 10px;">GLSL</a> <a href="/tags/GSoC/" style="font-size: 10px;">GSoC</a> <a href="/tags/Git/" style="font-size: 10px;">Git</a> <a href="/tags/Go/" style="font-size: 12.5px;">Go</a> <a href="/tags/Golang/" style="font-size: 17.5px;">Golang</a> <a href="/tags/Google/" style="font-size: 10px;">Google</a> <a href="/tags/Gourmet/" style="font-size: 10px;">Gourmet</a> <a href="/tags/Graph-Computing/" style="font-size: 10px;">Graph Computing</a> <a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Immutable/" style="font-size: 10px;">Immutable</a> <a href="/tags/Incremental-SQL/" style="font-size: 10px;">Incremental SQL</a> <a href="/tags/Intel/" style="font-size: 10px;">Intel</a> <a href="/tags/Interface-Builder/" style="font-size: 10px;">Interface Builder</a> <a href="/tags/IoT/" style="font-size: 10px;">IoT</a> <a href="/tags/Japan/" style="font-size: 10px;">Japan</a> <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Kylin/" style="font-size: 10px;">Kylin</a> <a href="/tags/Kyoto/" style="font-size: 10px;">Kyoto</a> <a href="/tags/Lazy-Evaluation/" style="font-size: 10px;">Lazy Evaluation</a> <a href="/tags/Linux/" style="font-size: 10px;">Linux</a> <a href="/tags/Log-Structured-Merge-Tree/" style="font-size: 10px;">Log-Structured Merge Tree</a> <a href="/tags/Materialized-View/" style="font-size: 10px;">Materialized View</a> <a href="/tags/NSControl/" style="font-size: 12.5px;">NSControl</a> <a href="/tags/NUC/" style="font-size: 10px;">NUC</a> <a href="/tags/NVM/" style="font-size: 10px;">NVM</a> <a href="/tags/OSX/" style="font-size: 15px;">OSX</a> <a href="/tags/Objective-C/" style="font-size: 12.5px;">Objective-C</a> <a href="/tags/Optimization/" style="font-size: 10px;">Optimization</a> <a href="/tags/Osaka/" style="font-size: 10px;">Osaka</a> <a href="/tags/PageRank/" style="font-size: 10px;">PageRank</a> <a href="/tags/Persistent-Memory/" style="font-size: 10px;">Persistent Memory</a> <a href="/tags/Pregel/" style="font-size: 10px;">Pregel</a> <a href="/tags/React/" style="font-size: 10px;">React</a> <a href="/tags/SQL/" style="font-size: 12.5px;">SQL</a> <a href="/tags/SVG/" style="font-size: 10px;">SVG</a> <a href="/tags/Scala/" style="font-size: 10px;">Scala</a> <a href="/tags/Scheduler/" style="font-size: 12.5px;">Scheduler</a> <a href="/tags/Splunk/" style="font-size: 10px;">Splunk</a> <a href="/tags/Stream-SQL/" style="font-size: 10px;">Stream SQL</a> <a href="/tags/Summary/" style="font-size: 10px;">Summary</a> <a href="/tags/Swift/" style="font-size: 10px;">Swift</a> <a href="/tags/Three-js/" style="font-size: 10px;">Three.js</a> <a href="/tags/Tokyo/" style="font-size: 10px;">Tokyo</a> <a href="/tags/Transmission/" style="font-size: 10px;">Transmission</a> <a href="/tags/Travel/" style="font-size: 10px;">Travel</a> <a href="/tags/Ubuntu/" style="font-size: 10px;">Ubuntu</a> <a href="/tags/User-Tracking/" style="font-size: 10px;">User Tracking</a> <a href="/tags/Volcano/" style="font-size: 10px;">Volcano</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/Y-Combinator/" style="font-size: 10px;">Y-Combinator</a> <a href="/tags/accelerate-meter/" style="font-size: 10px;">accelerate meter</a> <a href="/tags/allocator/" style="font-size: 10px;">allocator</a> <a href="/tags/bezier-path/" style="font-size: 12.5px;">bezier path</a> <a href="/tags/blender/" style="font-size: 12.5px;">blender</a> <a href="/tags/borg/" style="font-size: 10px;">borg</a> <a href="/tags/city/" style="font-size: 10px;">city</a> <a href="/tags/cli/" style="font-size: 10px;">cli</a> <a href="/tags/cocoa/" style="font-size: 15px;">cocoa</a> <a href="/tags/compiler/" style="font-size: 10px;">compiler</a> <a href="/tags/completion/" style="font-size: 10px;">completion</a> <a href="/tags/contenteditable/" style="font-size: 10px;">contenteditable</a> <a href="/tags/database/" style="font-size: 12.5px;">database</a> <a href="/tags/design/" style="font-size: 10px;">design</a> <a href="/tags/desktop/" style="font-size: 10px;">desktop</a> <a href="/tags/develop/" style="font-size: 10px;">develop</a> <a href="/tags/device-motion/" style="font-size: 10px;">device motion</a> <a href="/tags/distribute-storage/" style="font-size: 10px;">distribute storage</a> <a href="/tags/distributed-system/" style="font-size: 10px;">distributed system</a> <a href="/tags/diumoo/" style="font-size: 10px;">diumoo</a> <a href="/tags/douban/" style="font-size: 10px;">douban</a> <a href="/tags/drawing/" style="font-size: 17.5px;">drawing</a> <a href="/tags/editor/" style="font-size: 10px;">editor</a> <a href="/tags/essay/" style="font-size: 17.5px;">essay</a> <a href="/tags/export/" style="font-size: 10px;">export</a> <a href="/tags/filesystem/" style="font-size: 10px;">filesystem</a> <a href="/tags/font/" style="font-size: 12.5px;">font</a> <a href="/tags/fontawesome/" style="font-size: 10px;">fontawesome</a> <a href="/tags/fp/" style="font-size: 17.5px;">fp</a> <a href="/tags/functional-programming/" style="font-size: 20px;">functional programming</a> <a href="/tags/github/" style="font-size: 10px;">github</a> <a href="/tags/go/" style="font-size: 20px;">go</a> <a href="/tags/golang/" style="font-size: 12.5px;">golang</a> <a href="/tags/hamt/" style="font-size: 10px;">hamt</a> <a href="/tags/hashmap/" style="font-size: 10px;">hashmap</a> <a href="/tags/html/" style="font-size: 10px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/iOS/" style="font-size: 10px;">iOS</a> <a href="/tags/iOS-8/" style="font-size: 10px;">iOS 8</a> <a href="/tags/iPad/" style="font-size: 15px;">iPad</a> <a href="/tags/icon/" style="font-size: 10px;">icon</a> <a href="/tags/icon-font/" style="font-size: 12.5px;">icon font</a> <a href="/tags/icon-fontr/" style="font-size: 10px;">icon fontr</a> <a href="/tags/iconfontr/" style="font-size: 15px;">iconfontr</a> <a href="/tags/image/" style="font-size: 10px;">image</a> <a href="/tags/immutable/" style="font-size: 17.5px;">immutable</a> <a href="/tags/indexing/" style="font-size: 10px;">indexing</a> <a href="/tags/io-meter/" style="font-size: 10px;">io-meter</a> <a href="/tags/ionicons/" style="font-size: 10px;">ionicons</a> <a href="/tags/kubernetes/" style="font-size: 10px;">kubernetes</a> <a href="/tags/kv/" style="font-size: 10px;">kv</a> <a href="/tags/life/" style="font-size: 17.5px;">life</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/mac/" style="font-size: 10px;">mac</a> <a href="/tags/math/" style="font-size: 10px;">math</a> <a href="/tags/memory/" style="font-size: 10px;">memory</a> <a href="/tags/mobile/" style="font-size: 10px;">mobile</a> <a href="/tags/music/" style="font-size: 10px;">music</a> <a href="/tags/olap/" style="font-size: 10px;">olap</a> <a href="/tags/online-editor/" style="font-size: 10px;">online editor</a> <a href="/tags/open-source/" style="font-size: 10px;">open source</a> <a href="/tags/opensource/" style="font-size: 10px;">opensource</a> <a href="/tags/os/" style="font-size: 10px;">os</a> <a href="/tags/osx/" style="font-size: 15px;">osx</a> <a href="/tags/package/" style="font-size: 10px;">package</a> <a href="/tags/paper/" style="font-size: 12.5px;">paper</a> <a href="/tags/pencil/" style="font-size: 10px;">pencil</a> <a href="/tags/persist-datastructure/" style="font-size: 17.5px;">persist datastructure</a> <a href="/tags/programing/" style="font-size: 10px;">programing</a> <a href="/tags/programming/" style="font-size: 10px;">programming</a> <a href="/tags/rendering/" style="font-size: 10px;">rendering</a> <a href="/tags/review/" style="font-size: 10px;">review</a> <a href="/tags/rpc/" style="font-size: 10px;">rpc</a> <a href="/tags/scala/" style="font-size: 10px;">scala</a> <a href="/tags/schedule/" style="font-size: 10px;">schedule</a> <a href="/tags/selection/" style="font-size: 10px;">selection</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/shader/" style="font-size: 10px;">shader</a> <a href="/tags/sketch/" style="font-size: 10px;">sketch</a> <a href="/tags/sql/" style="font-size: 10px;">sql</a> <a href="/tags/stylus/" style="font-size: 10px;">stylus</a> <a href="/tags/summary/" style="font-size: 12.5px;">summary</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/swift/" style="font-size: 10px;">swift</a> <a href="/tags/taiwan/" style="font-size: 12.5px;">taiwan</a> <a href="/tags/tips/" style="font-size: 10px;">tips</a> <a href="/tags/travel/" style="font-size: 12.5px;">travel</a> <a href="/tags/utility/" style="font-size: 10px;">utility</a> <a href="/tags/vector-trie/" style="font-size: 12.5px;">vector trie</a> <a href="/tags/watch/" style="font-size: 10px;">watch</a> <a href="/tags/web/" style="font-size: 17.5px;">web</a> <a href="/tags/webGL/" style="font-size: 12.5px;">webGL</a> <a href="/tags/webgl/" style="font-size: 10px;">webgl</a> <a href="/tags/wu/" style="font-size: 10px;">wu</a> <a href="/tags/xcode/" style="font-size: 10px;">xcode</a> <a href="/tags/zocial/" style="font-size: 10px;">zocial</a> <a href="/tags/%E5%90%90%E6%A7%BD/" style="font-size: 10px;">吐槽</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2020 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+
+</body>
+
+</html>

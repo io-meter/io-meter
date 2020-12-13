@@ -1,0 +1,478 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>Nvm Store: 第二届阿里数据库大赛参赛记录 | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="前段时间因兴趣使然，参加了第二届阿里数据库大赛，并成功冲入决赛。
+本届数据库大赛的题目是在Intel提供的持久化内存（Persistent Memory）上实现一套KV Store。
+持久化内存一直是数据库研究的一个新兴研究方向，十分高兴这次有机会在真正的持久化内存上实现系统并测试。
+这里是我们参赛作品的一个介绍。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="Nvm Store: 第二届阿里数据库大赛参赛记录"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content=""/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a target="_blank" rel="noopener" href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2020/12/12/nvm-store/" target="_blank">Nvm Store: 第二届阿里数据库大赛参赛记录</a></h1>
+
+
+      
+        <time datetime="2020-12-12T05:25:12.000Z">2020-12-12</time>
+      
+    </header>
+    <div class="entry">
+      <p>前段时间因兴趣使然，参加了第二届阿里数据库大赛，并成功冲入决赛。
+本届数据库大赛的题目是在Intel提供的持久化内存（Persistent Memory）上实现一套KV Store。
+持久化内存一直是数据库研究的一个新兴研究方向，十分高兴这次有机会在真正的持久化内存上实现系统并测试。
+这里是我们参赛作品的一个介绍。</p>
+<a id="more"></a>
+<h2 id="u9898_u76EE_u7B80_u4ECB"><a href="#u9898_u76EE_u7B80_u4ECB" class="headerlink" title="题目简介"></a>题目简介</h2><p>本次数据库大赛的题目是在Intel Optane Persistent Memory上实现一套高性能的KV Store，
+访问模式主要是随机访问。由于使用的是持久化内存，要求实现的系统能够持久化数据，
+在系统Crash等场景下可以正确恢复。Key的写入要求是原子的，写入失败不能影响旧值。</p>
+<p>测试使用16个线程写入随机键值对，每个线程写入大约20M条记录，随后会进行十次混合读写。
+混合读写阶段的读写具有热点，以写入过程的时间和混合读写过程中最慢一次的时间作为成绩。
+总共提供的PMEM大小是64G，但写入数据量会大于64G（因为有重复Key的写入）。
+复赛阶段提供了8G DRAM以供使用。具体的题目描述请参见比赛<a target="_blank" rel="noopener" href="https://tianchi.aliyun.com/competition/entrance/531820/information">官方网站的介绍</a>。
+我所在的队伍在最后的决赛获得了季军（第四名）。</p>
+<p>首先需要介绍一下Persistent Memory，这是一种插在内存插槽上的新兴存储设备，
+在数据库领域是一个前沿研究热点。它具有类似DRAM的随机读取能力，但是能在掉电之后保持数据不丢失。
+与插在PCI-E/M.2插槽的所谓NVMe SSD不同，PMEM具有更细的访问粒度（8byte字长），
+更强的随机访问能力。但我们在测试中发现，它的性能相比DRAM还有一定的差距。</p>
+<p>PMEM目前的一种常用配置是将DRAM运行为CPU的L4 Cache，使用单位容量价格较低的PMEM作为主存，
+这种方式可以使现有应用程序无痛迁移到PMEM上，且不会相比DRAM有太大的性能差异。
+但是想要充分利用PMEM的性能，最佳方案仍然是设计专业的应用程序。
+为此，需要使用<a target="_blank" rel="noopener" href="https://pmem.io/pmdk/">PMDK</a>等工具直接访问PMEM。
+Linux等操作系统也已经位PMEM提供的DAX功能，可以绕过操作系统的页面管理，直接写入PMEM。</p>
+<p>本赛题的背景即是如此。对题目的信息进行分析，可以知道：</p>
+<ol>
+<li>写入数据量大于PMEM空间，说明存在大量的覆盖写，对Allocator的设计要求比较高</li>
+<li>内存相对来说比较充裕，且PMEM相比DRAM的总体性能还是有一定差距，因此应该尽量将不需要持久化的数据维护在DRAM</li>
+<li>并发写入的线程数较多，应该尽量使用Thread Local的数据结构，避免线程间同步。
+必须要同步的地方使用细粒度锁</li>
+</ol>
+<p>此外，在测试的时候发现，本地使用DRAM虚拟的PMEM和硬件PMEM的特性差异较大，
+因此需要尽量在实际硬件环境下测试才能得到有意义的结果，不能依赖本地试验结果。</p>
+<p>在以上分析的基础上，我们的系统采用了如下设计。</p>
+<h2 id="u6982_u89C8"><a href="#u6982_u89C8" class="headerlink" title="概览"></a>概览</h2><p>我们设计的系统架构图如下：</p>
+<p><img src="/img/nvmstore/overview.jpg" alt="Overview"></p>
+<p>总体来说，系统分为以下三个部分：</p>
+<ol>
+<li><strong>Hash Index</strong>：记录Key到Value映射的内存索引，实现查询和更新操作</li>
+<li><strong>Allocator</strong>：用来管理Heap上的存储空间，实现空间的分配和回收</li>
+<li><strong>Heap</strong>：用于写入数据记录的PMEM空间</li>
+</ol>
+<p>KV Store的读写操作都很简单，其中，写入操作使用类似影子分页
+（<a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/%E5%BD%B1%E5%AD%90%E5%88%86%E9%A1%B5">Shadow Paging</a>）
+的方法：</p>
+<ol>
+<li>先使用Allocator分配一块新的Heap空间</li>
+<li>直接将Record写入新分配的空间</li>
+<li>更新Hash Index，指向新写入的地址</li>
+</ol>
+<p>读取也很简单：通过Hash Index找到Heap上的地址并读取即可。</p>
+<h2 id="Heap"><a href="#Heap" class="headerlink" title="Heap"></a>Heap</h2><p>堆是存储实际数据的地方，它的设计关系到如何实现写入的持久化、原子性和可恢复性。
+同时，写入堆的方式和堆上记录（Record）的写入方法也极大地关系到写入的性能。
+下图展示了Heap的大致结构。</p>
+<p><img src="/img/nvmstore/heap.jpg" alt="Heap, Block, Record"></p>
+<p>在我们的系统中，Heap被划分为等长的Block，因此Heap内存的分配都是以Block为单位的。
+Heap的第一个块用于写入Magic Number。Hash Index当中的Entry指向Record的地址，
+而Allocator中会维护Heap中所有的空闲空间的位置。</p>
+<p>Record是写入在Heap上的表示，它要记录所写入的Key和Value，并保证可以原子地写入数据并可以恢复。
+下图是Record的结构的展示：</p>
+<p><img src="/img/nvmstore/records.jpg" alt="Records"></p>
+<p>Record由整数个Block构成，在Record的头部是存储元信息的Header，之后是Key和Value组成的Payload，
+由于Record总是由整数个Block构成，因此在Record的结尾可能会有一部分冗余空间没有被利用。
+Record中最重要的是Header，它的结构包括：</p>
+<ul>
+<li><strong>BlockSize</strong>：Record包含的Block的总数量，由于Value的长度小于1024，因此一条记录的总长度
+总小于1048（Header+Key+Value），则BlockSize不大于17，可以用5个二进制位表示</li>
+<li><strong>PayloadSize</strong>：存储Payload的实际长度，Payload最长不超过1040字节，因此可以用11个二进制位表示</li>
+<li><strong>CRC16</strong>：由Payload的CRC校验折叠而成。用于保证Record写入的原子性</li>
+<li><strong>Serial Number</strong>：Record的序列号，用于判断Record的先后顺序</li>
+</ul>
+<p>在Heap上写入Record的方法是先在内存中组装好一个Record，并写入Header中的字段，
+然后使用<code>pmem_memcpy</code>命令的<code>NON_TEMPORAL</code>模式写入。在内存中组装Record的原因，
+一方面是内存的访问性能仍然快于PMEM，另一方面是因为可以利用<code>NON_TEMPORAL</code>模式，
+使用一次刷写持久化一整个Record。</p>
+<p>所谓的<code>NON_TEMPORAL</code>写入，在一些文献中称为Stream写入。简单来说，一般CPU写入一段内存空间时，
+会先将对应内存中的一个CacheLine加载到CPU的缓存中，进行修改之后再写回。也就是说，
+正常情况下，即使你只在某个位置写入了几个Byte的数据，CPU仍然会把所在的CacheLine读入。
+这在很多情况下显然是低效的，因此现代CPU提供了对应的指令，可以实现对CacheLine的直接刷写，
+避免读入。PMEM作为一种特殊的内存，也适用于这些概念。</p>
+<p>我们发现，使用CacheLine对齐的Buffer组装Record，并利用<code>NON_TEMPORAL</code>写入方式写入PMEM所得性能最高。
+这也意味着我们必须将Heap上的Block设置为64Byte大小，并对齐到CacheLine。</p>
+<p>虽然有了<code>NON_TEMPORAL</code>写入，仍不能保证写入Record的原子性。在这里
+我们要保证写入的一个Record要么完整地写入成功，要么写入失败（不影响旧值）。
+这是因为PMEM只能保证对一个字长（8Byte）写入的原子性，即使是一个CacheLine，
+它也不能保证一定是整体写入成功或失败的。</p>
+<p>因此，我们在Header中集成了CRC：由于Header被压缩在8个Byte，PMEM可以保证它的原子写入，
+因此可以通过校验CRC判断整个Record是否合法。</p>
+<p>Serial Number的作用则是用来判断Record的写入顺序，比如说有同一个Key，先后写入了两条数据，
+第二条数据的值应该覆盖掉第一条。但是因为有内存回收的原因，第二条数据在文件中的位置可能更早，
+因此需要它来判断哪一条更新，以避免恢复出旧值。我们在比赛时使用的是简单的线程本地计数器，
+为了实现线程间的有序，可以考虑使用时间戳或全局递增计数器来实现，Serial Number也不必要放在Header里。</p>
+<p>在本系统中，将BlockSize和PayloadSize分开存储，这是希望一旦一个Record的空间被分配出去之后，
+就不再改变这一块空间的大小。也就是说，未来如果有其他不同长度的数据写到这里，BlockSize仍然不变。
+这是因为BlockSize改变可能会导致恢复的问题，比如在一个原来长度10的Record所占位置写入长度5的数据，
+如果更改了BlockSize并在此时Crash，则恢复进程可能找不到下一条记录的正确位置。
+原因是可能出现Header写入成功但内容写入失败的现象。如果此时恢复进程按照Header中指示的BlockSize（5）
+来跳转，会跳转到随机数据所在的位置。</p>
+<p>以上设计保证了Record的写入原子性和持久性。恢复记录的算法就非常简单：</p>
+<ol>
+<li>检查PMEM文件的第一个块是否有Magic Number，如果有就开始恢复进程</li>
+<li>依次读入记录，进行CRC校验，跳过校验失败的Record。将合法的Record登记到Hash Index上（Serial Number较大的胜出）</li>
+<li>重复以上过程直到处理完所有能读出的Record</li>
+</ol>
+<h2 id="Hash_Index"><a href="#Hash_Index" class="headerlink" title="Hash Index"></a>Hash Index</h2><p>Hash Index也是系统设计中很重要的一部分，他的查询性能是KV Store性能的基础，
+此外也需要在这上面实现合理的并发控制，保证多线程写入的一致性。我们设计的Hash Index
+有如下特点：</p>
+<ol>
+<li>开放寻址（<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Open_addressing">Open Addressing</a>）</li>
+<li>线性探查（<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/Linear_probing">Linear Probing</a>）</li>
+<li>Record地址使用<code>uint32</code>表示</li>
+<li>Hash函数使用<a target="_blank" rel="noopener" href="https://github.com/google/cityhash">CityHash</a></li>
+<li>细粒度锁</li>
+</ol>
+<p>首先，受Google的<a target="_blank" rel="noopener" href="https://github.com/abseil/abseil-cpp/blob/master/absl/container/flat_hash_map.h">Flat Hash Map</a>
+启发，我们对计算出的Key的Hash值做了如下图所示处理：</p>
+<p><img src="/img/nvmstore/hash.jpg" alt="Hash"></p>
+<p>Hash值总共64bit，其中后15个bit被用作H2，剩下的bit被用于H1。H1用来寻址Key应在的Bucket，
+H2则存放在HashMap的Bucket里。HashMap的Bucket具有如下图所示的构造：</p>
+<p><img src="/img/nvmstore/hash-bucket.jpg" alt="Buckets"></p>
+<p>HashMap的一个Bucket是对齐到CacheLine边界的连续三个CacheLine。
+每个Bucket可以存放8条记录，从左到右，依次是lock段、ctrl段、value段、block size段和key段。
+其中lock段通过原子操作实现细粒度的SpinLock；ctrl段存放8个H2值，用于进行快速比对；
+value段存放Key对应的记录地址。block size段和key段通过将key和block size缓存在内存中，
+避免写入阶段对PMEM的读取。</p>
+<p>为什么要设计ctrl段呢？当我们使用H1找到一个Key应该在的Bucket之后，与其逐个比较每个Slot，
+不如先使用H2探针来快速判断是否有匹配的Entry。具体来说，可以使用如下流程的SIMD指令，
+在少数几个Instruction的操作下，快速以很高的概率查找到匹配的点。</p>
+<p><img src="/img/nvmstore/simd-instructions.jpg" alt="SIMD Instructions"></p>
+<p>在上述案例中，我们要查找的Key的H2值是<code>0x0F23</code>，在对应的Bucket的ctrl段在slot 2有匹配的值。
+通过<code>_mm_cmpeq_epi16</code>和<code>_mm_movemask_epi8</code>指令操作之后，可以快速从16byte的ctrl段找到这个位置。
+这里还利用了<code>__builtin_ffs</code>快速求解一个整型数值的第一个<code>1</code>的位置。</p>
+<p>利用ctrl段可以减少Hash碰撞的概率和线性探查的长度：
+传统HashMap在利用Hash值定位到某个位置后，需要向后逐个对比Key值来找到匹配的Entry，
+通常不会存储之后的Key的Hash以供快速检查。使用我们（<code>flat_hash_map</code>）的解决方案，
+实际相当于先用Hash的一部分寻找Bucket，再用另一部分进行快速比对，可以更充分地利用Hash值中的每一位。</p>
+<p>在使用ctrl段找到一个匹配后，还需要再检查Key以避免碰撞的发生。在一开始的时候，我们的系统会去PMEM上读取Key的值，
+后来发现这种混合读写对PMEM性能伤害很大。后来我们采取了将Key缓存在Bucket中的方案，这就是Bucket中的key段的来源。
+后来，Block Size也被整合进来，使得无论是写入还是内存回收的时候都不需要访问PMEM，极大地提高了系统的性能。</p>
+<p>在本系统的Hash Index的设计中，插入和更新操作会锁定对应的Bucket，由于每个Bucket只有8个slot，所以锁的粒度很细。
+在查找操作的探查阶段，我们也不加锁，
+这是参考了<a target="_blank" rel="noopener" href="http://infoscience.epfl.ch/record/203822/files/Tech_report_CLHT_BSTTK.pdf">CLHT</a>的设计，
+x86系统采用的<a target="_blank" rel="noopener" href="https://en.wikipedia.org/wiki/MESIF_protocol">MESIF protocol</a>具有较强的Memory Order保证，
+以及对短于一个字的内存读写的原子性。在查询阶段不加锁，不但可以避免锁等待，
+还可以避免查询Miss的情况下对内存的任何写入。实际上，在多核强竞争场景下写入多核共享的CacheLine，
+会导致CacheLine同步和核间通讯，因此可能大大降低性能。</p>
+<p>但是值得注意的是，在命中记录开始读取值之前，要锁定Bucket以防止脏读。这是因为在并发线程同时读取一个Key时，
+可能出现第1个线程先读到了Key对应记录的地址，第二个线程写入同一个Key，回收了此前的记录，
+然后又在第2个写入中利用了这个地址的情况。此时就会出现两个线程对同一段内存的并发读写，触发脏读。
+下图展示了这种情况：</p>
+<p><img src="/img/nvmstore/read-value-consistency.jpg" alt="Read Consistency"></p>
+<h2 id="Allocator"><a href="#Allocator" class="headerlink" title="Allocator"></a>Allocator</h2><p>Allocator是整个系统当中最核心的部分，他的性能和策略设计，直接决定了系统的性能。
+在我们的系统中，每个线程都有自己本地的Allocator。Heap空间被预先分配给16个线程。
+每个线程的分配策略是先从头开始进行连续写（类似Log-Structured），
+随后开始从Allocator记录的空闲空间开始利用，最后使用保留段。基本策略如下图所示：</p>
+<p><img src="/img/nvmstore/alloc-strategies.jpg" alt="Allocate Strategies"></p>
+<p>Allocator主要由块状链表组成，不同长度的空闲空间根据它们的Block长度不同，被放置在不同的块状链表中。
+每个块状链表的节点存储着一系列空闲空间的地址，并使用一个<code>top</code>指针指向下一个地址存放的位置。
+块状链表的块使用<code>next</code>指针相连。为了避免频繁的内存分配，我们对块状链表的块使用了Memory Pool。
+使用块状链表的原因是为了在保证Alloc和Free取出和存放地址都是<code>O(1)</code>同时，避免随机内存访问和提高内存利用率。 
+块状链表比静态分配Stack更灵活。</p>
+<p>给定一条记录，我们可以先计算出他所需要的Block数，然后在Allocator中从下到上寻找可以放入这条记录的最小空闲空间。
+默认不改变对应空间原来的BlockSize，有可能出现把短记录放在很长的空闲段里，导致空间浪费和OOM，
+为此必须要考虑修改长段的长度。在比赛中，我们采用的是在Alloc切分一段空间前，先在后面写入块来维护元数据，
+保证恢复进程可以跳转。后来跟其他参赛选手交流后发现，逐块扫描校验CRC也许是一种更好的实现。</p>
+<p>下图展示了切分段的解决方法，在将长10的空闲段切开时，先在后面写入一块帮助恢复进程找到跳转位置，
+再返回前面的空间。</p>
+<p><img src="/img/nvmstore/split-long-space.jpg" alt="Split Long Space"></p>
+<p>除此之外，我们在Allocator中加入了一个<code>short_alloc</code>字段，
+用来在上述情况中，将长段的第二部分放在Allocator的头，在alloc的时候优先检查它。
+由于大部分写入的值长度都比较短，因此大概率<code>short_alloc</code>当中的空间会被立即使用，
+之后如果有剩余的空间仍然放在<code>short_alloc</code>里，因此可以获得局部的连续写入。</p>
+<p>上面提到，分配给每个Allocator管理的段在末尾还有一段保留段。
+这是因为有切分块的存在，上述策略对短块友好，因此Heap会越切越细。
+如果有长记录的写入到来，可能会出现找不到连续长空间的问题。
+为此增加一段保留段，在Allocator分配不出长空间时启用保留段，
+避免OOM。</p>
+<h2 id="u603B_u7ED3"><a href="#u603B_u7ED3" class="headerlink" title="总结"></a>总结</h2><p>我们首先实现了PMEM上高性能KV Store的基础框架，它具有以下特性：</p>
+<ol>
+<li>保证了写入的原子性和持久性</li>
+<li>实现了基于SIMD指令快速查找和细粒度锁的Hash Index</li>
+<li>实现了简单高效且适应性强的Allocator</li>
+</ol>
+<p>在第一阶段我们实现了大约54秒的测试成绩。之后我们将Block Size和Key信息缓存在Hash Index
+中，使得写入和Free空间时无需读取PMEM，立即使得成绩提升了8秒到达46秒左右。</p>
+<p>最后我们尝试了在内存中组装Record，使用64byte的Block，
+并对齐到CacheLine。再配合<code>NON_TEMPORAL</code>写入模式，达到了我们的最佳成绩36秒。</p>
+<p>这一成绩距离第2名和第3名的成绩差距不到1秒，应该说是一个级别的实现方案了。
+综合来看我们的方案在实现并发控制、持久化和原子性方面的细节方面是比较周到的：</p>
+<ol>
+<li>使用了CRC校验保证记录写入的完整性</li>
+<li>使用细粒度的Hash Index锁保证并发性能</li>
+<li>使用Serial Number保证记录的恢复顺序</li>
+<li>对切分块场景下的恢复提出了合理的方案</li>
+</ol>
+<p>个人认为我们的方案没有特别地利用测试程序的访问模式，通用性非常好。
+虽然没有能够拿到更好的名次，总体来说还是非常令人满意的。</p>
+<p>在本方案的基础上，参考其他队伍的解决方案，我觉得还有以下一些可以提高的地方：</p>
+<ol>
+<li>使用HugePage或使用预热TLB的方法来减少Page Fault。有其他参赛选手通过预热TLB获得了可观的性能提升，
+但是我觉得在实际生产环境中配置HugePage来减少页表大小是更好的手段。在比赛时有考虑过相关实现，
+遗憾的是发现HugePage在测试环境中无法激活后我就放弃了这个方向</li>
+<li>实现内存碎片整理。目前的解决方案会出现不断碎片化的问题，被切碎的空间即使相连也不会互相合并，
+这主要是考虑到实现的复杂性和性能问题。在实际生产环境中，有必要添加内存碎片整理机制，定期合并碎片以获得连续段</li>
+<li>增加写入的连续性。事实表明，顺序写入PMEM相比于随机写仍然有相当可观的性能提升。
+冠军队伍通过利用这一特性获得了超过我们数秒的提升。然而遗憾的是，冠军队伍的实现利用了测试程序访问模式的弱点
+（先写入的记录会先被覆盖，因此前段的空间大概率会有连续空闲段）。实际工作负载中是否有此模式是存疑的，
+而且冠军队伍的实现在空闲空间不连续的情况下会退化成线性扫描，我相信这方面仍然是可以提高的</li>
+</ol>
+<h2 id="u53C2_u8D5B_u611F_u60F3"><a href="#u53C2_u8D5B_u611F_u60F3" class="headerlink" title="参赛感想"></a>参赛感想</h2><p>这是我第一次参加类似的编程竞赛，很高兴最后能拿奖。特别是在比赛的过程中还学到了很多东西：
+在比赛前，我对C++编程语言、内存模型、Memory Order、并发控制等的了解都比较肤浅，在这个比赛中，
+我了解到很多内存管理和编写高性能应用的知识。比如：在此之前，
+我从来都没有想过内存对象在内存中的地址会对软件的性能产生巨大影响，对齐到CacheLine之后竟然能获得数十秒的性能提升。
+也没想过存在于同一CacheLine的两个锁竟然会有False Sharing，两个线程分别对这样的两个锁加锁，
+竟然会互相干扰并导致性能退化！可以说涉及到系统调用、TLB、指令集和CPU Cache级别的性能优化技巧让我大开眼界。</p>
+<p>编写如此接近硬件的程序让我对C++（以及其他系统编程语言）和高性能编程产生了浓厚的兴趣。
+希望未来还可以在这个方向上继续学习。</p>
+
+    </div>
+    <footer>
+        
+        
+  
+  <div class="tags">
+    <a href="/tags/database/">database</a>, <a href="/tags/kv/">kv</a>, <a href="/tags/memory/">memory</a>, <a href="/tags/hashmap/">hashmap</a>, <a href="/tags/allocator/">allocator</a>, <a href="/tags/NVM/">NVM</a>, <a href="/tags/Persistent-Memory/">Persistent Memory</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2020/12/12/nvm-store/">Nvm Store: 第二届阿里数据库大赛参赛记录</a>
+      </li>
+    
+      <li>
+        <a href="/2020/02/24/how-to-architect-a-query-compiler/">SIGMOD 16 | How to Architect a Query Compiler</a>
+      </li>
+    
+      <li>
+        <a href="/2020/01/04/olap-distributed/">OLAP 任务的并发执行与调度</a>
+      </li>
+    
+      <li>
+        <a href="/2019/03/16/streaming-incremental-sql-execution/">Stream SQL 的执行原理与 Flink 的实现</a>
+      </li>
+    
+      <li>
+        <a href="/2018/11/01/sql-query-optimization-volcano/">SQL 查询优化原理与 Volcano Optimizer 介绍</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a target="_blank" rel="noopener" href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Functional-Go/">Functional Go</a><small>4</small></li>
+  
+    <li><a href="/categories/Mastering-Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>9</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/AWS/" style="font-size: 10px;">AWS</a> <a href="/tags/Algorithm/" style="font-size: 17.5px;">Algorithm</a> <a href="/tags/Apache-Flink/" style="font-size: 10px;">Apache Flink</a> <a href="/tags/Apple/" style="font-size: 10px;">Apple</a> <a href="/tags/Bezier-Path/" style="font-size: 10px;">Bezier Path</a> <a href="/tags/Big-Data/" style="font-size: 12.5px;">Big Data</a> <a href="/tags/Cascades/" style="font-size: 10px;">Cascades</a> <a href="/tags/Closure/" style="font-size: 10px;">Closure</a> <a href="/tags/Cloud/" style="font-size: 10px;">Cloud</a> <a href="/tags/Cocoa/" style="font-size: 10px;">Cocoa</a> <a href="/tags/Connected-Components/" style="font-size: 10px;">Connected Components</a> <a href="/tags/Data-structure/" style="font-size: 10px;">Data structure</a> <a href="/tags/Designing-Data-Intensive-Applications/" style="font-size: 10px;">Designing Data-Intensive Applications</a> <a href="/tags/Designing-Paradigm/" style="font-size: 10px;">Designing Paradigm</a> <a href="/tags/Distributed-System/" style="font-size: 12.5px;">Distributed System</a> <a href="/tags/Docker/" style="font-size: 10px;">Docker</a> <a href="/tags/Dokku/" style="font-size: 10px;">Dokku</a> <a href="/tags/EMR/" style="font-size: 10px;">EMR</a> <a href="/tags/ES6/" style="font-size: 10px;">ES6</a> <a href="/tags/ETL/" style="font-size: 10px;">ETL</a> <a href="/tags/Flink/" style="font-size: 10px;">Flink</a> <a href="/tags/Functional-Programing/" style="font-size: 10px;">Functional Programing</a> <a href="/tags/Functional-Programming/" style="font-size: 10px;">Functional Programming</a> <a href="/tags/GLSL/" style="font-size: 10px;">GLSL</a> <a href="/tags/GSoC/" style="font-size: 10px;">GSoC</a> <a href="/tags/Git/" style="font-size: 10px;">Git</a> <a href="/tags/Go/" style="font-size: 12.5px;">Go</a> <a href="/tags/Golang/" style="font-size: 17.5px;">Golang</a> <a href="/tags/Google/" style="font-size: 10px;">Google</a> <a href="/tags/Gourmet/" style="font-size: 10px;">Gourmet</a> <a href="/tags/Graph-Computing/" style="font-size: 10px;">Graph Computing</a> <a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Immutable/" style="font-size: 10px;">Immutable</a> <a href="/tags/Incremental-SQL/" style="font-size: 10px;">Incremental SQL</a> <a href="/tags/Intel/" style="font-size: 10px;">Intel</a> <a href="/tags/Interface-Builder/" style="font-size: 10px;">Interface Builder</a> <a href="/tags/IoT/" style="font-size: 10px;">IoT</a> <a href="/tags/Japan/" style="font-size: 10px;">Japan</a> <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Kylin/" style="font-size: 10px;">Kylin</a> <a href="/tags/Kyoto/" style="font-size: 10px;">Kyoto</a> <a href="/tags/Lazy-Evaluation/" style="font-size: 10px;">Lazy Evaluation</a> <a href="/tags/Linux/" style="font-size: 10px;">Linux</a> <a href="/tags/Log-Structured-Merge-Tree/" style="font-size: 10px;">Log-Structured Merge Tree</a> <a href="/tags/Materialized-View/" style="font-size: 10px;">Materialized View</a> <a href="/tags/NSControl/" style="font-size: 12.5px;">NSControl</a> <a href="/tags/NUC/" style="font-size: 10px;">NUC</a> <a href="/tags/NVM/" style="font-size: 10px;">NVM</a> <a href="/tags/OSX/" style="font-size: 15px;">OSX</a> <a href="/tags/Objective-C/" style="font-size: 12.5px;">Objective-C</a> <a href="/tags/Optimization/" style="font-size: 10px;">Optimization</a> <a href="/tags/Osaka/" style="font-size: 10px;">Osaka</a> <a href="/tags/PageRank/" style="font-size: 10px;">PageRank</a> <a href="/tags/Persistent-Memory/" style="font-size: 10px;">Persistent Memory</a> <a href="/tags/Pregel/" style="font-size: 10px;">Pregel</a> <a href="/tags/React/" style="font-size: 10px;">React</a> <a href="/tags/SQL/" style="font-size: 12.5px;">SQL</a> <a href="/tags/SVG/" style="font-size: 10px;">SVG</a> <a href="/tags/Scala/" style="font-size: 10px;">Scala</a> <a href="/tags/Scheduler/" style="font-size: 12.5px;">Scheduler</a> <a href="/tags/Splunk/" style="font-size: 10px;">Splunk</a> <a href="/tags/Stream-SQL/" style="font-size: 10px;">Stream SQL</a> <a href="/tags/Summary/" style="font-size: 10px;">Summary</a> <a href="/tags/Swift/" style="font-size: 10px;">Swift</a> <a href="/tags/Three-js/" style="font-size: 10px;">Three.js</a> <a href="/tags/Tokyo/" style="font-size: 10px;">Tokyo</a> <a href="/tags/Transmission/" style="font-size: 10px;">Transmission</a> <a href="/tags/Travel/" style="font-size: 10px;">Travel</a> <a href="/tags/Ubuntu/" style="font-size: 10px;">Ubuntu</a> <a href="/tags/User-Tracking/" style="font-size: 10px;">User Tracking</a> <a href="/tags/Volcano/" style="font-size: 10px;">Volcano</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/Y-Combinator/" style="font-size: 10px;">Y-Combinator</a> <a href="/tags/accelerate-meter/" style="font-size: 10px;">accelerate meter</a> <a href="/tags/allocator/" style="font-size: 10px;">allocator</a> <a href="/tags/bezier-path/" style="font-size: 12.5px;">bezier path</a> <a href="/tags/blender/" style="font-size: 12.5px;">blender</a> <a href="/tags/borg/" style="font-size: 10px;">borg</a> <a href="/tags/city/" style="font-size: 10px;">city</a> <a href="/tags/cli/" style="font-size: 10px;">cli</a> <a href="/tags/cocoa/" style="font-size: 15px;">cocoa</a> <a href="/tags/compiler/" style="font-size: 10px;">compiler</a> <a href="/tags/completion/" style="font-size: 10px;">completion</a> <a href="/tags/contenteditable/" style="font-size: 10px;">contenteditable</a> <a href="/tags/database/" style="font-size: 12.5px;">database</a> <a href="/tags/design/" style="font-size: 10px;">design</a> <a href="/tags/desktop/" style="font-size: 10px;">desktop</a> <a href="/tags/develop/" style="font-size: 10px;">develop</a> <a href="/tags/device-motion/" style="font-size: 10px;">device motion</a> <a href="/tags/distribute-storage/" style="font-size: 10px;">distribute storage</a> <a href="/tags/distributed-system/" style="font-size: 10px;">distributed system</a> <a href="/tags/diumoo/" style="font-size: 10px;">diumoo</a> <a href="/tags/douban/" style="font-size: 10px;">douban</a> <a href="/tags/drawing/" style="font-size: 17.5px;">drawing</a> <a href="/tags/editor/" style="font-size: 10px;">editor</a> <a href="/tags/essay/" style="font-size: 17.5px;">essay</a> <a href="/tags/export/" style="font-size: 10px;">export</a> <a href="/tags/filesystem/" style="font-size: 10px;">filesystem</a> <a href="/tags/font/" style="font-size: 12.5px;">font</a> <a href="/tags/fontawesome/" style="font-size: 10px;">fontawesome</a> <a href="/tags/fp/" style="font-size: 17.5px;">fp</a> <a href="/tags/functional-programming/" style="font-size: 20px;">functional programming</a> <a href="/tags/github/" style="font-size: 10px;">github</a> <a href="/tags/go/" style="font-size: 20px;">go</a> <a href="/tags/golang/" style="font-size: 12.5px;">golang</a> <a href="/tags/hamt/" style="font-size: 10px;">hamt</a> <a href="/tags/hashmap/" style="font-size: 10px;">hashmap</a> <a href="/tags/html/" style="font-size: 10px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/iOS/" style="font-size: 10px;">iOS</a> <a href="/tags/iOS-8/" style="font-size: 10px;">iOS 8</a> <a href="/tags/iPad/" style="font-size: 15px;">iPad</a> <a href="/tags/icon/" style="font-size: 10px;">icon</a> <a href="/tags/icon-font/" style="font-size: 12.5px;">icon font</a> <a href="/tags/icon-fontr/" style="font-size: 10px;">icon fontr</a> <a href="/tags/iconfontr/" style="font-size: 15px;">iconfontr</a> <a href="/tags/image/" style="font-size: 10px;">image</a> <a href="/tags/immutable/" style="font-size: 17.5px;">immutable</a> <a href="/tags/indexing/" style="font-size: 10px;">indexing</a> <a href="/tags/io-meter/" style="font-size: 10px;">io-meter</a> <a href="/tags/ionicons/" style="font-size: 10px;">ionicons</a> <a href="/tags/kubernetes/" style="font-size: 10px;">kubernetes</a> <a href="/tags/kv/" style="font-size: 10px;">kv</a> <a href="/tags/life/" style="font-size: 17.5px;">life</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/mac/" style="font-size: 10px;">mac</a> <a href="/tags/math/" style="font-size: 10px;">math</a> <a href="/tags/memory/" style="font-size: 10px;">memory</a> <a href="/tags/mobile/" style="font-size: 10px;">mobile</a> <a href="/tags/music/" style="font-size: 10px;">music</a> <a href="/tags/olap/" style="font-size: 10px;">olap</a> <a href="/tags/online-editor/" style="font-size: 10px;">online editor</a> <a href="/tags/open-source/" style="font-size: 10px;">open source</a> <a href="/tags/opensource/" style="font-size: 10px;">opensource</a> <a href="/tags/os/" style="font-size: 10px;">os</a> <a href="/tags/osx/" style="font-size: 15px;">osx</a> <a href="/tags/package/" style="font-size: 10px;">package</a> <a href="/tags/paper/" style="font-size: 12.5px;">paper</a> <a href="/tags/pencil/" style="font-size: 10px;">pencil</a> <a href="/tags/persist-datastructure/" style="font-size: 17.5px;">persist datastructure</a> <a href="/tags/programing/" style="font-size: 10px;">programing</a> <a href="/tags/programming/" style="font-size: 10px;">programming</a> <a href="/tags/rendering/" style="font-size: 10px;">rendering</a> <a href="/tags/review/" style="font-size: 10px;">review</a> <a href="/tags/rpc/" style="font-size: 10px;">rpc</a> <a href="/tags/scala/" style="font-size: 10px;">scala</a> <a href="/tags/schedule/" style="font-size: 10px;">schedule</a> <a href="/tags/selection/" style="font-size: 10px;">selection</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/shader/" style="font-size: 10px;">shader</a> <a href="/tags/sketch/" style="font-size: 10px;">sketch</a> <a href="/tags/sql/" style="font-size: 10px;">sql</a> <a href="/tags/stylus/" style="font-size: 10px;">stylus</a> <a href="/tags/summary/" style="font-size: 12.5px;">summary</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/swift/" style="font-size: 10px;">swift</a> <a href="/tags/taiwan/" style="font-size: 12.5px;">taiwan</a> <a href="/tags/tips/" style="font-size: 10px;">tips</a> <a href="/tags/travel/" style="font-size: 12.5px;">travel</a> <a href="/tags/utility/" style="font-size: 10px;">utility</a> <a href="/tags/vector-trie/" style="font-size: 12.5px;">vector trie</a> <a href="/tags/watch/" style="font-size: 10px;">watch</a> <a href="/tags/web/" style="font-size: 17.5px;">web</a> <a href="/tags/webGL/" style="font-size: 12.5px;">webGL</a> <a href="/tags/webgl/" style="font-size: 10px;">webgl</a> <a href="/tags/wu/" style="font-size: 10px;">wu</a> <a href="/tags/xcode/" style="font-size: 10px;">xcode</a> <a href="/tags/zocial/" style="font-size: 10px;">zocial</a> <a href="/tags/%E5%90%90%E6%A7%BD/" style="font-size: 10px;">吐槽</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2020 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+
+</body>
+
+</html>

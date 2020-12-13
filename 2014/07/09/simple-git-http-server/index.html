@@ -1,0 +1,369 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>自己动手写 Git HTTP Server | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="在 Github 上可以使用 HTTP 协议 fetch 和 push 仓库中的代码，
+其实想要写一个简单的 Git HTTP Server 是相当容易的。
+这篇文章总结了使用 Go 语言实现这样一个 Server 的过程和相关知识。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="自己动手写 Git HTTP Server"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content=""/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a target="_blank" rel="noopener" href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2014/07/09/simple-git-http-server/" target="_blank">自己动手写 Git HTTP Server</a></h1>
+
+
+      
+        <time datetime="2014-07-09T13:26:54.000Z">2014-07-09</time>
+      
+    </header>
+    <div class="entry">
+      <p>在 Github 上可以使用 HTTP 协议 fetch 和 push 仓库中的代码，
+其实想要写一个简单的 Git HTTP Server 是相当容易的。
+这篇文章总结了使用 Go 语言实现这样一个 Server 的过程和相关知识。</p>
+<a id="more"></a>
+<h1 id="u57FA_u672C_u539F_u7406"><a href="#u57FA_u672C_u539F_u7406" class="headerlink" title="基本原理"></a>基本原理</h1><p>先介绍一下 Git HTTP Server 的实现原理。本地的 Git 在使用 HTTP 协议访问远程的 Git 仓库时，
+会分别发起如下三种类型的请求：</p>
+<ol>
+<li><code>GET /:working_path/*</code> 直接 Serve 远程仓库的静态文件到客户端，这里就是本地的仓库从上游获得数据的地方</li>
+<li><code>GET /:working_path/info/refs</code> 用于访问远程仓库的 refs 数据，比如都有哪些 Branch 和 Tags 等等</li>
+<li><code>POST /:working_path/git-&lt;command&gt;</code> 用于在远程仓库执行指令，进行数据交流。Git 的 push
+和 fetch 都要依赖这个请求来完成</li>
+</ol>
+<p>在开始之前，我们首先定义一个 gitRoot 路径，所有的远程仓库在服务端都存放在这下面。譬如：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> gitRoot = path.Join(os.TempDir(), <span class="string">"git_repo"</span>)</span><br></pre></td></tr></table></figure>
+<p>此外，为了方便路由，我选用了一个相当轻量级的 Go Web 库 <a href="http://goji.io/" target="_blank" rel="noopener">Goji</a>。
+用下面的命令安装这个依赖:</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">go get github.com/zenazn/goji</span><br></pre></td></tr></table></figure>
+<p>做完准备工作就要开始实现 Server 了。接下来由从最简单的第一类请求讲起：</p>
+<h1 id="u5904_u7406_u9759_u6001_u6587_u4EF6_u8BF7_u6C42"><a href="#u5904_u7406_u9759_u6001_u6587_u4EF6_u8BF7_u6C42" class="headerlink" title="处理静态文件请求"></a>处理静态文件请求</h1><p>静态文件请求，也就是前面所说的第一类请求，Git 会直接通过这类请求来访问远程仓库的数据文件，
+譬如<code>HEAD</code>、<code>refs</code>等。客户端的 Git 主要通过这种方式来获取一些 Git 自己产生的文件的详细内容，
+一般来说并不会直接请求仓库里的代码等文件。类似<code>git clone</code>和<code>git fetch</code>这样的操作会交给第二类请求。</p>
+<p>在 Go 中使用<code>http</code>库实现处理静态文件请求是非常方便的。我们定义一个名为<code>generic</code>的函数用来处理相关请求：
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">generic</span><span class="params">(c web.C, w http.ResponseWriter, r *http.Request)</span></span> &#123;</span><br><span class="line">    reponame := c.URLParams[<span class="string">"reponame"</span>]</span><br><span class="line">    repopath := path.Join(gitRoot, reponame)</span><br><span class="line">    filepath := path.Join(gitRoot, r.URL.String())</span><br><span class="line">    <span class="keyword">if</span> strings.HasPrefix(filepath, repopath) &#123;</span><br><span class="line">        http.ServeFile(w, r, filepath)</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        w.WriteHeader(<span class="number">404</span>)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>这里使用了<code>filepath := path.Join(gitRoot, r.URL.String())</code>这行代码来计算远程仓库在文件系统上的真实位置，
+这行代码也可以改写成任何其他策略产生的路径。只要这个路径指向的位置是一个通过<code>git init --bare</code>方式创建的仓库。
+在<code>main</code>函数中用下列方法绑定路由并开启服务器。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    <span class="comment">// access file contents</span></span><br><span class="line">    goji.Get(<span class="string">"/:reponame/*"</span>, generic)</span><br><span class="line">    goji.Head(<span class="string">"/:reponame/*"</span>, generic)</span><br><span class="line"></span><br><span class="line">    <span class="comment">// start serving</span></span><br><span class="line">    goji.Serve()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这样，对于所有指向<code>/:reponame/</code>下任意路径的请求都会用<code>generic</code>函数处理，这里允许请求方法为<code>GET</code>和<code>HEAD</code>。
+返回静态文件则使用<code>http</code>包中的<code>ServeFile</code>函数直接完成。</p>
+<p>这样，第一类请求就可以被轻松处理了。</p>
+<h1 id="info/refs"><a href="#info/refs" class="headerlink" title="info/refs"></a>info/refs</h1><p>接下来是稍微复杂一点的<code>info/refs</code>请求。本地的 Git 一般会在<code>git fetch</code>的时候进行这样的请求。
+这个请求主要用来返回仓库的 References 数据，包括 Branch、Tags 等。跟上面讲过的第一类请求不同，
+这个请求需要服务端将相关数据总结整理成特定的格式返回给客户端，从而节省请求次数。</p>
+<p>根据用户操作类型的不同，Git 还会附加一个 URL 参数<code>service</code>。<code>service</code>一般的取值包括
+<code>git-upload-pack</code>、<code>git-receive-pack</code>等。分别是客户端<code>fetch</code>和<code>push</code>时的状态。</p>
+<p>我们并不需要了解这些请求的细节，只需要按照格式返回数据即可。那么该怎么返回正确的数据呢？
+如果是对 Git 非常熟悉的同学可能会知道<code>upload-pack</code>和<code>receive-pack</code>本身就是 Git 可以使用的命令。
+这两个命令都可以接受一个<code>--advertise-refs</code>参数。</p>
+<p>根据 Git 的<a href="http://git-scm.com/book/en/Git-Internals-Transfer-Protocols" target="_blank" rel="noopener">文档</a>
+<code>--advertise-refs</code>可以使 Git 列出仓库所拥有的 References 以及那些客户端希望抓取到的 References。
+而这些数据就被称为 Advertise Refs。</p>
+<p>此外我们还可以使用<code>--stateless-rpc</code>参数。这个参数使强制 Git 使用无状态的
+<a href="http://zh.wikipedia.org/wiki/%E9%81%A0%E7%A8%8B%E9%81%8E%E7%A8%8B%E8%AA%BF%E7%94%A8" target="_blank" rel="noopener">RPC</a>。
+简单来说，可以让 Git 返回的 References 列表中，代表每个 Reference 的字段长度恰好和一个数据包的长度相同，
+这样每个 Reference 都可以被放在单独一个数据包上传输，不依赖于前面的数据包(也就是实现了所谓的“无状态”)。
+有些时候，在这里获得到了某个 Reference 还需要再去请求更详细的信息，这种方式下提高了并行性。</p>
+<p>返回的数据的 MIME type 必须是 <code>application/x-&lt;command&gt;-advertisement</code>
+其中<code>&lt;command&gt;</code>就是调用时用的命令。此外在<code>git receive-pack</code>和<code>git upload-pack</code>返回的数据的基础上，
+我们还需要给数据添加一个头信息。其格式如下图所示:</p>
+<p><img src="/img/posts/git-info-refs-head.png" alt=""></p>
+<p>把以上这些写成函数就是下面这样。请重点注意其中有关<code>serverAdvert</code>的操作。
+这里还使用了 Go 语言标准库中的<code>exec</code>包。
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">inforefs</span><span class="params">(c web.C, w http.ResponseWriter, r *http.Request)</span></span> &#123;</span><br><span class="line">    reponame := c.URLParams[<span class="string">"reponame"</span>]</span><br><span class="line">    repopath := path.Join(gitRoot, reponame)</span><br><span class="line">    service := r.FormValue(<span class="string">"service"</span>)</span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(service) &gt; <span class="number">0</span> &#123;</span><br><span class="line">        w.Header().Add(<span class="string">"Content-type"</span>, fmt.Sprintf(<span class="string">"application/x-%s-advertisement"</span>, service))</span><br><span class="line">        gitLocalCmd := exec.Command(</span><br><span class="line">            <span class="string">"git"</span>,</span><br><span class="line">            <span class="keyword">string</span>(service[<span class="number">4</span>:]),</span><br><span class="line">            <span class="string">"--stateless-rpc"</span>,</span><br><span class="line">            <span class="string">"--advertise-refs"</span>,</span><br><span class="line">            repopath)</span><br><span class="line">        out, err := gitLocalCmd.CombinedOutput()</span><br><span class="line">        <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">            w.WriteHeader(<span class="number">500</span>)</span><br><span class="line">            fmt.Fprintln(w, <span class="string">"Internal Server Error"</span>)</span><br><span class="line">            w.Write(out)</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            serverAdvert := fmt.Sprintf(<span class="string">"# service=%s"</span>, service)</span><br><span class="line">            length := <span class="built_in">len</span>(serverAdvert) + <span class="number">4</span></span><br><span class="line">            fmt.Fprintf(w, <span class="string">"%04x%s0000"</span>, length, serverAdvert)</span><br><span class="line">            w.Write(out)</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        fmt.Fprintln(w, <span class="string">"Invalid request"</span>)</span><br><span class="line">        w.WriteHeader(<span class="number">400</span>)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h1 id="RPC__u8FDC_u7A0B_u8C03_u7528"><a href="#RPC__u8FDC_u7A0B_u8C03_u7528" class="headerlink" title="RPC 远程调用"></a>RPC 远程调用</h1><p>第三类请求是数据调用请求。简单来说就是由客户端 Git 指定命令在服务端对应仓库执行，
+执行的过程中，客户端 Git 将命令需要的输入当做 HTTP 的 POST 数据发送到服务端，
+服务端需要将这些输入转发给本地 Git 命令的标准输入流(stdin)，反过来还要将命令的标准输出(stdout)
+当做 HTTP 请求的返回数据转发给客户端。</p>
+<p>这个流程说起来很绕，但其实还蛮简单的。其通讯的模型可以用下图来表示：
+<img src="/img/posts/git-server-rpc-model.png" alt=""></p>
+<p>为了在 Go 中完成这样的转发，我们首先要设法从 Request 对象中读出 Body 的内容来。
+为了节约传输大量数据时消耗的内存，把所有发送来的数据都读取出来再写入是不能接受的，
+因此我们要以串流的方式来从 Body 中读取数据并同时写入 stdin。</p>
+<p>为了获取所执行的命令的输入输出流，我们需要调用<code>exec.Command</code>类提供的<code>StdinPipe()</code>和<code>StdoutPipe()</code>方法。
+串流转发的功能只需要方便地使用<code>io.Copy</code>方法即可。<code>io.Copy</code>方法默认将会以每次 32KB 的块大小读出数据然后写入到目标文件中。</p>
+<p>众所周知，基本的 HTTP 是一种半双工的通讯协议，数据的发送和接收是不能交错进行的。所以我们也只能先把 HTTP 
+请求的内容串流给 Git 命令的 stdin，完成后再从 stdout 里读取数据发送回客户端。</p>
+<p>最后执行完<code>receive-pack</code>命令，还要执行<code>git update-server-info</code>命令来更新服务端仓库的信息。
+Response 的 MIME 是<code>application/x-git-&lt;command&gt;-result</code>。</p>
+<p>具体实现如下:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">rpc</span><span class="params">(c web.C, w http.ResponseWriter, r *http.Request)</span></span> &#123;</span><br><span class="line">    reponame := c.URLParams[<span class="string">"reponame"</span>]</span><br><span class="line">    repopath := path.Join(gitRoot, reponame)</span><br><span class="line">    command := c.URLParams[<span class="string">"command"</span>]</span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(command) &gt; <span class="number">0</span> &#123;</span><br><span class="line"></span><br><span class="line">        w.Header().Add(<span class="string">"Content-type"</span>, fmt.Sprintf(<span class="string">"application/x-git-%s-result"</span>, command))</span><br><span class="line">        w.WriteHeader(<span class="number">200</span>)</span><br><span class="line"></span><br><span class="line">        gitCmd := exec.Command(<span class="string">"git"</span>, command, <span class="string">"--stateless-rpc"</span>, repopath)</span><br><span class="line"></span><br><span class="line">        cmdIn, _ := gitCmd.StdinPipe()</span><br><span class="line">        cmdOut, _ := gitCmd.StdoutPipe()</span><br><span class="line">        body := r.Body</span><br><span class="line"></span><br><span class="line">        gitCmd.Start()</span><br><span class="line"></span><br><span class="line">        io.Copy(cmdIn, body)</span><br><span class="line">        io.Copy(w, cmdOut)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> command == <span class="string">"receive-pack"</span> &#123;</span><br><span class="line">            updateCmd := exec.Command(<span class="string">"git"</span>, <span class="string">"--git-dir"</span>, repopath, <span class="string">"update-server-info"</span>)</span><br><span class="line">            updateCmd.Start()</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        w.WriteHeader(<span class="number">400</span>)</span><br><span class="line">        fmt.Fprintln(w, <span class="string">"Invalid Request"</span>)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h1 id="u8DEF_u7531_u7684_u5B89_u6392"><a href="#u8DEF_u7531_u7684_u5B89_u6392" class="headerlink" title="路由的安排"></a>路由的安排</h1><p>为了使路由按照正确的顺序匹配，应该要注意绑定请求时候的顺序。第一类请求虽然最简单，
+但是他的匹配模式可以完全包含后两种，因此正确的顺序应该是：</p>
+<ol>
+<li>优先匹配 info/refs 请求</li>
+<li>其次匹配 RPC 请求</li>
+<li>以上两个都没有匹配，则匹配静态文件请求</li>
+</ol>
+<p>实现为:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// get repo info/refs</span></span><br><span class="line">goji.Get(<span class="string">"/:reponame/info/refs"</span>, inforefs)</span><br><span class="line">goji.Head(<span class="string">"/:reponame/info/refs"</span>, inforefs)</span><br><span class="line"></span><br><span class="line"><span class="comment">// RPC request on repo</span></span><br><span class="line">goji.Post(regexp.MustCompile(<span class="string">"^/(?P&lt;reponame&gt;[^/]+)/git-(?P&lt;command&gt;[^/]+)$"</span>), rpc)</span><br><span class="line"></span><br><span class="line"><span class="comment">// access file contents</span></span><br><span class="line">goji.Get(<span class="string">"/:reponame/*"</span>, generic)</span><br><span class="line">goji.Head(<span class="string">"/:reponame/*"</span>, generic)</span><br></pre></td></tr></table></figure>
+<p>值得注意的是，只有 RPC 请求因需要写入文件而允许使用 POST 方法，另外两种请求都是 GET 或 HEAD 方法。</p>
+<h1 id="Security"><a href="#Security" class="headerlink" title="Security"></a>Security</h1><p>为了限制对仓库的访问，我们还可以使用 HTTP 的 <a href="http://en.wikipedia.org/wiki/Basic_access_authentication" target="_blank" rel="noopener">Basic Auth</a>
+协议对进行用户认证。</p>
+<p>首先，对于未认证的请求，需要返回 Code 为 <code>401 Unauthorized</code> 的 HTTP Response，
+并在 Response 的 Header 上加上如下格式的字段。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">WWW-Authenticate: Basic realm=&quot;[your realm]&quot;</span><br></pre></td></tr></table></figure>
+<p>其中<code>realm</code>用来指定服务器的名称或者 UID，Git 会根据 realm 的值的不同，
+使用本地缓存的不同用户名/密码组合。如果没有对应密码，Git 就会请求用户输入。</p>
+<p>如果用户输入了密码，在 HTTP 请求的 Header 中将会出现下面格式的一个字段，其中<code>[username:password]</code>
+的内容使用<code>base64</code>编码，需先解码：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Authenticate: Basic [username:password]</span><br></pre></td></tr></table></figure>
+<p>可以将上述 Authenticate 的逻辑通过 Goji 提供的 Middleware 机制实现，这样可以使对所有请求都会要求认证。
+实现细节不再赘述，可以参见<a href="https://gist.github.com/shanzi/1aa571f8f3b8f4608d60#file-gittp-go-L173" target="_blank" rel="noopener">我实现的版本</a>。</p>
+<h1 id="u603B_u7ED3"><a href="#u603B_u7ED3" class="headerlink" title="总结"></a>总结</h1><p>为了方便使用，我还为 Server 添加了创建和删除远程仓库的代码，具体实现已经全部放在
+<a href="https://gist.github.com/shanzi/1aa571f8f3b8f4608d60" target="_blank" rel="noopener">Gist</a>上。当服务器开始运行之后，可以简单的使用 curl 
+命令在服务器上创建空白仓库以及删除已有仓库。
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># create remote repo</span></span><br><span class="line">curl -u username:password -X PUT http://localhost:8000/new_repo</span><br><span class="line"><span class="comment"># delete remote repo</span></span><br><span class="line">curl -u username:password -X DELETE http://localhost:8000/exists_repo</span><br></pre></td></tr></table></figure></p>
+<p>我们目前实现的版本得益于 Git 本身和 Go 语言的强大，总行数还不超过 250 行，
+请<a href="https://gist.github.com/shanzi/1aa571f8f3b8f4608d60" target="_blank" rel="noopener">查看完整代码</a>。</p>
+<p>不过我们还没有考虑到 Git 对 GZip的支持。尤其对于第一类对静态文件的请求，
+支持 GZip 将能够显著提高传输效率。这个需求使用 Go 语言自带的<code>compass/gzip</code>包可以很方便的实现。</p>
+<p>最后来看一下成果吧！</p>
+<p><img src="/img/posts/git-simple-server-result.png" alt=""></p>
+
+    </div>
+    <footer>
+        
+  
+  <div class="categories">
+    <a href="/categories/web/">web</a>
+  </div>
+
+        
+  
+  <div class="tags">
+    <a href="/tags/go/">go</a>, <a href="/tags/golang/">golang</a>, <a href="/tags/web/">web</a>, <a href="/tags/Git/">Git</a>, <a href="/tags/server/">server</a>, <a href="/tags/rpc/">rpc</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2020/12/12/nvm-store/">Nvm Store: 第二届阿里数据库大赛参赛记录</a>
+      </li>
+    
+      <li>
+        <a href="/2020/02/24/how-to-architect-a-query-compiler/">SIGMOD 16 | How to Architect a Query Compiler</a>
+      </li>
+    
+      <li>
+        <a href="/2020/01/04/olap-distributed/">OLAP 任务的并发执行与调度</a>
+      </li>
+    
+      <li>
+        <a href="/2019/03/16/streaming-incremental-sql-execution/">Stream SQL 的执行原理与 Flink 的实现</a>
+      </li>
+    
+      <li>
+        <a href="/2018/11/01/sql-query-optimization-volcano/">SQL 查询优化原理与 Volcano Optimizer 介绍</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a target="_blank" rel="noopener" href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Functional-Go/">Functional Go</a><small>4</small></li>
+  
+    <li><a href="/categories/Mastering-Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>9</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/AWS/" style="font-size: 10px;">AWS</a> <a href="/tags/Algorithm/" style="font-size: 17.5px;">Algorithm</a> <a href="/tags/Apache-Flink/" style="font-size: 10px;">Apache Flink</a> <a href="/tags/Apple/" style="font-size: 10px;">Apple</a> <a href="/tags/Bezier-Path/" style="font-size: 10px;">Bezier Path</a> <a href="/tags/Big-Data/" style="font-size: 12.5px;">Big Data</a> <a href="/tags/Cascades/" style="font-size: 10px;">Cascades</a> <a href="/tags/Closure/" style="font-size: 10px;">Closure</a> <a href="/tags/Cloud/" style="font-size: 10px;">Cloud</a> <a href="/tags/Cocoa/" style="font-size: 10px;">Cocoa</a> <a href="/tags/Connected-Components/" style="font-size: 10px;">Connected Components</a> <a href="/tags/Data-structure/" style="font-size: 10px;">Data structure</a> <a href="/tags/Designing-Data-Intensive-Applications/" style="font-size: 10px;">Designing Data-Intensive Applications</a> <a href="/tags/Designing-Paradigm/" style="font-size: 10px;">Designing Paradigm</a> <a href="/tags/Distributed-System/" style="font-size: 12.5px;">Distributed System</a> <a href="/tags/Docker/" style="font-size: 10px;">Docker</a> <a href="/tags/Dokku/" style="font-size: 10px;">Dokku</a> <a href="/tags/EMR/" style="font-size: 10px;">EMR</a> <a href="/tags/ES6/" style="font-size: 10px;">ES6</a> <a href="/tags/ETL/" style="font-size: 10px;">ETL</a> <a href="/tags/Flink/" style="font-size: 10px;">Flink</a> <a href="/tags/Functional-Programing/" style="font-size: 10px;">Functional Programing</a> <a href="/tags/Functional-Programming/" style="font-size: 10px;">Functional Programming</a> <a href="/tags/GLSL/" style="font-size: 10px;">GLSL</a> <a href="/tags/GSoC/" style="font-size: 10px;">GSoC</a> <a href="/tags/Git/" style="font-size: 10px;">Git</a> <a href="/tags/Go/" style="font-size: 12.5px;">Go</a> <a href="/tags/Golang/" style="font-size: 17.5px;">Golang</a> <a href="/tags/Google/" style="font-size: 10px;">Google</a> <a href="/tags/Gourmet/" style="font-size: 10px;">Gourmet</a> <a href="/tags/Graph-Computing/" style="font-size: 10px;">Graph Computing</a> <a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Immutable/" style="font-size: 10px;">Immutable</a> <a href="/tags/Incremental-SQL/" style="font-size: 10px;">Incremental SQL</a> <a href="/tags/Intel/" style="font-size: 10px;">Intel</a> <a href="/tags/Interface-Builder/" style="font-size: 10px;">Interface Builder</a> <a href="/tags/IoT/" style="font-size: 10px;">IoT</a> <a href="/tags/Japan/" style="font-size: 10px;">Japan</a> <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Kylin/" style="font-size: 10px;">Kylin</a> <a href="/tags/Kyoto/" style="font-size: 10px;">Kyoto</a> <a href="/tags/Lazy-Evaluation/" style="font-size: 10px;">Lazy Evaluation</a> <a href="/tags/Linux/" style="font-size: 10px;">Linux</a> <a href="/tags/Log-Structured-Merge-Tree/" style="font-size: 10px;">Log-Structured Merge Tree</a> <a href="/tags/Materialized-View/" style="font-size: 10px;">Materialized View</a> <a href="/tags/NSControl/" style="font-size: 12.5px;">NSControl</a> <a href="/tags/NUC/" style="font-size: 10px;">NUC</a> <a href="/tags/NVM/" style="font-size: 10px;">NVM</a> <a href="/tags/OSX/" style="font-size: 15px;">OSX</a> <a href="/tags/Objective-C/" style="font-size: 12.5px;">Objective-C</a> <a href="/tags/Optimization/" style="font-size: 10px;">Optimization</a> <a href="/tags/Osaka/" style="font-size: 10px;">Osaka</a> <a href="/tags/PageRank/" style="font-size: 10px;">PageRank</a> <a href="/tags/Persistent-Memory/" style="font-size: 10px;">Persistent Memory</a> <a href="/tags/Pregel/" style="font-size: 10px;">Pregel</a> <a href="/tags/React/" style="font-size: 10px;">React</a> <a href="/tags/SQL/" style="font-size: 12.5px;">SQL</a> <a href="/tags/SVG/" style="font-size: 10px;">SVG</a> <a href="/tags/Scala/" style="font-size: 10px;">Scala</a> <a href="/tags/Scheduler/" style="font-size: 12.5px;">Scheduler</a> <a href="/tags/Splunk/" style="font-size: 10px;">Splunk</a> <a href="/tags/Stream-SQL/" style="font-size: 10px;">Stream SQL</a> <a href="/tags/Summary/" style="font-size: 10px;">Summary</a> <a href="/tags/Swift/" style="font-size: 10px;">Swift</a> <a href="/tags/Three-js/" style="font-size: 10px;">Three.js</a> <a href="/tags/Tokyo/" style="font-size: 10px;">Tokyo</a> <a href="/tags/Transmission/" style="font-size: 10px;">Transmission</a> <a href="/tags/Travel/" style="font-size: 10px;">Travel</a> <a href="/tags/Ubuntu/" style="font-size: 10px;">Ubuntu</a> <a href="/tags/User-Tracking/" style="font-size: 10px;">User Tracking</a> <a href="/tags/Volcano/" style="font-size: 10px;">Volcano</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/Y-Combinator/" style="font-size: 10px;">Y-Combinator</a> <a href="/tags/accelerate-meter/" style="font-size: 10px;">accelerate meter</a> <a href="/tags/allocator/" style="font-size: 10px;">allocator</a> <a href="/tags/bezier-path/" style="font-size: 12.5px;">bezier path</a> <a href="/tags/blender/" style="font-size: 12.5px;">blender</a> <a href="/tags/borg/" style="font-size: 10px;">borg</a> <a href="/tags/city/" style="font-size: 10px;">city</a> <a href="/tags/cli/" style="font-size: 10px;">cli</a> <a href="/tags/cocoa/" style="font-size: 15px;">cocoa</a> <a href="/tags/compiler/" style="font-size: 10px;">compiler</a> <a href="/tags/completion/" style="font-size: 10px;">completion</a> <a href="/tags/contenteditable/" style="font-size: 10px;">contenteditable</a> <a href="/tags/database/" style="font-size: 12.5px;">database</a> <a href="/tags/design/" style="font-size: 10px;">design</a> <a href="/tags/desktop/" style="font-size: 10px;">desktop</a> <a href="/tags/develop/" style="font-size: 10px;">develop</a> <a href="/tags/device-motion/" style="font-size: 10px;">device motion</a> <a href="/tags/distribute-storage/" style="font-size: 10px;">distribute storage</a> <a href="/tags/distributed-system/" style="font-size: 10px;">distributed system</a> <a href="/tags/diumoo/" style="font-size: 10px;">diumoo</a> <a href="/tags/douban/" style="font-size: 10px;">douban</a> <a href="/tags/drawing/" style="font-size: 17.5px;">drawing</a> <a href="/tags/editor/" style="font-size: 10px;">editor</a> <a href="/tags/essay/" style="font-size: 17.5px;">essay</a> <a href="/tags/export/" style="font-size: 10px;">export</a> <a href="/tags/filesystem/" style="font-size: 10px;">filesystem</a> <a href="/tags/font/" style="font-size: 12.5px;">font</a> <a href="/tags/fontawesome/" style="font-size: 10px;">fontawesome</a> <a href="/tags/fp/" style="font-size: 17.5px;">fp</a> <a href="/tags/functional-programming/" style="font-size: 20px;">functional programming</a> <a href="/tags/github/" style="font-size: 10px;">github</a> <a href="/tags/go/" style="font-size: 20px;">go</a> <a href="/tags/golang/" style="font-size: 12.5px;">golang</a> <a href="/tags/hamt/" style="font-size: 10px;">hamt</a> <a href="/tags/hashmap/" style="font-size: 10px;">hashmap</a> <a href="/tags/html/" style="font-size: 10px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/iOS/" style="font-size: 10px;">iOS</a> <a href="/tags/iOS-8/" style="font-size: 10px;">iOS 8</a> <a href="/tags/iPad/" style="font-size: 15px;">iPad</a> <a href="/tags/icon/" style="font-size: 10px;">icon</a> <a href="/tags/icon-font/" style="font-size: 12.5px;">icon font</a> <a href="/tags/icon-fontr/" style="font-size: 10px;">icon fontr</a> <a href="/tags/iconfontr/" style="font-size: 15px;">iconfontr</a> <a href="/tags/image/" style="font-size: 10px;">image</a> <a href="/tags/immutable/" style="font-size: 17.5px;">immutable</a> <a href="/tags/indexing/" style="font-size: 10px;">indexing</a> <a href="/tags/io-meter/" style="font-size: 10px;">io-meter</a> <a href="/tags/ionicons/" style="font-size: 10px;">ionicons</a> <a href="/tags/kubernetes/" style="font-size: 10px;">kubernetes</a> <a href="/tags/kv/" style="font-size: 10px;">kv</a> <a href="/tags/life/" style="font-size: 17.5px;">life</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/mac/" style="font-size: 10px;">mac</a> <a href="/tags/math/" style="font-size: 10px;">math</a> <a href="/tags/memory/" style="font-size: 10px;">memory</a> <a href="/tags/mobile/" style="font-size: 10px;">mobile</a> <a href="/tags/music/" style="font-size: 10px;">music</a> <a href="/tags/olap/" style="font-size: 10px;">olap</a> <a href="/tags/online-editor/" style="font-size: 10px;">online editor</a> <a href="/tags/open-source/" style="font-size: 10px;">open source</a> <a href="/tags/opensource/" style="font-size: 10px;">opensource</a> <a href="/tags/os/" style="font-size: 10px;">os</a> <a href="/tags/osx/" style="font-size: 15px;">osx</a> <a href="/tags/package/" style="font-size: 10px;">package</a> <a href="/tags/paper/" style="font-size: 12.5px;">paper</a> <a href="/tags/pencil/" style="font-size: 10px;">pencil</a> <a href="/tags/persist-datastructure/" style="font-size: 17.5px;">persist datastructure</a> <a href="/tags/programing/" style="font-size: 10px;">programing</a> <a href="/tags/programming/" style="font-size: 10px;">programming</a> <a href="/tags/rendering/" style="font-size: 10px;">rendering</a> <a href="/tags/review/" style="font-size: 10px;">review</a> <a href="/tags/rpc/" style="font-size: 10px;">rpc</a> <a href="/tags/scala/" style="font-size: 10px;">scala</a> <a href="/tags/schedule/" style="font-size: 10px;">schedule</a> <a href="/tags/selection/" style="font-size: 10px;">selection</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/shader/" style="font-size: 10px;">shader</a> <a href="/tags/sketch/" style="font-size: 10px;">sketch</a> <a href="/tags/sql/" style="font-size: 10px;">sql</a> <a href="/tags/stylus/" style="font-size: 10px;">stylus</a> <a href="/tags/summary/" style="font-size: 12.5px;">summary</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/swift/" style="font-size: 10px;">swift</a> <a href="/tags/taiwan/" style="font-size: 12.5px;">taiwan</a> <a href="/tags/tips/" style="font-size: 10px;">tips</a> <a href="/tags/travel/" style="font-size: 12.5px;">travel</a> <a href="/tags/utility/" style="font-size: 10px;">utility</a> <a href="/tags/vector-trie/" style="font-size: 12.5px;">vector trie</a> <a href="/tags/watch/" style="font-size: 10px;">watch</a> <a href="/tags/web/" style="font-size: 17.5px;">web</a> <a href="/tags/webGL/" style="font-size: 12.5px;">webGL</a> <a href="/tags/webgl/" style="font-size: 10px;">webgl</a> <a href="/tags/wu/" style="font-size: 10px;">wu</a> <a href="/tags/xcode/" style="font-size: 10px;">xcode</a> <a href="/tags/zocial/" style="font-size: 10px;">zocial</a> <a href="/tags/%E5%90%90%E6%A7%BD/" style="font-size: 10px;">吐槽</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2020 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+
+</body>
+
+</html>

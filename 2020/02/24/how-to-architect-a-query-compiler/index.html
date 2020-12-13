@@ -1,0 +1,307 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>SIGMOD 16 | How to Architect a Query Compiler | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="这篇发表在 SIGMOD 16 的论文来自洛桑联邦理工学院（EFPL），这所学校在计算机领域以Scala编程语言的发源地而闻名于世。不出意外，这篇论文虽然发表于数据处理相关顶会，却弥漫着浓厚的函数式编程和PL的气氛。连系统实现和代码样例都使用 Scala 描述。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="SIGMOD 16 | How to Architect a Query Compiler"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content=""/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a target="_blank" rel="noopener" href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2020/02/24/how-to-architect-a-query-compiler/" target="_blank">SIGMOD 16 | How to Architect a Query Compiler</a></h1>
+
+
+      
+        <time datetime="2020-02-24T10:29:55.000Z">2020-02-24</time>
+      
+    </header>
+    <div class="entry">
+      <p>这篇发表在 SIGMOD 16 的论文来自洛桑联邦理工学院（EFPL），这所学校在计算机领域以Scala编程语言的发源地而闻名于世。不出意外，这篇论文虽然发表于数据处理相关顶会，却弥漫着浓厚的函数式编程和PL的气氛。连系统实现和代码样例都使用 Scala 描述。</p>
+<a id="more"></a>
+<p>从研究的依赖关系上，本文是之前介绍过的同样来自EFPL的研究<a href="https://zhuanlan.zhihu.com/p/89644696" target="_blank" rel="noopener">LegoBase</a>的延伸。本文在之前从Scala编译到C语言的系统之上，进一步地建立起了多层次的查询编译器架构，并提出了一套实现易操控和可维护的SQL查询编译系统的方法论。</p>
+<h2 id="u7B80_u4ECB"><a href="#u7B80_u4ECB" class="headerlink" title="简介"></a>简介</h2><p>SQL编译查询不是新鲜事物。在Hekaton，Impala，Presto，MemSQL和Calcite当中都有使用。由于现阶段OLAP任务的主要瓶颈还在于IO，各个系统对相关领域的研究不算深入。其中Java系的大数据处理平台很多使用<a href="https://janino-compiler.github.io/janino/" target="_blank" rel="noopener">Janino</a>作为Bytecode编译器，也有很多系统将查询翻译成C/C++语言，并使用GCC/Clang或直接使用LLVM进行处理。本文指出，现阶段很多查询编译系统仍然停留在模板展开（template expander）的层次，简单来说也就是拼接代码和进行Operator调用内联（inlining）。本文指出，这类查询编译结局方案缺乏应用多种编程语言优化技术的能力，且需要的规则数和代码量随着算子数量的上升，至少以 N^2 的速度上升。此外，目前的解决方案也很难利用编译器来直接支持 Pipeline。</p>
+<p>本文的解决方案在于为查询编译实现专门的DSL，而且是实现一系列堆叠起来的具有不同表现力和底层操控能力的DSL。在这一堆栈的最上层是最接近于关系模型的QPlan和QMonad DSL，这一层次的DSL非常的声明式（Declarative）。相反，在这一堆栈的最下层是C.Scala——一个几乎可以直接逐句翻译成C语言的DSL。显然，在最上层，用户得到的是抽象程度高的编程语言，在这一层次用户可以使用非常简洁地表示查询，也方便应用很多PL优化算法，但缺乏对程序细节（内存分配、数据结构、执行顺序等）的控制，也难以进行性能调优。在最下层，用户得到了一个非常接近硬件的命令式的DSL，因此可以对执行细节进行详细的操控，但是程序的表现力减弱且应用各种编译优化技巧变得困难起来。实际上，为了平衡这两者，本论文提出在两个极端之间插入多种中间DSL语言，在每个层次应用不同层次的PL优化技术。同时，在编译时，使用逐层下降的方法将高层次的语言（SQL）翻译成低层次的语言（C）从而实现模块化并提高可维护性。下图展示了本文提出的DSL堆栈。</p>
+<p><img src="img/DSL-stack.png" alt=""></p>
+<p>总体来说，在堆栈的每个层次，系统都会完成两项任务：</p>
+<ul>
+<li>应用适合于当前层次的编程语言优化规则和算法，在当前层次对执行方案进行优化</li>
+<li>进行数据结构特化，即将某种抽象的数据结构（List，Map，MultiMap）等，具体化更低层次的抽象（ArrayList，LinkedList，HashMap，TreeMap等）</li>
+</ul>
+<p>经过这两步处理，高层次的DSL会被下降为低层次的DSL，直到最终的C语言实现，所有的内存管理和数据结构就都被具体化了，可以通过编译来直接执行。</p>
+<h2 id="DSL__u5806_u6808"><a href="#DSL__u5806_u6808" class="headerlink" title="DSL 堆栈"></a>DSL 堆栈</h2><p>本文使用Scala语言实现了名为ScaLite的DSL，这一DSL吸取了函数式编程思想。本文指出，函数式编程的语言介于纯声明式语言（SQL）和纯命令式语言（C）之间，是作为插入DSL层的理想选择。而且这类语言易于理解和推理，可以复用PL社区的研究成果，也便于计算机进行抽象处理并应用一些编程语言优化算法。在这里，论文着重介绍了函数式编程的不可变性（Immutability）为程序分析带来的好处——具有副作用的编程语言语句有时很难使用算法进行分析和优化。</p>
+<p>从抽象到具体，本文提出的DSL堆栈主要有一下几个层次：</p>
+<h3 id="SQL__u5C42"><a href="#SQL__u5C42" class="headerlink" title="SQL 层"></a>SQL 层</h3><p>SQL层就是最上层用户交互的层次，它包括传统数据库优化的技术栈，如使用算子和关系代数描述语句，并可以使用Volcano/Cascades模型对关系代数进行优化。在本文中，以下述SQL作为输入案例：</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">SELECT</span> <span class="type">COUNT</span>(*)</span><br><span class="line"><span class="type">FROM</span> <span class="type">R</span>, <span class="type">S</span></span><br><span class="line"><span class="type">WHERE</span> <span class="type">R</span>.name = <span class="string">"R1"</span></span><br><span class="line">  <span class="type">AND</span> <span class="type">R</span>.sid = <span class="type">S</span>.rid;</span><br></pre></td></tr></table></figure>
+<h3 id="QPlan/QMonad__u5C42"><a href="#QPlan/QMonad__u5C42" class="headerlink" title="QPlan/QMonad 层"></a>QPlan/QMonad 层</h3><p>QPlan和QMonad是两个可以相互替换的高层次声明式DSL，它们非常接近SQL的关系代数表示，但是在这个层次，SQL已经可以被翻译为能被Scala理解的语法了。相比起来，QPlan的表示方法更接近关系代数，而QMonad更接近于函数式编程和Collection Programming。</p>
+<p>上述SQL在QPlan中的表示是：</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">AggOp</span>(</span><br><span class="line">  <span class="type">HashJoinOp</span>(</span><br><span class="line">    <span class="type">SelectOp</span>(<span class="type">R</span>, <span class="string">"name"</span>, <span class="type">EQ</span>, <span class="string">"R1"</span>),</span><br><span class="line">    <span class="type">S</span>, <span class="string">"sid"</span>, <span class="string">"rid"</span></span><br><span class="line">  ),</span><br><span class="line">  <span class="type">COUNT</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<p>上述 SQL 在 QMonad 上的表示是：</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">R</span>.filter(r =&gt; r.name == <span class="string">"R1"</span>)</span><br><span class="line">  .hashJoin(<span class="type">S</span>)(r =&gt; r.sid)(s =&gt; s.sid)</span><br><span class="line">  .count</span><br></pre></td></tr></table></figure>
+<p>随后，QPlan/QMonad会被翻译成 <code>ScaLite[Map, List]</code>。值得注意的是，在这一步系统会进行Pipelining的优化。比方说上述QMonad代码中的 filter 和 hashJoin 两个操作，其实可以将 hashJoin 操作的前半部分（为其中一个表构建Hash表）的循环和 filter 当中过滤元素的循环合并起来。因为我们在构建 Hash 表的时候，显然不需要无关的来自 R 表中的记录。下面层次的 DSL 表示已经执行了这一优化。</p>
+<h3 id="ScaLite_5BMap_2C_List_5D__u5C42"><a href="#ScaLite_5BMap_2C_List_5D__u5C42" class="headerlink" title="ScaLite[Map, List] 层"></a>ScaLite[Map, List] 层</h3><p>这一层次，DSL可以使用抽象的Map和List数据结构来进行描述，而无需考虑这些Map和List的具体实现。下面是上述QPlan和QMonad翻译成的 ScaLite[Map, List]。</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> hm = <span class="keyword">new</span> <span class="type">MultiMap</span>[<span class="type">Int</span>, <span class="type">R</span>]</span><br><span class="line"><span class="keyword">for</span> (r &lt;- <span class="type">R</span>) &#123;</span><br><span class="line">  <span class="keyword">if</span> (r.name == <span class="string">"R1"</span>) &#123; <span class="comment">// Pipelining</span></span><br><span class="line">    hm.addBinding(r.sid, r)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">var</span> count = <span class="number">0</span></span><br><span class="line"><span class="keyword">for</span> (s &lt;- <span class="type">S</span>) &#123;</span><br><span class="line">  hm.get(s.rid) <span class="keyword">match</span> &#123;</span><br><span class="line">    <span class="keyword">case</span> <span class="type">Some</span>(rList) =&gt; </span><br><span class="line">      <span class="keyword">for</span> (r &lt;- rList) &#123;</span><br><span class="line">        <span class="keyword">if</span> (r.sid == s.rid) count +=<span class="number">1</span></span><br><span class="line">      &#125;</span><br><span class="line">    <span class="keyword">case</span> <span class="type">None</span> =&gt; ()</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">return</span> count</span><br></pre></td></tr></table></figure>
+<p>在这一层次，系统会对 Map 数据结构进行特化，将其翻译成使用List或Array来描述的形式。在这个例子中，根据系统掌握的信息，他有可能把 MultiMap 翻译成 Array[List] 或者直接使用 Array （当 r.sid 是 Unique 主键时）。也就是说，在这一层次会进行数据结构的特化，将 MultiMap 转变成最合适的底层实现。经过这样的操作，所有的 Map 都被底层的 Array 或 List 替代，从而下降到 ScaLite[List]。</p>
+<p>值得注意的是，在这一 DSL 层次，所有Map的Key和Value都假定是不可变的。因此在当前层次，可以应用对 FOR 循环的多种优化规则，因为已经插入 Map 的值不可变，程序分析时更容易对循环的Access Pattern进行推断。值得注意的是，第一个循环其实是上层 QMonad DSL 表示中 filter 和 hashJoin 算子 Fusion 之后的实现。本文还提到，在对 Map 类数据结构进行下降的时候，可以在合适的情况下使用 String Dictionary 来加速对字符串相关列的处理。</p>
+<h3 id="ScaLite_5BList_5D__u5C42"><a href="#ScaLite_5BList_5D__u5C42" class="headerlink" title="ScaLite[List] 层"></a>ScaLite[List] 层</h3><p>所有的Map数据结构都被特化，用Array等其他底层数据结构取代。在这一层次，我们放松了上一层次对不变性的要求，允许程序修改Array中List的值，这样，上述代码中第一个循环的MultiMap的构建过程，就可以更为具体地以命令式的方式表达出来。下面是DSL下降到这一层次的代码：</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> <span class="type">MR</span>: <span class="type">Array</span>[<span class="type">List</span>[<span class="type">R</span>]] = <span class="keyword">new</span> <span class="type">Array</span>[<span class="type">List</span>[<span class="type">R</span>]](<span class="type">R_GROUPS</span>);</span><br><span class="line"><span class="keyword">for</span>(r &lt;- <span class="type">R</span>) &#123;</span><br><span class="line">  <span class="keyword">if</span> (r.name == <span class="string">"R1"</span>) <span class="type">MR</span>(r.sid) += r <span class="comment">// Materialized here</span></span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">var</span> count = <span class="number">0</span></span><br><span class="line"><span class="keyword">for</span> (s &lt;- <span class="type">S</span>) &#123;</span><br><span class="line">  <span class="keyword">val</span> rList = <span class="type">MR</span>(s.rid)</span><br><span class="line">  <span class="keyword">for</span> (r &lt;- rList) &#123;</span><br><span class="line">    <span class="keyword">if</span> (r.sid == s.rid) count += <span class="number">1</span></span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> count</span><br></pre></td></tr></table></figure>
+<p>可以看到，对于 MultiMap 的构建和访问都已经以命令式的形式翻译成对 Array[List] 的操作了。</p>
+<p>从这一层次进行下降，系统进行的变换是具像化 List。比方说，根据系统掌握的信息，可以将 List 翻译成 LinkedList 或者Array。在翻译成 LinkedList 的时候，与其使用一个封装类，系统可以将next指针内联到Record之中。也就是生成一个新的结构体，这个结构体除了保存原来数据条目的每个记录之外，还包含一个指向下一条记录的指针。这样就避免了使用封装链表访问数据字段的一次指针跳转。通过对 ScaLite[List] 进行下降，我们就得到了 ScaLite。</p>
+<h3 id="ScaLite"><a href="#ScaLite" class="headerlink" title="ScaLite"></a>ScaLite</h3><p>ScaLite 的核心是一个简单类型的 Lambda Calculus，它不支持递归且主要由数据结构的构造和函数的调用构成。这一层次的DSL已经距离纯函数式编程相当远，数据结构的可变性和副作用都被允许。它支持定长数组、变长数组和有序列表等基本数据结构。下面是 ScaLite 的代码</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> <span class="type">MR</span>: <span class="type">Array</span>[<span class="type">R</span>] = <span class="keyword">new</span> <span class="type">Array</span>[<span class="type">R</span>](<span class="type">R_GROUPS</span>)</span><br><span class="line"><span class="keyword">for</span> (r &lt;- <span class="type">R</span>) &#123;</span><br><span class="line">  <span class="keyword">if</span> (r.name == <span class="string">"R1"</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="type">MR</span>(r.sid) == <span class="literal">null</span>) &#123;</span><br><span class="line">      <span class="type">MR</span>(r.sid) = r</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      r.next = <span class="type">MR</span>(r.sid)</span><br><span class="line">      <span class="type">MR</span>(r.sid) = r</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">var</span> count = <span class="number">0</span></span><br><span class="line"><span class="keyword">for</span> (s &lt;- <span class="type">S</span>) &#123;</span><br><span class="line">  <span class="keyword">var</span> r = <span class="type">MR</span>(s.rid)</span><br><span class="line">  <span class="keyword">while</span> (r != <span class="literal">null</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (r.sid == s.rid) count += <span class="number">1</span></span><br><span class="line">    r = r.next</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> count</span><br></pre></td></tr></table></figure>
+<p>可以看到，在这个层次，连 List 抽象数据结构也不存在了，对数据的访问已经转换为对 next 指针命令式的赋值和读取。在这个层次，系统会进行一个重要的下降转换：数据结构布局的变换和内存控制的变换。也就是说，在从这个层次进行下降的过程中，会加入内存分配和访问相关的代码，并可能根据系统信息将数据结构转换为不同的Layout。常见的Layout有：</p>
+<ul>
+<li>Boxed layout：指向结构体指针的数组</li>
+<li>Row layout：结构体排列在一起形成的数组</li>
+<li>Columnar layout：将结构体的每个字段组合在形成多个列式的数组</li>
+</ul>
+<p>下图展示了不同的数据布局表示：</p>
+<p><img src="img/data-layout.png" alt=""></p>
+<p>在 ScaLite 下降之后，就形成了 C.Scala。</p>
+<h3 id="C-Scala"><a href="#C-Scala" class="headerlink" title="C.Scala"></a>C.Scala</h3><p>这一DSL层次是一个几乎可以逐行翻译成C语言的DSL，它已经包含了所有的内存分配等操作，完全可以直接用于执行了。下面是 C.Scala 的例子：</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">val</span> <span class="type">MR</span>: <span class="type">Array</span>[<span class="type">Pointer</span>[<span class="type">R</span>]] = malloc[<span class="type">Pointer</span>[<span class="type">R</span>]](<span class="type">R_GROUPS</span>)</span><br><span class="line"><span class="keyword">for</span> (r &lt;- <span class="type">R</span>) &#123;</span><br><span class="line">  <span class="keyword">if</span> (r -&gt; name == <span class="string">"R1"</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (<span class="type">MR</span>(r-&gt;sid) == <span class="literal">null</span>) &#123;</span><br><span class="line">      <span class="type">MR</span>(r-&gt;sid) = r</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      r-&gt;next = <span class="type">MR</span>(r-&gt;sid)</span><br><span class="line">      <span class="type">MR</span>(r-&gt;sid) = r</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">var</span> count = <span class="number">0</span></span><br><span class="line"><span class="keyword">for</span> (s &lt;- <span class="type">S</span>) &#123;</span><br><span class="line">  <span class="keyword">var</span> r: <span class="type">Pointer</span>[<span class="type">R</span>] = <span class="type">MR</span>(s-&gt;rid)</span><br><span class="line">  <span class="keyword">while</span>(r != <span class="literal">null</span>) &#123;</span><br><span class="line">    <span class="keyword">if</span> (r-&gt;sid == s.rid) count += <span class="number">1</span></span><br><span class="line">    r = r-&gt; next</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> count</span><br></pre></td></tr></table></figure>
+<p>在这一层次之后，DSL会用来生成真的C代码，从而交付给编译器进行编译。在编译的过程当中，C语言常用的编译优化规则自然也可以被应用，从而进一步加快执行。</p>
+<p>值得注意的是，在本文系统架构翻译出的可执行代码，和 HyPer 等系统一样使用的是 Push 模型。</p>
+<h2 id="u603B_u7ED3"><a href="#u603B_u7ED3" class="headerlink" title="总结"></a>总结</h2><p>本文在 LegoBase 的基础上提出了构建查询编译引擎的一些有益思路。通过将PL领域的相关研究和数据库领域的一些发展结合起来，提出了一个用来简化查询编译系统开发、推理和维护的框架。可以说是跨领域学科研究的一个不错的案例。</p>
+<p>尽管现阶段常见OLAP系统当中主要的性能瓶颈仍是IO，因此从现实角度来说，In-memory 数据库从这个研究中获益更大。但是随着硬件的不断发展和RDMA系统的逐渐普及，也许在未来类似的查询编译系统将会成为主流。</p>
+
+    </div>
+    <footer>
+        
+        
+  
+  <div class="tags">
+    <a href="/tags/functional-programming/">functional programming</a>, <a href="/tags/database/">database</a>, <a href="/tags/compiler/">compiler</a>, <a href="/tags/scala/">scala</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2020/12/12/nvm-store/">Nvm Store: 第二届阿里数据库大赛参赛记录</a>
+      </li>
+    
+      <li>
+        <a href="/2020/02/24/how-to-architect-a-query-compiler/">SIGMOD 16 | How to Architect a Query Compiler</a>
+      </li>
+    
+      <li>
+        <a href="/2020/01/04/olap-distributed/">OLAP 任务的并发执行与调度</a>
+      </li>
+    
+      <li>
+        <a href="/2019/03/16/streaming-incremental-sql-execution/">Stream SQL 的执行原理与 Flink 的实现</a>
+      </li>
+    
+      <li>
+        <a href="/2018/11/01/sql-query-optimization-volcano/">SQL 查询优化原理与 Volcano Optimizer 介绍</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a target="_blank" rel="noopener" href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Functional-Go/">Functional Go</a><small>4</small></li>
+  
+    <li><a href="/categories/Mastering-Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>9</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/AWS/" style="font-size: 10px;">AWS</a> <a href="/tags/Algorithm/" style="font-size: 17.5px;">Algorithm</a> <a href="/tags/Apache-Flink/" style="font-size: 10px;">Apache Flink</a> <a href="/tags/Apple/" style="font-size: 10px;">Apple</a> <a href="/tags/Bezier-Path/" style="font-size: 10px;">Bezier Path</a> <a href="/tags/Big-Data/" style="font-size: 12.5px;">Big Data</a> <a href="/tags/Cascades/" style="font-size: 10px;">Cascades</a> <a href="/tags/Closure/" style="font-size: 10px;">Closure</a> <a href="/tags/Cloud/" style="font-size: 10px;">Cloud</a> <a href="/tags/Cocoa/" style="font-size: 10px;">Cocoa</a> <a href="/tags/Connected-Components/" style="font-size: 10px;">Connected Components</a> <a href="/tags/Data-structure/" style="font-size: 10px;">Data structure</a> <a href="/tags/Designing-Data-Intensive-Applications/" style="font-size: 10px;">Designing Data-Intensive Applications</a> <a href="/tags/Designing-Paradigm/" style="font-size: 10px;">Designing Paradigm</a> <a href="/tags/Distributed-System/" style="font-size: 12.5px;">Distributed System</a> <a href="/tags/Docker/" style="font-size: 10px;">Docker</a> <a href="/tags/Dokku/" style="font-size: 10px;">Dokku</a> <a href="/tags/EMR/" style="font-size: 10px;">EMR</a> <a href="/tags/ES6/" style="font-size: 10px;">ES6</a> <a href="/tags/ETL/" style="font-size: 10px;">ETL</a> <a href="/tags/Flink/" style="font-size: 10px;">Flink</a> <a href="/tags/Functional-Programing/" style="font-size: 10px;">Functional Programing</a> <a href="/tags/Functional-Programming/" style="font-size: 10px;">Functional Programming</a> <a href="/tags/GLSL/" style="font-size: 10px;">GLSL</a> <a href="/tags/GSoC/" style="font-size: 10px;">GSoC</a> <a href="/tags/Git/" style="font-size: 10px;">Git</a> <a href="/tags/Go/" style="font-size: 12.5px;">Go</a> <a href="/tags/Golang/" style="font-size: 17.5px;">Golang</a> <a href="/tags/Google/" style="font-size: 10px;">Google</a> <a href="/tags/Gourmet/" style="font-size: 10px;">Gourmet</a> <a href="/tags/Graph-Computing/" style="font-size: 10px;">Graph Computing</a> <a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Immutable/" style="font-size: 10px;">Immutable</a> <a href="/tags/Incremental-SQL/" style="font-size: 10px;">Incremental SQL</a> <a href="/tags/Intel/" style="font-size: 10px;">Intel</a> <a href="/tags/Interface-Builder/" style="font-size: 10px;">Interface Builder</a> <a href="/tags/IoT/" style="font-size: 10px;">IoT</a> <a href="/tags/Japan/" style="font-size: 10px;">Japan</a> <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Kylin/" style="font-size: 10px;">Kylin</a> <a href="/tags/Kyoto/" style="font-size: 10px;">Kyoto</a> <a href="/tags/Lazy-Evaluation/" style="font-size: 10px;">Lazy Evaluation</a> <a href="/tags/Linux/" style="font-size: 10px;">Linux</a> <a href="/tags/Log-Structured-Merge-Tree/" style="font-size: 10px;">Log-Structured Merge Tree</a> <a href="/tags/Materialized-View/" style="font-size: 10px;">Materialized View</a> <a href="/tags/NSControl/" style="font-size: 12.5px;">NSControl</a> <a href="/tags/NUC/" style="font-size: 10px;">NUC</a> <a href="/tags/NVM/" style="font-size: 10px;">NVM</a> <a href="/tags/OSX/" style="font-size: 15px;">OSX</a> <a href="/tags/Objective-C/" style="font-size: 12.5px;">Objective-C</a> <a href="/tags/Optimization/" style="font-size: 10px;">Optimization</a> <a href="/tags/Osaka/" style="font-size: 10px;">Osaka</a> <a href="/tags/PageRank/" style="font-size: 10px;">PageRank</a> <a href="/tags/Persistent-Memory/" style="font-size: 10px;">Persistent Memory</a> <a href="/tags/Pregel/" style="font-size: 10px;">Pregel</a> <a href="/tags/React/" style="font-size: 10px;">React</a> <a href="/tags/SQL/" style="font-size: 12.5px;">SQL</a> <a href="/tags/SVG/" style="font-size: 10px;">SVG</a> <a href="/tags/Scala/" style="font-size: 10px;">Scala</a> <a href="/tags/Scheduler/" style="font-size: 12.5px;">Scheduler</a> <a href="/tags/Splunk/" style="font-size: 10px;">Splunk</a> <a href="/tags/Stream-SQL/" style="font-size: 10px;">Stream SQL</a> <a href="/tags/Summary/" style="font-size: 10px;">Summary</a> <a href="/tags/Swift/" style="font-size: 10px;">Swift</a> <a href="/tags/Three-js/" style="font-size: 10px;">Three.js</a> <a href="/tags/Tokyo/" style="font-size: 10px;">Tokyo</a> <a href="/tags/Transmission/" style="font-size: 10px;">Transmission</a> <a href="/tags/Travel/" style="font-size: 10px;">Travel</a> <a href="/tags/Ubuntu/" style="font-size: 10px;">Ubuntu</a> <a href="/tags/User-Tracking/" style="font-size: 10px;">User Tracking</a> <a href="/tags/Volcano/" style="font-size: 10px;">Volcano</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/Y-Combinator/" style="font-size: 10px;">Y-Combinator</a> <a href="/tags/accelerate-meter/" style="font-size: 10px;">accelerate meter</a> <a href="/tags/allocator/" style="font-size: 10px;">allocator</a> <a href="/tags/bezier-path/" style="font-size: 12.5px;">bezier path</a> <a href="/tags/blender/" style="font-size: 12.5px;">blender</a> <a href="/tags/borg/" style="font-size: 10px;">borg</a> <a href="/tags/city/" style="font-size: 10px;">city</a> <a href="/tags/cli/" style="font-size: 10px;">cli</a> <a href="/tags/cocoa/" style="font-size: 15px;">cocoa</a> <a href="/tags/compiler/" style="font-size: 10px;">compiler</a> <a href="/tags/completion/" style="font-size: 10px;">completion</a> <a href="/tags/contenteditable/" style="font-size: 10px;">contenteditable</a> <a href="/tags/database/" style="font-size: 12.5px;">database</a> <a href="/tags/design/" style="font-size: 10px;">design</a> <a href="/tags/desktop/" style="font-size: 10px;">desktop</a> <a href="/tags/develop/" style="font-size: 10px;">develop</a> <a href="/tags/device-motion/" style="font-size: 10px;">device motion</a> <a href="/tags/distribute-storage/" style="font-size: 10px;">distribute storage</a> <a href="/tags/distributed-system/" style="font-size: 10px;">distributed system</a> <a href="/tags/diumoo/" style="font-size: 10px;">diumoo</a> <a href="/tags/douban/" style="font-size: 10px;">douban</a> <a href="/tags/drawing/" style="font-size: 17.5px;">drawing</a> <a href="/tags/editor/" style="font-size: 10px;">editor</a> <a href="/tags/essay/" style="font-size: 17.5px;">essay</a> <a href="/tags/export/" style="font-size: 10px;">export</a> <a href="/tags/filesystem/" style="font-size: 10px;">filesystem</a> <a href="/tags/font/" style="font-size: 12.5px;">font</a> <a href="/tags/fontawesome/" style="font-size: 10px;">fontawesome</a> <a href="/tags/fp/" style="font-size: 17.5px;">fp</a> <a href="/tags/functional-programming/" style="font-size: 20px;">functional programming</a> <a href="/tags/github/" style="font-size: 10px;">github</a> <a href="/tags/go/" style="font-size: 20px;">go</a> <a href="/tags/golang/" style="font-size: 12.5px;">golang</a> <a href="/tags/hamt/" style="font-size: 10px;">hamt</a> <a href="/tags/hashmap/" style="font-size: 10px;">hashmap</a> <a href="/tags/html/" style="font-size: 10px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/iOS/" style="font-size: 10px;">iOS</a> <a href="/tags/iOS-8/" style="font-size: 10px;">iOS 8</a> <a href="/tags/iPad/" style="font-size: 15px;">iPad</a> <a href="/tags/icon/" style="font-size: 10px;">icon</a> <a href="/tags/icon-font/" style="font-size: 12.5px;">icon font</a> <a href="/tags/icon-fontr/" style="font-size: 10px;">icon fontr</a> <a href="/tags/iconfontr/" style="font-size: 15px;">iconfontr</a> <a href="/tags/image/" style="font-size: 10px;">image</a> <a href="/tags/immutable/" style="font-size: 17.5px;">immutable</a> <a href="/tags/indexing/" style="font-size: 10px;">indexing</a> <a href="/tags/io-meter/" style="font-size: 10px;">io-meter</a> <a href="/tags/ionicons/" style="font-size: 10px;">ionicons</a> <a href="/tags/kubernetes/" style="font-size: 10px;">kubernetes</a> <a href="/tags/kv/" style="font-size: 10px;">kv</a> <a href="/tags/life/" style="font-size: 17.5px;">life</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/mac/" style="font-size: 10px;">mac</a> <a href="/tags/math/" style="font-size: 10px;">math</a> <a href="/tags/memory/" style="font-size: 10px;">memory</a> <a href="/tags/mobile/" style="font-size: 10px;">mobile</a> <a href="/tags/music/" style="font-size: 10px;">music</a> <a href="/tags/olap/" style="font-size: 10px;">olap</a> <a href="/tags/online-editor/" style="font-size: 10px;">online editor</a> <a href="/tags/open-source/" style="font-size: 10px;">open source</a> <a href="/tags/opensource/" style="font-size: 10px;">opensource</a> <a href="/tags/os/" style="font-size: 10px;">os</a> <a href="/tags/osx/" style="font-size: 15px;">osx</a> <a href="/tags/package/" style="font-size: 10px;">package</a> <a href="/tags/paper/" style="font-size: 12.5px;">paper</a> <a href="/tags/pencil/" style="font-size: 10px;">pencil</a> <a href="/tags/persist-datastructure/" style="font-size: 17.5px;">persist datastructure</a> <a href="/tags/programing/" style="font-size: 10px;">programing</a> <a href="/tags/programming/" style="font-size: 10px;">programming</a> <a href="/tags/rendering/" style="font-size: 10px;">rendering</a> <a href="/tags/review/" style="font-size: 10px;">review</a> <a href="/tags/rpc/" style="font-size: 10px;">rpc</a> <a href="/tags/scala/" style="font-size: 10px;">scala</a> <a href="/tags/schedule/" style="font-size: 10px;">schedule</a> <a href="/tags/selection/" style="font-size: 10px;">selection</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/shader/" style="font-size: 10px;">shader</a> <a href="/tags/sketch/" style="font-size: 10px;">sketch</a> <a href="/tags/sql/" style="font-size: 10px;">sql</a> <a href="/tags/stylus/" style="font-size: 10px;">stylus</a> <a href="/tags/summary/" style="font-size: 12.5px;">summary</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/swift/" style="font-size: 10px;">swift</a> <a href="/tags/taiwan/" style="font-size: 12.5px;">taiwan</a> <a href="/tags/tips/" style="font-size: 10px;">tips</a> <a href="/tags/travel/" style="font-size: 12.5px;">travel</a> <a href="/tags/utility/" style="font-size: 10px;">utility</a> <a href="/tags/vector-trie/" style="font-size: 12.5px;">vector trie</a> <a href="/tags/watch/" style="font-size: 10px;">watch</a> <a href="/tags/web/" style="font-size: 17.5px;">web</a> <a href="/tags/webGL/" style="font-size: 12.5px;">webGL</a> <a href="/tags/webgl/" style="font-size: 10px;">webgl</a> <a href="/tags/wu/" style="font-size: 10px;">wu</a> <a href="/tags/xcode/" style="font-size: 10px;">xcode</a> <a href="/tags/zocial/" style="font-size: 10px;">zocial</a> <a href="/tags/%E5%90%90%E6%A7%BD/" style="font-size: 10px;">吐槽</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2020 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+
+</body>
+
+</html>

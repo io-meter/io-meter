@@ -1,0 +1,453 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>More on Bezier Path | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="在之前讲解 Icon Font Viewer 和 SVG 的文章中，曾经简单介绍过 Bezier Path。
+这次再稍微介绍一点数学原理，另外针对 Bezier Path 使用上的一些问题进行更多的探讨。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="More on Bezier Path"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content=""/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a target="_blank" rel="noopener" href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2014/05/14/more-detail-on-bezier-path/" target="_blank">More on Bezier Path</a></h1>
+
+
+      
+        <time datetime="2014-05-14T11:04:51.000Z">2014-05-14</time>
+      
+    </header>
+    <div class="entry">
+      <p>在之前讲解 Icon Font Viewer 和 SVG 的文章中，曾经简单介绍过 Bezier Path。
+这次再稍微介绍一点数学原理，另外针对 Bezier Path 使用上的一些问题进行更多的探讨。</p>
+<a id="more"></a>
+<p>贝塞尔曲线最初应用于汽车主体设计，由法国工程师 Pierre Bézier 最早提出。
+现在在计算机图形学中具有的应用非常广泛，可以说，
+你在计算机上所看到的大多数矢量曲线，都是由 Bezier Path 绘制出来的。</p>
+<p>目前常用的 Bezier 曲线有二阶和三阶两种。广泛使用的 TrueType 以二阶 Bezier 曲线为基础的，
+Postscript 则是使用三阶 Bezier 曲线的代表。三阶 Bezier 曲线已经可以满足大多数需求了，
+对于更高阶的曲线，可以使用这两种 Bezier 曲线来进行分段拟合。</p>
+<p>下面先介绍 Bezier 曲线的数学表达式。</p>
+<h2 id="Bezier__u66F2_u7EBF_u7684_u6570_u5B66_u8868_u8FBE_u5F0F"><a href="#Bezier__u66F2_u7EBF_u7684_u6570_u5B66_u8868_u8FBE_u5F0F" class="headerlink" title="Bezier 曲线的数学表达式"></a>Bezier 曲线的数学表达式</h2><p>最简单的 Bezier 曲线是一阶的——其实就是线段。它的参数形式是：</p>
+<p>$$\mathbf{B}^{(1)}(t)=\mathbf{P}_0 + (\mathbf{P}_1-\mathbf{P}_0)t=(1-t)\mathbf{P}_0 + t\mathbf{P}_1 \mbox{ , } t \in [0,1]$$</p>
+<p>观察上面的公式，在$t$取0到1之间的值时，$\mathbf{B}(t)$的值就是在$\mathbf{P}_0$和$\mathbf{P}_1$之间线段上某一点的坐标。
+我们把$\mathbf{P}_0$和$\mathbf{P}_1$称为曲线的控制点，那么一阶 Bezier 曲线需要的控制点数量就是2。
+实际上，$n$阶 Bezier 曲线需要$n+1$个控制点。</p>
+<p>一阶 Bezier 曲线还称不上“曲线”，使用最多的两种 Bezier 曲线是二阶和三阶的。
+二阶 Bezier 曲线的参数方程为：</p>
+<p>$$\mathbf{B}^{(2)}(t) = (1 - t)^{2}\mathbf{P}_0 + 2t(1 - t)\mathbf{P}_1 + t^{2}\mathbf{P}_2 \mbox{ , } t \in [0,1]$$</p>
+<p>三阶 Bezier 曲线的参数方程为：</p>
+<p>$$\mathbf{B}^{(3)}(t)=\mathbf{P}_0(1-t)^3+3\mathbf{P}_1t(1-t)^2+3\mathbf{P}_2t^2(1-t)+\mathbf{P}_3t^3 \mbox{ , } t \in [0,1]$$</p>
+<p>对于$n$阶的 Bezier 曲线，有一个一般化的参数方程，这里就不再赘述。
+在目前的使用的计算机图形绘制系统中，最广泛使用的就是三阶 Beizer 的曲线，
+因为它的复杂度比较适中，尤其是用来拟合圆弧的时候非常方便，
+OSX 和 iOS 的绘图系统 CoreGraphic 就是使用的三阶 Bezier 曲线，
+SVG 标准上来说同时支持二阶和三阶 Bezier 曲线，但是不同浏览器在绘制的时候可能会有所不同。</p>
+<p>下面有两个重要的性质在后面的讨论中可能会用到：</p>
+<ol>
+<li>$n$阶 Bezier 曲线经过它第一个控制点和最后一个控制点。
+只需要$t$分别设为$0$和$1$就可以看出来。</li>
+<li>对于二阶以上的 Bezier 曲线，
+$\mathbf{P}_0\mathbf{P}_1$ 和 $\mathbf{P}_{n-2}\mathbf{P}_{n-1}$ 这两条线段同曲线相切。</li>
+<li>$\mathbf{B}(t) = (1-t)\mathbf{B}(t) + t\mathbf{B}(t)$</li>
+</ol>
+<h2 id="u4F7F_u7528_u9AD8_u9636_Bezier__u66F2_u7EBF_u62DF_u5408_u4F4E_u9636_Bezier__u66F2_u7EBF_u3002"><a href="#u4F7F_u7528_u9AD8_u9636_Bezier__u66F2_u7EBF_u62DF_u5408_u4F4E_u9636_Bezier__u66F2_u7EBF_u3002" class="headerlink" title="使用高阶 Bezier 曲线拟合低阶 Bezier 曲线。"></a>使用高阶 Bezier 曲线拟合低阶 Bezier 曲线。</h2><p>之前曾经提到过，一些图形系统只支持某一个阶次的 Bezier 曲线，
+比如 PostScript 和 Cocoa 就只支持三阶 Bezier 曲线。但是有些图形系统，
+比如 TrueType 和 SVG，都是支持 二阶 Bezier 曲线的。
+因此我们需要能够在只支持高阶 Bezier 曲线的图形系统中绘制低阶 Bezier 曲线。</p>
+<p>实际上利用上面的第三个属性，这件事是可以精确做到的(每个点都可以相吻合)。
+这里只给出二阶升三阶的过程：</p>
+<p>对于二阶 Bezier 曲线 $\mathbf{B}^{(2)}(t)$，将其表达式带入第三条性质，有</p>
+<p>$$\begin{eqnarray*}
+\mathbf{B}^{(2)}(t) &amp; = &amp; (1-t)\mathbf{B}^{(2)}(t)+t\mathbf{B}^{(2)}(t)\\
+ &amp; = &amp; (1-t)^{3}\mathbf{P}_{0}+(1-t)^{2}t\mathbf{P}_{0}+2(1-t)^{2}t\mathbf{P}_{1}+\\
+ &amp;  &amp; 2(1-t)t^{2}\mathbf{P}_{1}+(1-t)t^{2}\mathbf{P}_{2}+t^{3}\mathbf{P}_{2}\\
+ &amp; = &amp; (1-t)^{3}\mathbf{P}_{0}+3(1-t)^{2}t\frac{\mathbf{P}_{0}+2\mathbf{P}_{1}}{3}+\\
+ &amp;  &amp; 3(1-t)t^{2}\frac{2\mathbf{P}_{1}+\mathbf{P}_{2}}{3}+t^{3}\mathbf{P}_{2}
+\end{eqnarray*}$$</p>
+<p>取下列变换代入原式</p>
+<p>$$\begin{eqnarray*}
+\mathbf{P}’_{0} &amp; = &amp; \mathbf{P}_{0}\\
+\mathbf{P}’_{1} &amp; = &amp; \frac{\mathbf{P}_{0}+2\mathbf{P}_{1}}{3}\\
+\mathbf{P}’_{2} &amp; = &amp; \frac{2\mathbf{P}_{1}+\mathbf{P_{2}}}{3}\\
+\mathbf{P}’_{3} &amp; = &amp; \mathbf{P}_{2}
+\end{eqnarray*}$$</p>
+<p>恰好可以得到三阶 Bezier 曲线$\mathbf{B}^{(3)}(t)$的表达形式。这样我们就可以使用三阶 Bezier 曲线来精确绘制出二阶
+Bezier 曲线。也正因为如此，在目前绝大部分的计算机图形系统中，都是只提供三阶 Bezier 曲线的绘制函数。</p>
+<p>下面是一个使用 SVG 绘制的例子(需浏览器支持才能查看)，你可以通过查看页面源码看到具体的实现。
+从左往右，依次是二阶 Bezier 曲线、三阶 Bezier 曲线和将二者重叠起来的效果。可以看到两条曲线是完全吻合的。</p>
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="100%" height="auto" viewbox="0 0 400 150" enable-background="new 0 0 400 200" xml:space="preserve">
+<path fill="transparent" stroke="#F00" stroke-width="2" d="M30,30 Q30,90 90,90"/>
+<path fill="transparent" stroke="#000" stroke-width="2" d="M130,30 C130,70 150,90 190,90"/>
+<path fill="transparent" stroke="#F00" stroke-width="4" d="M230,30 Q230,90 290,90"/>
+<path fill="transparent" stroke="#000" stroke-width="1" d="M230,30 C230,70 250,90 290,90"/>
+<text x="30" y="110">Quadratic</text>
+<text x="130" y="110">Cubic</text>
+<text x="230" y="110">Overlap</text>
+<circle cx="30" cy="30" r="2" fill="#F0F"/>
+<circle cx="30" cy="90" r="2" fill="#F0F"/>
+<circle cx="90" cy="90" r="2" fill="#F0F"/>
+<circle cx="130" cy="30" r="2" fill="#F0F"/>
+<circle cx="130" cy="70" r="2" fill="#F0F"/>
+<circle cx="150" cy="90" r="2" fill="#F0F"/>
+<circle cx="190" cy="90" r="2" fill="#F0F"/>
+<polyline fill="transparent" stroke="#999" points="30,30 30,90 90,90"/>
+<polyline fill="transparent" stroke="#999" points="130,30 130,70 150,90 190,90"/>
+</svg>
+
+<h2 id="u7528_u4F4E_u9636_u66F2_u7EBF_u8868_u793A_u9AD8_u9636_u66F2_u7EBF_uFF1F"><a href="#u7528_u4F4E_u9636_u66F2_u7EBF_u8868_u793A_u9AD8_u9636_u66F2_u7EBF_uFF1F" class="headerlink" title="用低阶曲线表示高阶曲线？"></a>用低阶曲线表示高阶曲线？</h2><p>接下来自然有一个问题，如果我有一个高阶的曲线需要绘制，而系统只支持低阶曲线，那么应该如何实现呢？
+很不幸的是，使用有限条低阶的曲线是没有办法精确的绘制出需要的高阶曲线的，一般使用的方法是逼近法。
+一个比较常用的技巧是将高阶曲线分割为两个部分，对这两个部分分别使用低一阶的曲线进行逼近，从而获得一个比较好的效果。</p>
+<p>关于这个主题，<a href="http://www.caffeineowl.com/graphics/2d/vectorial/cubic2quad01.html" target="_blank" rel="noopener">这篇文章</a>
+中有详细的介绍，涵盖了：</p>
+<ol>
+<li>使用一条低阶曲线逼近高一阶曲线的方法</li>
+<li>使用两条曲线逼近高一阶曲线前后两部分的方法</li>
+<li>可变数量的曲线动态逼近高一阶曲线的算法</li>
+</ol>
+<p>使用低阶曲线逼近高阶曲线是一个比较复杂的问题，而且没有一个很简洁且效果很好的通用公式。
+这里就不赘述了。</p>
+<p>一个更实用的方法是直接用折线去逼近高阶曲线。实际上，即使是二阶和三阶 Bezier 曲线，
+具体实现中也是使用同样的方法。既然知道了高阶曲线的参数方程，直接使用方程来分段成折线绘制自然最好不过了。
+需要注意的是，为了获得较好的效果和性能，一般来说不会使用均匀的折线分段。
+一个比较简单的算法就是在曲线曲率较大的地方多安排分段，反之少安排分段。</p>
+<h2 id="u4F7F_u7528_u4E09_u9636_Bezier__u66F2_u7EBF_u903C_u8FD1_u5706_u5F27"><a href="#u4F7F_u7528_u4E09_u9636_Bezier__u66F2_u7EBF_u903C_u8FD1_u5706_u5F27" class="headerlink" title="使用三阶 Bezier 曲线逼近圆弧"></a>使用三阶 Bezier 曲线逼近圆弧</h2><p>圆弧是另一个我们经常使用的平面曲线，下面是圆的参数方程：</p>
+<p>$$
+\begin{eqnarray*}
+x=r\cos\theta\\
+y=r\sin\theta
+\end{eqnarray*}.
+$$</p>
+<p>可以看出，如果要精确绘制圆弧，我们不得不计算$\sin\theta$和$\cos\theta$的值，
+这对于计算机来说，是一个成本很高、得不偿失的工作。使用具有多项式表达式的三阶 Bezier 
+曲线来逼近圆弧就成为了一个很好的选择。</p>
+<p>我们是无法使用一条完整的 Bezier 曲线来绘制整个圆的，常用的方法是用一条 Bezier 曲线去逼近一个四分之一圆弧，
+使用四条曲线组成一个圆。</p>
+<p>简便起见，取圆心在原点的单位圆在第一象限的四分之一圆弧进行讨论。由上面所提到的
+Bezier 曲线的第一条性质，可以得到用来用来逼近这个圆弧的 Bezier 曲线一定满足：</p>
+<p>$$
+\begin{eqnarray*}
+\mathbf{P}_{0} &amp; = &amp; (0,1)\\
+\mathbf{P}_{3} &amp; = &amp; (1,0)
+\end{eqnarray*}
+$$</p>
+<p>这是因为我们指定的圆弧必定经过$(0,1)$和$(1,0)$这两个点，因此用来逼近的 Bezier 曲线也应该经过这个点。</p>
+<p>同理，因为圆弧在这两点的切线分别平行于$x$轴和$y$轴，由第二条性质，$\mathbf{P}_1$的$x$坐标必定为$1$，
+$\mathbf{P}_2$的$y$坐标必定为$1$。同时因为圆弧是对称的，$\mathbf{P}_1$的$y$坐标和
+$\mathbf{P}_2$的$x$坐标一定是相同的，将其设为$\lambda$，此时 Bezier 曲线的表达式可以化简为：</p>
+<p>$$
+\begin{eqnarray*}
+C_{x}(t) &amp; = &amp; 3(1-t^{2})t\lambda+3(1-t)t^{2}+t^{3}\\
+C_{y}(t) &amp; = &amp; (1-t)+3(1-t^{2})t+3(1-t)t^{2}\lambda
+\end{eqnarray*}
+$$</p>
+<p>其中$C_{x}(t)$和$C_{y}(t)$分别代表三阶 Bezier 曲线的$x$和$y$坐标关于参数$t$的函数。</p>
+<p>此外，我们的圆弧肯定经过$(\frac{\sqrt{2}}{2}, \frac{\sqrt{2}}{2})$这个点，
+使 Bezier 曲线经过这个点，且由对称性此时需有$t=0.5$。 代入上面的式子，我们可以解出。</p>
+<p>$$
+\lambda = \frac{4}{3}(\sqrt{2}-1)\approx 0.5522847498
+$$</p>
+<p>至此我们就可以绘制出来一个比较完美的四分之一圆弧了，为了绘制一整个圆，
+可以使用四个这样的 Bezier 曲线来实现。不同半径的圆只要按比例缩放上面这个参数就可以达到目的。
+实际上使用三阶 Bezier 曲线，我们还可以方便的绘制出非$\frac{\pi}{2}$弧度的圆弧。
+具体的公式可以在这个<a href="http://itc.ktu.lt/itc354/Riskus354.pdf" target="_blank" rel="noopener">参考文献</a>中找到。</p>
+<p>下面是一个使用 SVG 的绘制演示，最左边是使用三阶圆弧绘制的效果，中间是使用 SVG 内置的 Arc 命令绘制的效果，
+最右边的是将两个结果重叠在一起的效果，可以看出来是完全吻合的。这是因为在绝大部分 SVG 的绘制系统中，
+其实就是使用三阶 Bezier 曲线来绘制圆弧的。</p>
+<svg version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="100%" height="auto" viewbox="0 0 400 150" enable-background="new 0 0 400 200" xml:space="preserve">
+<path fill="transparent" stroke="#F00" stroke-width="2" d="M10,10 C54.1824,10 90,45.8176 90,90"/>
+<path fill="transparent" stroke="#000" stroke-width="2" d="M100,10 A80,80 0 0 1 180,90"/>
+<path fill="transparent" stroke="#F00" stroke-width="4" d="M200,10 C244.1827,10 280,45.8176 280,90"/>
+<path fill="transparent" stroke="#000" stroke-width="2" d="M200,10 A80,80 0 0 1 280,90"/>
+<text x="10" y="110">Bezier Path</text>
+<text x="130" y="110">Arc</text>
+<text x="210" y="110">Overlap</text>
+<circle cx="10" cy="10" r="2" fill="#F0F"/>
+<circle cx="54.1824" cy="10" r="2" fill="#F0F"/>
+<circle cx="90" cy="45.8176" r="2" fill="#F0F"/>
+<circle cx="90" cy="90" r="2" fill="#F0F"/>
+<polyline fill="transparent" stroke="#999" points="10,10 54.1824,10 90,45.8176 90,90"/>
+<polyline fill="transparent" stroke="#99f" points="10,10 10,90, 90,90"/>
+<polyline fill="transparent" stroke="#99f" points="100,10 100,90, 180,90"/>
+<polyline fill="transparent" stroke="#99f" points="200,10 200,90, 280,90"/>
+</svg>
+
+<h2 id="u603B_u7ED3_u548C_u6269_u5C55"><a href="#u603B_u7ED3_u548C_u6269_u5C55" class="headerlink" title="总结和扩展"></a>总结和扩展</h2><p>在这篇文章讨论了二维平面上的 Bezier 曲线的一些特性，只要改变控制点的维度，
+就可以很容易地将其推广到三维甚至更高维空间上去。</p>
+<p>现在，在 Bezier 曲线的基础上还发展出了 B 样条，并能够进一步推广为 NURBS (非均匀有理B样条)。
+NURBS 在 3D 建模和工业设计上使用非常广泛，常用的 3D 制作软件，如 Maya、Rhino、Blender 等都支持 NURBS。
+下图是在 Blender 中显示一个简单 NURBS 表面的效果。</p>
+<p><img src="/img/posts/NURBS-blender.png" alt="NURBS on blener"></p>
+<p>关于 Bezier 曲线还有很多值得讨论的东西，希望这篇文章对相关学习提供一定的帮助。</p>
+<h3 id="u53C2_u8003_u6587_u732E"><a href="#u53C2_u8003_u6587_u732E" class="headerlink" title="参考文献"></a>参考文献</h3><ol>
+<li><a href="http://en.wikipedia.org/wiki/B-spline" target="_blank" rel="noopener">http://en.wikipedia.org/wiki/B-spline</a> </li>
+<li><a href="http://en.wikipedia.org/wiki/B%C3%A9zier_curve" target="_blank" rel="noopener">http://en.wikipedia.org/wiki/B%C3%A9zier_curve</a></li>
+<li><a href="http://itc.ktu.lt/itc354/Riskus354.pdf" target="_blank" rel="noopener">http://itc.ktu.lt/itc354/Riskus354.pdf</a></li>
+<li><a href="http://www.caffeineowl.com/graphics/2d/vectorial/cubic2quad01.html" target="_blank" rel="noopener">http://www.caffeineowl.com/graphics/2d/vectorial/cubic2quad01.html</a></li>
+<li><a href="https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorial/Paths" target="_blank" rel="noopener">https://developer.mozilla.org/en-US/docs/Web/SVG/Tutorial/Paths</a></li>
+</ol>
+
+    </div>
+    <footer>
+        
+  
+  <div class="categories">
+    <a href="/categories/Math/">Math</a>
+  </div>
+
+        
+  
+  <div class="tags">
+    <a href="/tags/bezier-path/">bezier path</a>, <a href="/tags/math/">math</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2020/12/12/nvm-store/">Nvm Store: 第二届阿里数据库大赛参赛记录</a>
+      </li>
+    
+      <li>
+        <a href="/2020/02/24/how-to-architect-a-query-compiler/">SIGMOD 16 | How to Architect a Query Compiler</a>
+      </li>
+    
+      <li>
+        <a href="/2020/01/04/olap-distributed/">OLAP 任务的并发执行与调度</a>
+      </li>
+    
+      <li>
+        <a href="/2019/03/16/streaming-incremental-sql-execution/">Stream SQL 的执行原理与 Flink 的实现</a>
+      </li>
+    
+      <li>
+        <a href="/2018/11/01/sql-query-optimization-volcano/">SQL 查询优化原理与 Volcano Optimizer 介绍</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a target="_blank" rel="noopener" href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Functional-Go/">Functional Go</a><small>4</small></li>
+  
+    <li><a href="/categories/Mastering-Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>9</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/AWS/" style="font-size: 10px;">AWS</a> <a href="/tags/Algorithm/" style="font-size: 17.5px;">Algorithm</a> <a href="/tags/Apache-Flink/" style="font-size: 10px;">Apache Flink</a> <a href="/tags/Apple/" style="font-size: 10px;">Apple</a> <a href="/tags/Bezier-Path/" style="font-size: 10px;">Bezier Path</a> <a href="/tags/Big-Data/" style="font-size: 12.5px;">Big Data</a> <a href="/tags/Cascades/" style="font-size: 10px;">Cascades</a> <a href="/tags/Closure/" style="font-size: 10px;">Closure</a> <a href="/tags/Cloud/" style="font-size: 10px;">Cloud</a> <a href="/tags/Cocoa/" style="font-size: 10px;">Cocoa</a> <a href="/tags/Connected-Components/" style="font-size: 10px;">Connected Components</a> <a href="/tags/Data-structure/" style="font-size: 10px;">Data structure</a> <a href="/tags/Designing-Data-Intensive-Applications/" style="font-size: 10px;">Designing Data-Intensive Applications</a> <a href="/tags/Designing-Paradigm/" style="font-size: 10px;">Designing Paradigm</a> <a href="/tags/Distributed-System/" style="font-size: 12.5px;">Distributed System</a> <a href="/tags/Docker/" style="font-size: 10px;">Docker</a> <a href="/tags/Dokku/" style="font-size: 10px;">Dokku</a> <a href="/tags/EMR/" style="font-size: 10px;">EMR</a> <a href="/tags/ES6/" style="font-size: 10px;">ES6</a> <a href="/tags/ETL/" style="font-size: 10px;">ETL</a> <a href="/tags/Flink/" style="font-size: 10px;">Flink</a> <a href="/tags/Functional-Programing/" style="font-size: 10px;">Functional Programing</a> <a href="/tags/Functional-Programming/" style="font-size: 10px;">Functional Programming</a> <a href="/tags/GLSL/" style="font-size: 10px;">GLSL</a> <a href="/tags/GSoC/" style="font-size: 10px;">GSoC</a> <a href="/tags/Git/" style="font-size: 10px;">Git</a> <a href="/tags/Go/" style="font-size: 12.5px;">Go</a> <a href="/tags/Golang/" style="font-size: 17.5px;">Golang</a> <a href="/tags/Google/" style="font-size: 10px;">Google</a> <a href="/tags/Gourmet/" style="font-size: 10px;">Gourmet</a> <a href="/tags/Graph-Computing/" style="font-size: 10px;">Graph Computing</a> <a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Immutable/" style="font-size: 10px;">Immutable</a> <a href="/tags/Incremental-SQL/" style="font-size: 10px;">Incremental SQL</a> <a href="/tags/Intel/" style="font-size: 10px;">Intel</a> <a href="/tags/Interface-Builder/" style="font-size: 10px;">Interface Builder</a> <a href="/tags/IoT/" style="font-size: 10px;">IoT</a> <a href="/tags/Japan/" style="font-size: 10px;">Japan</a> <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Kylin/" style="font-size: 10px;">Kylin</a> <a href="/tags/Kyoto/" style="font-size: 10px;">Kyoto</a> <a href="/tags/Lazy-Evaluation/" style="font-size: 10px;">Lazy Evaluation</a> <a href="/tags/Linux/" style="font-size: 10px;">Linux</a> <a href="/tags/Log-Structured-Merge-Tree/" style="font-size: 10px;">Log-Structured Merge Tree</a> <a href="/tags/Materialized-View/" style="font-size: 10px;">Materialized View</a> <a href="/tags/NSControl/" style="font-size: 12.5px;">NSControl</a> <a href="/tags/NUC/" style="font-size: 10px;">NUC</a> <a href="/tags/NVM/" style="font-size: 10px;">NVM</a> <a href="/tags/OSX/" style="font-size: 15px;">OSX</a> <a href="/tags/Objective-C/" style="font-size: 12.5px;">Objective-C</a> <a href="/tags/Optimization/" style="font-size: 10px;">Optimization</a> <a href="/tags/Osaka/" style="font-size: 10px;">Osaka</a> <a href="/tags/PageRank/" style="font-size: 10px;">PageRank</a> <a href="/tags/Persistent-Memory/" style="font-size: 10px;">Persistent Memory</a> <a href="/tags/Pregel/" style="font-size: 10px;">Pregel</a> <a href="/tags/React/" style="font-size: 10px;">React</a> <a href="/tags/SQL/" style="font-size: 12.5px;">SQL</a> <a href="/tags/SVG/" style="font-size: 10px;">SVG</a> <a href="/tags/Scala/" style="font-size: 10px;">Scala</a> <a href="/tags/Scheduler/" style="font-size: 12.5px;">Scheduler</a> <a href="/tags/Splunk/" style="font-size: 10px;">Splunk</a> <a href="/tags/Stream-SQL/" style="font-size: 10px;">Stream SQL</a> <a href="/tags/Summary/" style="font-size: 10px;">Summary</a> <a href="/tags/Swift/" style="font-size: 10px;">Swift</a> <a href="/tags/Three-js/" style="font-size: 10px;">Three.js</a> <a href="/tags/Tokyo/" style="font-size: 10px;">Tokyo</a> <a href="/tags/Transmission/" style="font-size: 10px;">Transmission</a> <a href="/tags/Travel/" style="font-size: 10px;">Travel</a> <a href="/tags/Ubuntu/" style="font-size: 10px;">Ubuntu</a> <a href="/tags/User-Tracking/" style="font-size: 10px;">User Tracking</a> <a href="/tags/Volcano/" style="font-size: 10px;">Volcano</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/Y-Combinator/" style="font-size: 10px;">Y-Combinator</a> <a href="/tags/accelerate-meter/" style="font-size: 10px;">accelerate meter</a> <a href="/tags/allocator/" style="font-size: 10px;">allocator</a> <a href="/tags/bezier-path/" style="font-size: 12.5px;">bezier path</a> <a href="/tags/blender/" style="font-size: 12.5px;">blender</a> <a href="/tags/borg/" style="font-size: 10px;">borg</a> <a href="/tags/city/" style="font-size: 10px;">city</a> <a href="/tags/cli/" style="font-size: 10px;">cli</a> <a href="/tags/cocoa/" style="font-size: 15px;">cocoa</a> <a href="/tags/compiler/" style="font-size: 10px;">compiler</a> <a href="/tags/completion/" style="font-size: 10px;">completion</a> <a href="/tags/contenteditable/" style="font-size: 10px;">contenteditable</a> <a href="/tags/database/" style="font-size: 12.5px;">database</a> <a href="/tags/design/" style="font-size: 10px;">design</a> <a href="/tags/desktop/" style="font-size: 10px;">desktop</a> <a href="/tags/develop/" style="font-size: 10px;">develop</a> <a href="/tags/device-motion/" style="font-size: 10px;">device motion</a> <a href="/tags/distribute-storage/" style="font-size: 10px;">distribute storage</a> <a href="/tags/distributed-system/" style="font-size: 10px;">distributed system</a> <a href="/tags/diumoo/" style="font-size: 10px;">diumoo</a> <a href="/tags/douban/" style="font-size: 10px;">douban</a> <a href="/tags/drawing/" style="font-size: 17.5px;">drawing</a> <a href="/tags/editor/" style="font-size: 10px;">editor</a> <a href="/tags/essay/" style="font-size: 17.5px;">essay</a> <a href="/tags/export/" style="font-size: 10px;">export</a> <a href="/tags/filesystem/" style="font-size: 10px;">filesystem</a> <a href="/tags/font/" style="font-size: 12.5px;">font</a> <a href="/tags/fontawesome/" style="font-size: 10px;">fontawesome</a> <a href="/tags/fp/" style="font-size: 17.5px;">fp</a> <a href="/tags/functional-programming/" style="font-size: 20px;">functional programming</a> <a href="/tags/github/" style="font-size: 10px;">github</a> <a href="/tags/go/" style="font-size: 20px;">go</a> <a href="/tags/golang/" style="font-size: 12.5px;">golang</a> <a href="/tags/hamt/" style="font-size: 10px;">hamt</a> <a href="/tags/hashmap/" style="font-size: 10px;">hashmap</a> <a href="/tags/html/" style="font-size: 10px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/iOS/" style="font-size: 10px;">iOS</a> <a href="/tags/iOS-8/" style="font-size: 10px;">iOS 8</a> <a href="/tags/iPad/" style="font-size: 15px;">iPad</a> <a href="/tags/icon/" style="font-size: 10px;">icon</a> <a href="/tags/icon-font/" style="font-size: 12.5px;">icon font</a> <a href="/tags/icon-fontr/" style="font-size: 10px;">icon fontr</a> <a href="/tags/iconfontr/" style="font-size: 15px;">iconfontr</a> <a href="/tags/image/" style="font-size: 10px;">image</a> <a href="/tags/immutable/" style="font-size: 17.5px;">immutable</a> <a href="/tags/indexing/" style="font-size: 10px;">indexing</a> <a href="/tags/io-meter/" style="font-size: 10px;">io-meter</a> <a href="/tags/ionicons/" style="font-size: 10px;">ionicons</a> <a href="/tags/kubernetes/" style="font-size: 10px;">kubernetes</a> <a href="/tags/kv/" style="font-size: 10px;">kv</a> <a href="/tags/life/" style="font-size: 17.5px;">life</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/mac/" style="font-size: 10px;">mac</a> <a href="/tags/math/" style="font-size: 10px;">math</a> <a href="/tags/memory/" style="font-size: 10px;">memory</a> <a href="/tags/mobile/" style="font-size: 10px;">mobile</a> <a href="/tags/music/" style="font-size: 10px;">music</a> <a href="/tags/olap/" style="font-size: 10px;">olap</a> <a href="/tags/online-editor/" style="font-size: 10px;">online editor</a> <a href="/tags/open-source/" style="font-size: 10px;">open source</a> <a href="/tags/opensource/" style="font-size: 10px;">opensource</a> <a href="/tags/os/" style="font-size: 10px;">os</a> <a href="/tags/osx/" style="font-size: 15px;">osx</a> <a href="/tags/package/" style="font-size: 10px;">package</a> <a href="/tags/paper/" style="font-size: 12.5px;">paper</a> <a href="/tags/pencil/" style="font-size: 10px;">pencil</a> <a href="/tags/persist-datastructure/" style="font-size: 17.5px;">persist datastructure</a> <a href="/tags/programing/" style="font-size: 10px;">programing</a> <a href="/tags/programming/" style="font-size: 10px;">programming</a> <a href="/tags/rendering/" style="font-size: 10px;">rendering</a> <a href="/tags/review/" style="font-size: 10px;">review</a> <a href="/tags/rpc/" style="font-size: 10px;">rpc</a> <a href="/tags/scala/" style="font-size: 10px;">scala</a> <a href="/tags/schedule/" style="font-size: 10px;">schedule</a> <a href="/tags/selection/" style="font-size: 10px;">selection</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/shader/" style="font-size: 10px;">shader</a> <a href="/tags/sketch/" style="font-size: 10px;">sketch</a> <a href="/tags/sql/" style="font-size: 10px;">sql</a> <a href="/tags/stylus/" style="font-size: 10px;">stylus</a> <a href="/tags/summary/" style="font-size: 12.5px;">summary</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/swift/" style="font-size: 10px;">swift</a> <a href="/tags/taiwan/" style="font-size: 12.5px;">taiwan</a> <a href="/tags/tips/" style="font-size: 10px;">tips</a> <a href="/tags/travel/" style="font-size: 12.5px;">travel</a> <a href="/tags/utility/" style="font-size: 10px;">utility</a> <a href="/tags/vector-trie/" style="font-size: 12.5px;">vector trie</a> <a href="/tags/watch/" style="font-size: 10px;">watch</a> <a href="/tags/web/" style="font-size: 17.5px;">web</a> <a href="/tags/webGL/" style="font-size: 12.5px;">webGL</a> <a href="/tags/webgl/" style="font-size: 10px;">webgl</a> <a href="/tags/wu/" style="font-size: 10px;">wu</a> <a href="/tags/xcode/" style="font-size: 10px;">xcode</a> <a href="/tags/zocial/" style="font-size: 10px;">zocial</a> <a href="/tags/%E5%90%90%E6%A7%BD/" style="font-size: 10px;">吐槽</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2020 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"], linebreaks: { automatic:true }, EqnChunk: (MathJax.Hub.Browser.isMobile ? 10 : 50) },
+        tex2jax: { inlineMath: [ ["$", "$"], ["\\(","\\)"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno",skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']},
+        TeX: {  noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } }, Macros: { href: "{}" } },
+        messageStyle: "none"
+    }); 
+</script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+
+</body>
+
+</html>

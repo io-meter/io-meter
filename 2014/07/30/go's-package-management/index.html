@@ -1,0 +1,354 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>Go 语言的包依赖管理 | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="对于从 Ruby、Python 或者 Node 等编程语言转向 Go 语言的开发者，可能会有一个疑问：
+Go 语言中的包依赖关系是怎么管理的？有没有什么方便使用的工具呢？
+我最近研究了一下这个问题，以下是我的研究报告。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="Go 语言的包依赖管理"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content=""/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a target="_blank" rel="noopener" href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2014/07/30/go's-package-management/" target="_blank">Go 语言的包依赖管理</a></h1>
+
+
+      
+        <time datetime="2014-07-30T08:11:44.000Z">2014-07-30</time>
+      
+    </header>
+    <div class="entry">
+      <p>对于从 Ruby、Python 或者 Node 等编程语言转向 Go 语言的开发者，可能会有一个疑问：
+Go 语言中的包依赖关系是怎么管理的？有没有什么方便使用的工具呢？
+我最近研究了一下这个问题，以下是我的研究报告。</p>
+<a id="more"></a>
+<p><img src="/img/posts/go-package.jpg" alt="(图片来源：nathany.com)"></p>
+<h2 id="Go__u8BED_u8A00_u672C_u8EAB_u63D0_u4F9B_u7684_u5305_u7BA1_u7406_u673A_u5236"><a href="#Go__u8BED_u8A00_u672C_u8EAB_u63D0_u4F9B_u7684_u5305_u7BA1_u7406_u673A_u5236" class="headerlink" title="Go 语言本身提供的包管理机制"></a>Go 语言本身提供的包管理机制</h2><p>在 Go 语言中，我们可以使用<code>go get</code>命令安装远程仓库中托管的代码，不同于 Ruby Gem、pypi 等集中式的包管理机制，
+Go 语言的包管理系统是去中心化的。简单来讲，<code>go get</code>命令支持任何一个位置托管的 Git 或 Mercurial
+的仓库，无论是 Github 还是 Google Code 上的包，都可以通过这个命令安装。</p>
+<p>我们知道，在 Go 语言中的<code>import</code>语句对于已经使用<code>go get</code>安装到本地的包，依然要使用其去绝对路径引入。
+比如对于从 Github 上安装的 <a href="https://goji.io/" target="_blank" rel="noopener">goji</a>，其在 Github 上的路径 URL 是
+<code>https://github.com/zenazn/goji</code>，因此在<code>import</code>它的时候需要使用下面的代码：
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> <span class="string">"github.com/zenazn/goji"</span></span><br></pre></td></tr></table></figure></p>
+<p>正因为如此，Go 语言可以通过直接分析代码中的<code>import</code>语句来查询依赖关系。
+<code>go get</code>命令在执行时，就会自动解析<code>import</code>来安装所有的依赖。</p>
+<p>除了<code>go get</code>，Go 语言还提供了一个 Workspace 的机制，这个机制也是很容易让人困惑的设计。简单来说就是通过设定
+<code>GOPATH</code>环境变量，指定除了<code>GOROOT</code>所指定的目录之外，Go 代码所在的位置(也就是 Workspace 的位置)。
+一般来说，<code>GOPATH</code>目录下会包含<code>pkg</code>、<code>src</code>和<code>bin</code>三个子目录，这三个目录各有用处。</p>
+<ul>
+<li><code>bin</code> 目录用来放置编译好的可执行文件，为了使得这里的可执行文件可以方便的运行，
+在 shell 中设置<code>PATH</code>变量。</li>
+<li><code>src</code> 目录用来放置代码源文件，在进行<code>import</code>时，是使用这个位置作为根目录的。自己编写的代码也应该放在这下面。</li>
+<li><code>pkg</code> 用来放置安装的包的链接对象(Object)的。这个概念有点类似于链接库，Go 会将编译出的可连接库放在这里，
+方便编译时链接。不同的系统和处理器架构的对象会在<code>pkg</code>存放在不同的文件夹中。</li>
+</ul>
+<p>我的<code>GOPATH</code>目录树如下所示：
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">├── bin</span><br><span class="line">├── pkg</span><br><span class="line">│   └── darwin_amd64</span><br><span class="line">│       └── github.com</span><br><span class="line">│           └── zenazn</span><br><span class="line">│               └── goji</span><br><span class="line">└── src</span><br><span class="line">    ├── code.google.com</span><br><span class="line">    │   └── p</span><br><span class="line">    │       └── go.crypto</span><br><span class="line">    └── github.com</span><br><span class="line">        └── zenazn</span><br><span class="line">            └── goji</span><br></pre></td></tr></table></figure></p>
+<p>一般来说，你自己的代码不应该直接放置在<code>src</code>目录下，而应该为其建立对应的项目文件夹。
+<code>go get</code>也会把第三方包的源代码放到这个目录下，因此一般推荐设置两个<code>GOPATH</code>，比如：</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">export</span> GOPATH=<span class="string">"/usr/local/share/go:<span class="variable">$HOME</span>/codes/go"</span></span><br></pre></td></tr></table></figure>
+<p>这样第三方包就会默认放置在第一个路径中，而你可以在第二个路径下编写自己的代码。
+虽然 Go 语言本身已经提供了相当强大的包管理方式了，但是仍然有一些不足：</p>
+<ol>
+<li>不能很方便地隔离不同项目的环境</li>
+<li>不能很方便地控制某个依赖包的版本</li>
+<li>不能管理 Go 本身的版本</li>
+</ol>
+<p>因此我们还需要一些第三方的工具来弥补这些缺陷。</p>
+<h2 id="u7B2C_u4E09_u65B9_u7684_u7BA1_u7406_u5DE5_u5177"><a href="#u7B2C_u4E09_u65B9_u7684_u7BA1_u7406_u5DE5_u5177" class="headerlink" title="第三方的管理工具"></a>第三方的管理工具</h2><h3 id="GOPATH__u7BA1_u7406_u548C_u5305_u7BA1_u7406"><a href="#GOPATH__u7BA1_u7406_u548C_u5305_u7BA1_u7406" class="headerlink" title="GOPATH 管理和包管理"></a>GOPATH 管理和包管理</h3><p>由于存在<code>GOPATH</code>的机制，我们可以使用多个<code>GOPATH</code>来实现项目隔离的方法。
+譬如，对于每个项目，都分配一个不同的路径作为<code>GOPATH</code>。
+可以实现这样的目的的工具有<a href="https://github.com/pote/gvp" target="_blank" rel="noopener">gvp</a>等。</p>
+<p>对于 gvp 来说，想要针对当前目录建立一个<code>GOPATH</code>，只需要执行<code>gvp init</code>即可。
+gvp 会在当前项目的目录下新建一个隐藏的文件夹作为<code>GOPATH</code>指向的位置。
+切换环境时使用下面两个命令来修改环境变量。这种做法跟 Python
+中的<a href="https://pypi.python.org/pypi/virtualenv" target="_blank" rel="noopener">virtualenv</a>比较类似。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">source</span> gvp <span class="keyword">in</span>   <span class="comment"># 进入当前目录对应的 GOPATH 环境</span></span><br><span class="line"><span class="built_in">source</span> gvp out  <span class="comment"># 登出当前目录对应的 GOPATH 环境</span></span><br></pre></td></tr></table></figure>
+<p>至于对依赖包更版本更细致的管理，可以配合的工具还有 <a href="https://github.com/pote/gpm" target="_blank" rel="noopener">gpm</a>。
+<code>gpm</code>有点类似于 Python 中的<a href="http://pip.readthedocs.org/en/latest/" target="_blank" rel="noopener">pip</a>工具。他可以生成一个名为 <code>Godeps</code> 的文件，
+其中记录了每个依赖包的 URL 以及使用的版本(hash tag)。
+之前的<a href="http://dev.af83.com/2013/09/14/a-journey-in-golang-package-manager.html" target="_blank" rel="noopener">一篇文章</a>提到
+<code>gpm</code>只能管理来自 Github 的依赖，不过当前的版本已经支持了非 Git 方式托管的依赖包了。</p>
+<p>基于同样原理管理依赖包版本的工具还有<a href="https://github.com/tools/godep" target="_blank" rel="noopener">Godep</a>。
+这个工具在 Github 上具有相当高的关注度。它所生成的<code>Godeps</code>文件采用 JSON 格式储存，
+是一个跟 Node.js 中 <a href="https://www.npmjs.org://www.npmjs.org/" target="_blank" rel="noopener">NPM</a> 相仿的工具。</p>
+<p>总体来说以上几个工具已经可以解决隔离项目环境和控制依赖包版本的问题了。但是使用上还不算方便，
+为了能在我们 cd 到某个目录时自动的切换环境变量，我们可能还需要在 shell
+做一些配置使其在<code>cd</code>到项目目录下时自动切换环境变量。</p>
+<p>这方面做的比较好的一个选择是 <a href="https://github.com/mattn/gom" target="_blank" rel="noopener">Go Manager(gom)</a>，
+它生成的<code>Gomfile</code>格式上几乎跟 Ruby Gem 一样。gom 可能是这些工具当中使用最方便的一个，
+只要使用<code>gom build</code>命令代替原来的<code>go build</code>命令进行编译，你基本不需要配置 Shell 或者和环境变量打交道。</p>
+<h3 id="Go__u8BED_u8A00_u7248_u672C_u7BA1_u7406"><a href="#Go__u8BED_u8A00_u7248_u672C_u7BA1_u7406" class="headerlink" title="Go 语言版本管理"></a>Go 语言版本管理</h3><p>对于 Go 语言，一般来说并没有使多个语言版本并存的需求。Go 语言现在还没有经历过类似 Python 2.x 到 3.x
+或者 Ruby 1.x 到 2.x 这样破坏性的版本升级。旧的代码在新的语言版本当中一般是能够正确运行的。
+不过若遇到非要并存多个版本的时候，<a href="https://github.com/moovweb/gvm" target="_blank" rel="noopener">gvm</a>就是一个不错的选择。</p>
+<p>gvm 的使用跟 <a href="https://rvm.io/" target="_blank" rel="noopener">rvm</a> 比较类似。</p>
+<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">gvm install go1 <span class="comment"># 安装 go1 版本</span></span><br><span class="line">gvm use go1     <span class="comment"># 修改环境变量使用 go1 版本的 Go</span></span><br></pre></td></tr></table></figure>
+<h2 id="u603B_u7ED3"><a href="#u603B_u7ED3" class="headerlink" title="总结"></a>总结</h2><p>是否有必要使用多个 Workspace 仍然具有争议，譬如这个 StackOverflow
+上的<a href="http://stackoverflow.com/questions/20722502/whats-a-good-best-practice-with-go-workspaces" target="_blank" rel="noopener">相关问答</a>中，
+就有人提出只使用一个 Workspace 就可以应付大多数情况了。</p>
+<p>在研究相关问题的时候，我发现很多 Go 语言的用户都还带着原来编程语言的思维，
+这点从上面介绍的多个工具的特点当中就可以很容易看出来：<code>gvp</code>和<code>gpm</code>就是典型的 Python 的包管理模式，
+<code>gvp</code>对应着<code>virtualenv</code>，<code>gpm</code>对应着<code>pip</code>；如果你之前是 Node.js 和 NPM 的用户，
+那么<code>GoDeps</code>肯定会让你有种熟悉的感觉；更不用说最后介绍的<code>gom</code>了，它从名称到文件格式都在模仿 Ruby Gem。</p>
+<p>不同编程背景的开发者来到 Go 语言之后各自带来了自己的依赖包管理方式，而且形成了各自的社区。
+这种现象虽然使得各自圈子的开发者免去了选择恐惧症，但是造成的解决方案分裂和互不兼容的情况也需要正视。
+这时我们不禁要问，Go 自己的解决方式应该是什么样的？Go 语言为何没有一个官方标准的解决方案呢？</p>
+<p>从<a href="http://golang.org/doc/faq#get_version" target="_blank" rel="noopener">Go FAQ</a>的一段文字当中我们可以得到部分答案：</p>
+<blockquote>
+<p>Versioning is a source of significant complexity, especially in large code bases, 
+and we are unaware of any approach that works well at scale in a large enough variety
+of situations to be appropriate to force on all Go users.
+(依赖包的版本管理是一个非常复杂的问题，特别是在代码量比较大的时候。
+我们一直没有找到任何一种方式能够在各种情形下都能良好工作，
+因此也没有一种方式足够好到应该强迫所有的 Go 用户使用它)</p>
+</blockquote>
+<p>因此现阶段来看，对于 Go 语言的包管理解决方案，我们也就只能“仁者见仁，智者见智”了。</p>
+<p>最后，对于想要了解 Go 语言的包管理以及更多可用的工具的读者，这里再推荐两篇相关的文章：
+<a href="http://nathany.com/go-packages/" target="_blank" rel="noopener">Go Package Management</a> 和
+<a href="http://dev.af83.com/2013/09/14/a-journey-in-golang-package-manager.html" target="_blank" rel="noopener">A Journey in Golang Package Manager</a></p>
+
+    </div>
+    <footer>
+        
+  
+  <div class="categories">
+    <a href="/categories/essay/">essay</a>
+  </div>
+
+        
+  
+  <div class="tags">
+    <a href="/tags/Go/">Go</a>, <a href="/tags/package/">package</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2020/12/12/nvm-store/">Nvm Store: 第二届阿里数据库大赛参赛记录</a>
+      </li>
+    
+      <li>
+        <a href="/2020/02/24/how-to-architect-a-query-compiler/">SIGMOD 16 | How to Architect a Query Compiler</a>
+      </li>
+    
+      <li>
+        <a href="/2020/01/04/olap-distributed/">OLAP 任务的并发执行与调度</a>
+      </li>
+    
+      <li>
+        <a href="/2019/03/16/streaming-incremental-sql-execution/">Stream SQL 的执行原理与 Flink 的实现</a>
+      </li>
+    
+      <li>
+        <a href="/2018/11/01/sql-query-optimization-volcano/">SQL 查询优化原理与 Volcano Optimizer 介绍</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a target="_blank" rel="noopener" href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Functional-Go/">Functional Go</a><small>4</small></li>
+  
+    <li><a href="/categories/Mastering-Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>9</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/AWS/" style="font-size: 10px;">AWS</a> <a href="/tags/Algorithm/" style="font-size: 17.5px;">Algorithm</a> <a href="/tags/Apache-Flink/" style="font-size: 10px;">Apache Flink</a> <a href="/tags/Apple/" style="font-size: 10px;">Apple</a> <a href="/tags/Bezier-Path/" style="font-size: 10px;">Bezier Path</a> <a href="/tags/Big-Data/" style="font-size: 12.5px;">Big Data</a> <a href="/tags/Cascades/" style="font-size: 10px;">Cascades</a> <a href="/tags/Closure/" style="font-size: 10px;">Closure</a> <a href="/tags/Cloud/" style="font-size: 10px;">Cloud</a> <a href="/tags/Cocoa/" style="font-size: 10px;">Cocoa</a> <a href="/tags/Connected-Components/" style="font-size: 10px;">Connected Components</a> <a href="/tags/Data-structure/" style="font-size: 10px;">Data structure</a> <a href="/tags/Designing-Data-Intensive-Applications/" style="font-size: 10px;">Designing Data-Intensive Applications</a> <a href="/tags/Designing-Paradigm/" style="font-size: 10px;">Designing Paradigm</a> <a href="/tags/Distributed-System/" style="font-size: 12.5px;">Distributed System</a> <a href="/tags/Docker/" style="font-size: 10px;">Docker</a> <a href="/tags/Dokku/" style="font-size: 10px;">Dokku</a> <a href="/tags/EMR/" style="font-size: 10px;">EMR</a> <a href="/tags/ES6/" style="font-size: 10px;">ES6</a> <a href="/tags/ETL/" style="font-size: 10px;">ETL</a> <a href="/tags/Flink/" style="font-size: 10px;">Flink</a> <a href="/tags/Functional-Programing/" style="font-size: 10px;">Functional Programing</a> <a href="/tags/Functional-Programming/" style="font-size: 10px;">Functional Programming</a> <a href="/tags/GLSL/" style="font-size: 10px;">GLSL</a> <a href="/tags/GSoC/" style="font-size: 10px;">GSoC</a> <a href="/tags/Git/" style="font-size: 10px;">Git</a> <a href="/tags/Go/" style="font-size: 12.5px;">Go</a> <a href="/tags/Golang/" style="font-size: 17.5px;">Golang</a> <a href="/tags/Google/" style="font-size: 10px;">Google</a> <a href="/tags/Gourmet/" style="font-size: 10px;">Gourmet</a> <a href="/tags/Graph-Computing/" style="font-size: 10px;">Graph Computing</a> <a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Immutable/" style="font-size: 10px;">Immutable</a> <a href="/tags/Incremental-SQL/" style="font-size: 10px;">Incremental SQL</a> <a href="/tags/Intel/" style="font-size: 10px;">Intel</a> <a href="/tags/Interface-Builder/" style="font-size: 10px;">Interface Builder</a> <a href="/tags/IoT/" style="font-size: 10px;">IoT</a> <a href="/tags/Japan/" style="font-size: 10px;">Japan</a> <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Kylin/" style="font-size: 10px;">Kylin</a> <a href="/tags/Kyoto/" style="font-size: 10px;">Kyoto</a> <a href="/tags/Lazy-Evaluation/" style="font-size: 10px;">Lazy Evaluation</a> <a href="/tags/Linux/" style="font-size: 10px;">Linux</a> <a href="/tags/Log-Structured-Merge-Tree/" style="font-size: 10px;">Log-Structured Merge Tree</a> <a href="/tags/Materialized-View/" style="font-size: 10px;">Materialized View</a> <a href="/tags/NSControl/" style="font-size: 12.5px;">NSControl</a> <a href="/tags/NUC/" style="font-size: 10px;">NUC</a> <a href="/tags/NVM/" style="font-size: 10px;">NVM</a> <a href="/tags/OSX/" style="font-size: 15px;">OSX</a> <a href="/tags/Objective-C/" style="font-size: 12.5px;">Objective-C</a> <a href="/tags/Optimization/" style="font-size: 10px;">Optimization</a> <a href="/tags/Osaka/" style="font-size: 10px;">Osaka</a> <a href="/tags/PageRank/" style="font-size: 10px;">PageRank</a> <a href="/tags/Persistent-Memory/" style="font-size: 10px;">Persistent Memory</a> <a href="/tags/Pregel/" style="font-size: 10px;">Pregel</a> <a href="/tags/React/" style="font-size: 10px;">React</a> <a href="/tags/SQL/" style="font-size: 12.5px;">SQL</a> <a href="/tags/SVG/" style="font-size: 10px;">SVG</a> <a href="/tags/Scala/" style="font-size: 10px;">Scala</a> <a href="/tags/Scheduler/" style="font-size: 12.5px;">Scheduler</a> <a href="/tags/Splunk/" style="font-size: 10px;">Splunk</a> <a href="/tags/Stream-SQL/" style="font-size: 10px;">Stream SQL</a> <a href="/tags/Summary/" style="font-size: 10px;">Summary</a> <a href="/tags/Swift/" style="font-size: 10px;">Swift</a> <a href="/tags/Three-js/" style="font-size: 10px;">Three.js</a> <a href="/tags/Tokyo/" style="font-size: 10px;">Tokyo</a> <a href="/tags/Transmission/" style="font-size: 10px;">Transmission</a> <a href="/tags/Travel/" style="font-size: 10px;">Travel</a> <a href="/tags/Ubuntu/" style="font-size: 10px;">Ubuntu</a> <a href="/tags/User-Tracking/" style="font-size: 10px;">User Tracking</a> <a href="/tags/Volcano/" style="font-size: 10px;">Volcano</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/Y-Combinator/" style="font-size: 10px;">Y-Combinator</a> <a href="/tags/accelerate-meter/" style="font-size: 10px;">accelerate meter</a> <a href="/tags/allocator/" style="font-size: 10px;">allocator</a> <a href="/tags/bezier-path/" style="font-size: 12.5px;">bezier path</a> <a href="/tags/blender/" style="font-size: 12.5px;">blender</a> <a href="/tags/borg/" style="font-size: 10px;">borg</a> <a href="/tags/city/" style="font-size: 10px;">city</a> <a href="/tags/cli/" style="font-size: 10px;">cli</a> <a href="/tags/cocoa/" style="font-size: 15px;">cocoa</a> <a href="/tags/compiler/" style="font-size: 10px;">compiler</a> <a href="/tags/completion/" style="font-size: 10px;">completion</a> <a href="/tags/contenteditable/" style="font-size: 10px;">contenteditable</a> <a href="/tags/database/" style="font-size: 12.5px;">database</a> <a href="/tags/design/" style="font-size: 10px;">design</a> <a href="/tags/desktop/" style="font-size: 10px;">desktop</a> <a href="/tags/develop/" style="font-size: 10px;">develop</a> <a href="/tags/device-motion/" style="font-size: 10px;">device motion</a> <a href="/tags/distribute-storage/" style="font-size: 10px;">distribute storage</a> <a href="/tags/distributed-system/" style="font-size: 10px;">distributed system</a> <a href="/tags/diumoo/" style="font-size: 10px;">diumoo</a> <a href="/tags/douban/" style="font-size: 10px;">douban</a> <a href="/tags/drawing/" style="font-size: 17.5px;">drawing</a> <a href="/tags/editor/" style="font-size: 10px;">editor</a> <a href="/tags/essay/" style="font-size: 17.5px;">essay</a> <a href="/tags/export/" style="font-size: 10px;">export</a> <a href="/tags/filesystem/" style="font-size: 10px;">filesystem</a> <a href="/tags/font/" style="font-size: 12.5px;">font</a> <a href="/tags/fontawesome/" style="font-size: 10px;">fontawesome</a> <a href="/tags/fp/" style="font-size: 17.5px;">fp</a> <a href="/tags/functional-programming/" style="font-size: 20px;">functional programming</a> <a href="/tags/github/" style="font-size: 10px;">github</a> <a href="/tags/go/" style="font-size: 20px;">go</a> <a href="/tags/golang/" style="font-size: 12.5px;">golang</a> <a href="/tags/hamt/" style="font-size: 10px;">hamt</a> <a href="/tags/hashmap/" style="font-size: 10px;">hashmap</a> <a href="/tags/html/" style="font-size: 10px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/iOS/" style="font-size: 10px;">iOS</a> <a href="/tags/iOS-8/" style="font-size: 10px;">iOS 8</a> <a href="/tags/iPad/" style="font-size: 15px;">iPad</a> <a href="/tags/icon/" style="font-size: 10px;">icon</a> <a href="/tags/icon-font/" style="font-size: 12.5px;">icon font</a> <a href="/tags/icon-fontr/" style="font-size: 10px;">icon fontr</a> <a href="/tags/iconfontr/" style="font-size: 15px;">iconfontr</a> <a href="/tags/image/" style="font-size: 10px;">image</a> <a href="/tags/immutable/" style="font-size: 17.5px;">immutable</a> <a href="/tags/indexing/" style="font-size: 10px;">indexing</a> <a href="/tags/io-meter/" style="font-size: 10px;">io-meter</a> <a href="/tags/ionicons/" style="font-size: 10px;">ionicons</a> <a href="/tags/kubernetes/" style="font-size: 10px;">kubernetes</a> <a href="/tags/kv/" style="font-size: 10px;">kv</a> <a href="/tags/life/" style="font-size: 17.5px;">life</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/mac/" style="font-size: 10px;">mac</a> <a href="/tags/math/" style="font-size: 10px;">math</a> <a href="/tags/memory/" style="font-size: 10px;">memory</a> <a href="/tags/mobile/" style="font-size: 10px;">mobile</a> <a href="/tags/music/" style="font-size: 10px;">music</a> <a href="/tags/olap/" style="font-size: 10px;">olap</a> <a href="/tags/online-editor/" style="font-size: 10px;">online editor</a> <a href="/tags/open-source/" style="font-size: 10px;">open source</a> <a href="/tags/opensource/" style="font-size: 10px;">opensource</a> <a href="/tags/os/" style="font-size: 10px;">os</a> <a href="/tags/osx/" style="font-size: 15px;">osx</a> <a href="/tags/package/" style="font-size: 10px;">package</a> <a href="/tags/paper/" style="font-size: 12.5px;">paper</a> <a href="/tags/pencil/" style="font-size: 10px;">pencil</a> <a href="/tags/persist-datastructure/" style="font-size: 17.5px;">persist datastructure</a> <a href="/tags/programing/" style="font-size: 10px;">programing</a> <a href="/tags/programming/" style="font-size: 10px;">programming</a> <a href="/tags/rendering/" style="font-size: 10px;">rendering</a> <a href="/tags/review/" style="font-size: 10px;">review</a> <a href="/tags/rpc/" style="font-size: 10px;">rpc</a> <a href="/tags/scala/" style="font-size: 10px;">scala</a> <a href="/tags/schedule/" style="font-size: 10px;">schedule</a> <a href="/tags/selection/" style="font-size: 10px;">selection</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/shader/" style="font-size: 10px;">shader</a> <a href="/tags/sketch/" style="font-size: 10px;">sketch</a> <a href="/tags/sql/" style="font-size: 10px;">sql</a> <a href="/tags/stylus/" style="font-size: 10px;">stylus</a> <a href="/tags/summary/" style="font-size: 12.5px;">summary</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/swift/" style="font-size: 10px;">swift</a> <a href="/tags/taiwan/" style="font-size: 12.5px;">taiwan</a> <a href="/tags/tips/" style="font-size: 10px;">tips</a> <a href="/tags/travel/" style="font-size: 12.5px;">travel</a> <a href="/tags/utility/" style="font-size: 10px;">utility</a> <a href="/tags/vector-trie/" style="font-size: 12.5px;">vector trie</a> <a href="/tags/watch/" style="font-size: 10px;">watch</a> <a href="/tags/web/" style="font-size: 17.5px;">web</a> <a href="/tags/webGL/" style="font-size: 12.5px;">webGL</a> <a href="/tags/webgl/" style="font-size: 10px;">webgl</a> <a href="/tags/wu/" style="font-size: 10px;">wu</a> <a href="/tags/xcode/" style="font-size: 10px;">xcode</a> <a href="/tags/zocial/" style="font-size: 10px;">zocial</a> <a href="/tags/%E5%90%90%E6%A7%BD/" style="font-size: 10px;">吐槽</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2020 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+
+</body>
+
+</html>

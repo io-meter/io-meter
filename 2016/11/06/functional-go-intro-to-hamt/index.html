@@ -1,0 +1,459 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>Functional Go: HAMT 简介 | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="在之前的一个系列的文章里，我们从基本原理开始，一步步实现了基于 Vector Trie 的持久化 List 数据结构。
+接下来将要研究的是使用 HAMT 这一数据结构实现持久化 Hash Table。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="Functional Go: HAMT 简介"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content=""/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a target="_blank" rel="noopener" href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2016/11/06/functional-go-intro-to-hamt/" target="_blank">Functional Go: HAMT 简介</a></h1>
+
+
+      
+        <time datetime="2016-11-06T07:36:17.000Z">2016-11-06</time>
+      
+    </header>
+    <div class="entry">
+      <p>在之前的一个系列的文章里，我们从基本原理开始，一步步实现了基于 Vector Trie 的持久化 List 数据结构。
+接下来将要研究的是使用 HAMT 这一数据结构实现持久化 Hash Table。</p>
+<a id="more"></a>
+<p><a href="https://io-meter.com/2016/09/03/Functional-Go-persist-datastructure-intro/">持久化数据结构简介</a> 这篇文章里，
+我们对比各种可以用来实现持久化数据结构的方案，详细介绍了 Vector Trie 这种数据结构，说明了用它实现 List 优势。
+HAMT 的全称是 Hash Array Mapped Trie，它和 Vector Trie 一样，都利用了前缀树(Trie)这种数据结构作为底层数据结构，
+但是由于 Map 本身和 List 之间性质的差别，HAMT 在很多方面进行了特别的处理。接下来我们先从原始 Hash Table 数据结构谈起，
+逐步引出 HAMT 的设计原理。</p>
+<h2 id="Hash_Table"><a href="#Hash_Table" class="headerlink" title="Hash Table"></a>Hash Table</h2><p>Hash Table 是利用对象的 Hash 值对所储存的键进行散列从而实现快速的插入、删除和访问的数据结构。
+在 Go 语言中的 <code>map</code>、Java 中的 <code>HashTable</code> 和 <code>HashMap</code> 和 Python 当中的 <code>dict</code> 都是 HashTable 的一种。
+其基本原理是通过某一 Hash 函数将对象映射在某一虚拟空间上的一个点，并以此为依据将对象保存在内存上的固定位置上。
+这样当需要访问这一对象时，依然使用同一 Hash 函数先计算出对象可能存在的位置，并尝试取出。</p>
+<p>关于 <a href="https://en.wikipedia.org/wiki/Hash_function" target="_blank" rel="noopener">Hash</a> 和 <a href="https://en.wikipedia.org/wiki/Hash_table" target="_blank" rel="noopener">Hash Table</a>
+的概念不再赘述，在这里我们主要需要着眼的是设计实现 Hash Table 所需要处理的几个关键问题:</p>
+<ol>
+<li>Hash 碰撞问题: 由于 Hash 函数是通过将对象映射到某一数值的方式获得对对象的一个快速的描摹，
+因此尽管我们可以断言 Hash 值不同的的对象一定不同，但是并不能保证具有相同 Hash 值的对象一定相同。
+因此，在实际应用中遇到 Hash 碰撞的问题，就需要进行处理。</li>
+<li>时间效率问题: 对于所有数据结构来说，时间效率都是非常重要的考量因素。Hash Table 从理论上来说的均摊时间复杂度很好，
+但是仍然需要考虑在某些极端条件下面的执行性能，以保证在各种情况下算法的时间效率不会退化。</li>
+<li>空间效率问题: 一般来说，我们不能将 Hash 函数值域整个在内存中一次分配出来。一来这样做在存入元素很少的情况下非常浪费，
+二来我们构造的 Hash 函数值域范围很大，一般无法直接分配。因此需要一种方法将空间使用压缩到合理的范围，
+同时保持一定的空间效率。</li>
+<li>并发同步问题: 和 List 一样，在现代多核盛行的计算环境内，Hash Table 实现的并发安全性也是一个重要的考虑因素。
+Hash Table 的插入、访问和删除操作往往包含好连续的几步，如果不能保证这些步骤在一起原子的完成就可能会产生无法预计的结果。</li>
+</ol>
+<p>以上四点在实现 Hash Table 的过程当中是互相联系的。比如说 Hash 碰撞问题就与时间效率和空间效率两个方面紧密相连。
+一般来说，Hash 碰撞越多，Hash Table 的时间效率越差。根据碰撞处理策略的不同，还有可能影响空间效率。
+反过来，如果空间分配的比较多，尽管空间效率下降，但是往往可以缓解 Hash 碰撞的概率，因此改善时间效率。
+并发同步问题也与上述问题紧密相连，譬如说有的 Hash Table 实现在空间不足时需要重新分配空间，
+这一操作既耗时，又包含很多的指令，对于并发安全提出了很高的要求。</p>
+<p>HAMT 在以上四个方面都给出了自己的极佳的解决方案，很多学者将其称为理想(Ideal)的 Hash Table 实现。
+在接下来介绍 HAMT 的原理之前，我们先给出在本文中对 Hash 函数的一些假定:</p>
+<ol>
+<li>Hash 函数的值是 <code>int32</code> 类型</li>
+<li>Hash 函数的值域 <code>int32</code> 类型的范围</li>
+<li>对于两个不同的对象，总可以找到一个 Hash 函数使二者 Hash 值不同</li>
+</ol>
+<h2 id="HAMT__u539F_u7406_u7B80_u4ECB"><a href="#HAMT__u539F_u7406_u7B80_u4ECB" class="headerlink" title="HAMT 原理简介"></a>HAMT 原理简介</h2><p>之前介绍了 Vector Trie 实现的持久化 List，如果将这种 List 作为基础，直接套用传统 Hash Table 的实现方法，
+其实就可以实现持久化的 HashMap 了。但是这种解决方案在时间效率、空间效率上都比较差。Hash Table 和 List
+的一个区别在于 Hash Table 当中保存的元素是散列和稀疏的，不像 List 那样从下标 <code>0</code> 一直排列到 <code>n</code>。</p>
+<p>然而只要把 List 当中下标必须连续的限制条件去掉，Vector Trie 本身就变成了一种相对传统 Array 更好的容器。
+下图表示的 Vector Trie 说明了这一点:</p>
+<p><img src="/img/posts/variant-of-vector-trie.png" alt="Variant of Vector Trie"></p>
+<p>由上图可见，在 Vector Trie 表示的 Hash Table 中，每个元素的 Hash 值的范围是 0 (<code>00 00 00 00</code>) 到 255 (<code>11 11 11 11</code>)。
+此时 Hash Table 当中只有两个元素，其中一个 hash 值是 0，另一个为 255。在传统 Array 实现的 Hash Table
+当中我们需要分配一个长度 256 的数组来保存。而使用 Trie 只需要 7 个节点，共计 28 个单位的空间。
+其它位置因为没有元素存在，那些节点可以直接节省掉。</p>
+<p>这说明应用 Trie 树可以在节约空间效率方面具有很好的表现。事实上依靠 Trie 树我们可以直接把 0 到 $2^{32} - 1$ (既<code>int32</code>)
+范围的空间表示出来而不用直接分配全部内存——只有存在元素的分支会被按需地分配出来。事实上，Trie
+树是线性空间上稀疏数组的一种很好的表示形式。</p>
+<p>在引入 Trie 树作为数组的稀疏表示之后，我们已经大幅地提高空间效率并得到了不错的时间效率。尽管查询 Trie
+树比直接访问数组更慢一些，但是由于我们表示的 Hash 空间足够宽广，在实际应用中遇见碰撞的概率极低，
+因此在时间效率上还是很有竞争力的。</p>
+<p>至此，在 Vector Trie 的基础上我们得到了通往 HAMT 的第一步：将元素的 Hash 值按位分割成固定宽度的序列，在 Trie
+树上以这些序列按顺序查找元素应该存放的位置。然而 HAMT 并不止步于此，从图中容易看出，
+我们还有两种优化方案可以达到更好的空间时间效率:</p>
+<ol>
+<li>节约单个节点当中空间的浪费: 许多 Trie 节点中仍然有非常多的空位，设法将这些空位清除可以节省很多空间。</li>
+<li>削减 Trie 树的高度: 保存在树中的两个元素的 Hash 值从第一位开始就不相同，理论上只需要检查最前面的几位就可以区分。
+只使用 Hash 值中较高的比特位既可以节约空间，又可以提高时间效率。</li>
+</ol>
+<p>在这两个方向，HAMT 都提出了不错的优化方案。</p>
+<h2 id="u8282_u70B9_u5185_u90E8_u7A7A_u95F4_u7684_u538B_u7F29"><a href="#u8282_u70B9_u5185_u90E8_u7A7A_u95F4_u7684_u538B_u7F29" class="headerlink" title="节点内部空间的压缩"></a>节点内部空间的压缩</h2><p>如果我们依然使用固定 32 个元素宽度的 Trie 树节点，那么必然可能出现由于存入的元素比较稀疏而存在大量空位的现象，
+为此我们要对节点内部空间进行压缩。压缩的方法是：</p>
+<ol>
+<li>为每一个节点添加一个 <code>int32</code> 类型的 Bit Map 字段，当这个字段某一比特位值为<code>1</code>代表在当前节点上对应的自节点出现了，
+否则则代表没有出现</li>
+<li>我们保存子元素时不再保留空间的空闲位置，而是将所有的子元素一个挨一个的紧密放置，
+在存取时利用上一步添加的字段计算出所需的是哪一个子节点。</li>
+</ol>
+<p>为了更清楚地解释上述做法，下面的示意图来描绘了进行节点内部压缩前后的节点内部结构:</p>
+<p><img src="/img/posts/trie-node-compression.png" alt="Trie Node Compression"></p>
+<p>由上图可以看到，虽然压缩后的节点多增加了一个用于保存 Bit Map 的字段，但是由于省略了6个空置空间，
+所以整体的内存消耗大大降低了。</p>
+<p>要在压缩过的节点当中完成跟原来一样的查询逻辑，我们要建立压缩前后节点之间的对应关系。
+在未压缩的节点中，由于每个自节点就在它序号所指定的内存位置，所以我们可以直接用下标访问它，
+在压缩过的节点中这一性质不再有效，我们需要使用新增的 Bit Map 字段将节点的内存位置计算出来。</p>
+<p>由上图可以看到，压缩前后子元素的相对顺序并没有改变，仍然是按照从小到大的顺序排列起来的，
+这一点非常重要。根据这个性质，我们可以给出如下的算法：</p>
+<ol>
+<li>如果指定序号在 Bit Map 字段中对应的比特位为<code>0</code>，表明并不存在给定序号的子元素，因此可以立刻返回空值</li>
+<li>如果指定序号在 Bit Map 字段中对应比特位为<code>1</code>，则元素存在且它在压缩后节点中的位置下标等于在其之前出现的子元素的数量</li>
+</ol>
+<p>第二条其实很好理解，因为压缩后元素的相对顺序不变，只是将空余空间剔除，因此如果从零开始编号，
+设在所查询子元素之前出现的元素数量为<code>n</code>，那么所查询子元素就是第<code>n+1</code>个元素。因此其下标恰好是<code>n</code>。
+利用 Bit Map 和位运算我们可以快速的计算出<code>n</code>的值。</p>
+<p>譬如说，我们要查询在原节点中下标为<code>i</code>的元素，首先我们看一下 Bit Map 第 <code>i</code> 位的值是否为 <code>1</code>。
+方法是使用位运算 <code>(B &gt;&gt; i) &amp; 1</code>，其中 <code>B</code> 是 Bit Map 字段的值。如果检查结果为
+<code>1</code>，说明元素存在，我们进一步计算它的位置。</p>
+<p>显然，当前元素之前的元素数量<code>n</code>，就等于 Bit Map 当中从 <code>0</code> 到 <code>i - 1</code> (包含两端)位比特位当中 <code>1</code> 的数量，
+我们首先用 <code>B &amp; ((1 &lt;&lt; i) - 1)</code> 将那些位单独取出来并将其他位置设为<code>0</code>。其中，<code>(i &lt;&lt; i) - 1</code>
+得到的是 <code>0</code> 到 <code>i - 1</code> 位全为 <code>1</code>，其他位全为 <code>0</code> 的一个整型值。</p>
+<p>得到这个结果之后，我们还需要把其中的 <code>1</code> 的数量计算出来。这一操作在计算机科学当中被称为 Pop Count，
+进行这样的计算所得到的值又称为<a href="https://en.wikipedia.org/wiki/Hamming_weight" target="_blank" rel="noopener">Hamming Weight</a>。
+Pop Count 是一种非常常用的操作，因此存在很多相关研究，有的 CPU 指令集(如 x86)还添加了专门的指令用于执行这一操作。</p>
+<p>除了直接使用指令集或者简单地逐个计数，Hamming Weight 的快速计算有很多方法，下面的代码给出了在 <code>int32</code> 
+类型上快速计算 Pop Count 的一种实现方法。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> <span class="keyword">uint32_t</span> m1  = <span class="number">0x55555555</span>; <span class="comment">//binary: 0101...</span></span><br><span class="line"><span class="keyword">const</span> <span class="keyword">uint32_t</span> m2  = <span class="number">0x33333333</span>; <span class="comment">//binary: 00110011..</span></span><br><span class="line"><span class="keyword">const</span> <span class="keyword">uint32_t</span> m4  = <span class="number">0x0f0f0f0f</span>; <span class="comment">//binary:  4 zeros,  4 ones ...</span></span><br><span class="line"><span class="keyword">const</span> <span class="keyword">uint32_t</span> m8  = <span class="number">0x00ff00ff</span>; <span class="comment">//binary:  8 zeros,  8 ones ...</span></span><br><span class="line"><span class="keyword">const</span> <span class="keyword">uint32_t</span> m16 = <span class="number">0x0000ffff</span>; <span class="comment">//binary: 16 zeros, 16 ones ...</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//This uses fewer arithmetic operations than any other known  </span></span><br><span class="line"><span class="comment">//implementation on machines with slow multiplication.</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">popcount32</span><span class="params">(<span class="keyword">uint32_t</span> x)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    x -= (x &gt;&gt; <span class="number">1</span>) &amp; m1;             <span class="comment">//put count of each 2 bits into those 2 bits</span></span><br><span class="line">    x = (x &amp; m2) + ((x &gt;&gt; <span class="number">2</span>) &amp; m2); <span class="comment">//put count of each 4 bits into those 4 bits </span></span><br><span class="line">    x = (x + (x &gt;&gt; <span class="number">4</span>)) &amp; m4;        <span class="comment">//put count of each 8 bits into those 8 bits </span></span><br><span class="line">    x += x &gt;&gt;  <span class="number">8</span>;  <span class="comment">//put count of each 16 bits into their lowest 8 bits</span></span><br><span class="line">    x += x &gt;&gt; <span class="number">16</span>;  <span class="comment">//put count of each 32 bits into their lowest 8 bits</span></span><br><span class="line">    <span class="keyword">return</span> x &amp; <span class="number">0x7f</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>关于 Pop Count 的计算本文不再赘述，相关内容可以参考 <a href="https://en.wikipedia.org/wiki/Hamming_weight" target="_blank" rel="noopener">Wikipedia</a>
+上详细的介绍和计算方法的对比。由于在 HAMT 当中 Pop Count 是一个非常常用的操作，因此他的性能对最终实现的 Hash Table
+的性能有显著的影响，在实现 HAMT 时，一定要根据目标平台的特点，选择合适的实现方法，可能的话应该直接使用 CPU
+指令集支持的指令进行计算。</p>
+<p>在获得到子元素在压缩后节点的内存下标之后，我们就可以像原来一样对节点进行查询访问了。</p>
+<h2 id="u538B_u7F29_Trie__u9AD8_u5EA6"><a href="#u538B_u7F29_Trie__u9AD8_u5EA6" class="headerlink" title="压缩 Trie 高度"></a>压缩 Trie 高度</h2><p>在节点内部空间之外另一个可以节省空间的地方是 Trie 树的高度。
+前面在利用这个 <code>int32</code> 宽的 Hash 值构造 Trie 树将我们的对象放置在内存中索引起来，
+那么一个容易想到的优化就是在不产生混淆的情况下，我们没有必要一定使用 Hash 值的每一个二进制位。
+也就是说，如果 Hash 值的较高的一部分二进制位已经可以在我们的 Hash Table 中唯一地标记这个对象了，
+我们就不再利用后面的比特位。</p>
+<p>下图展示了对 Trie 树高度的压缩。在左边的原始 Trie 树中存放了 Hash 值为
+<code>0</code>(<code>00 00 00 00</code>) 和 <code>127</code>(<code>01 11 11 11</code>)的两个对象，中间是压缩高度的 Trie 树，
+我们看到，由于当前 Hash Table 中只有两个元素，而这两个元素的 Hash 值从最开始就是不一样的，
+所以在压缩之后，从高位开始第二位之后的 Hash 值不再被使用。</p>
+<p><img src="/img/posts/trie-height-compression.png" alt="Trie Height Compression"></p>
+<p>同理，在添加和删除新的对象的时候，我们还需要动态地维护树的高度，在合适的时候增加或者减少树的高度。
+最右边的图展示了在 Hash Table 中插入 <code>79</code>(<code>01 00 11 11</code>)之后 Trie 树的结构。可以看到，
+因为新的节点插入，最高位<code>01</code>两个比特位指代的对象出现了混淆，不能唯一地确定一个对象，
+因此我们要进一步地利用剩下的比特位来构造无混淆的树。</p>
+<p>由于对 Trie 的各种操作都是基于树上节点的访问，对 Trie 高度进行的压缩不单节约了内存空间，
+也提高了查询和访问的性能。</p>
+<h2 id="u57FA_u672C_u64CD_u4F5C_u7684_u5B9E_u73B0"><a href="#u57FA_u672C_u64CD_u4F5C_u7684_u5B9E_u73B0" class="headerlink" title="基本操作的实现"></a>基本操作的实现</h2><p>在熟悉了 HAMT 在原始的 Trie 表示上做了哪些优化之后，我们就可以给出在 HAMT 实现的 Hash Table 
+上进行各种操作的基本思路了。</p>
+<h3 id="u67E5_u8BE2_u64CD_u4F5C"><a href="#u67E5_u8BE2_u64CD_u4F5C" class="headerlink" title="查询操作"></a>查询操作</h3><p>查询操作和在 Trie 上进行查询没有太大的改变，只是因为节点的空间被压缩之后，需要先通过 Bit Map 字段
+判断对应的位置是否存在子元素，如果存在，再通过 Pop Count 计算得到子元素所在的实际位置。
+在获得到子元素之后，鉴于 HAMT 对 Trie 的高度进行了压缩，我们要先判断这个子元素是 Trie
+的子节点还是值元素本身。对于 Hash Table，我们将值包装成<code>&lt;Key, Value&gt;</code>这样的一个值节点存放进去。
+这样取出时就可以先判断 <code>Key</code> 的值是否相同，以此决定是否真的取到了对象。</p>
+<h3 id="u52A0_u5165_u64CD_u4F5C"><a href="#u52A0_u5165_u64CD_u4F5C" class="headerlink" title="加入操作"></a>加入操作</h3><p>加入操作类似于查询操作，对于给定的键值对，我们先计算键的 Hash 值，然后从高位开始利用 Hash 值。
+沿着 Trie 树向下查找，此时存在四种情况：</p>
+<ol>
+<li>查找到一个位置，这个位置所保存的值对象代表的键和新插入的键相同，则用新插入的值代替原来的值</li>
+<li>查找到一个子节点，这个子节点再向下目标对象应该所在的位置没有元素，此时只需申请一个新的宽度比当前子节点多1的节点，
+将原来子节点上的所有元素连带当前对象一一设置到新的子节点上，维护好元素的顺序和 Bit Map 的值即可</li>
+<li>查找到一个子节点，这个子节点再向下目标对象所应该在的位置是一个值对象，这时，为这个值对象连带当前对象分配一个宽度为2
+的子节点，将原来的值对象和当前对象放置在新的节点中，最后用新的节点在当前子节点中替换掉对应位置</li>
+<li>查找到一个子节点，这个节点再向下目标对象所应该在的位置是另一个子节点，则在那个子节点上递归进行上述操作</li>
+</ol>
+<p>在以上三种情况外，还有一种情况即为出现 Hash 值碰撞。也就是说，当前想要插入的值和 Hash Table 当中某一个对象的 Hash
+值完全一样，这样即使两个对象的 Hash 值全部用尽，也无法不混淆地存放两个对象。这时就需要进行碰撞处理。
+对于 HAMT 来说，常见的碰撞处理有些类似于加盐 Hash 的过程。理论上来说，一个良好设计的 Hash 函数本身的碰撞概率就极小，
+如果两个元素确实在某次计算中 Hash 碰撞，在两个元素上追加某段已知的固定数据，再进行 Hash 所得的结果极有可能不再碰撞。
+因此我们可以利用这一特点，当两个对象 Hash 值相同，我们追加一个值，再进行一次 Hash，利用得到的新 Hash
+值接着在 Trie 上执行插入即可。</p>
+<p>如果出现了两个不同的对象，无论怎么 Hash ，都得到一样的值，那么要么表明使用 Hash 函数本身是有问题的，
+要么说明容器的实现存在问题。这时就应该直接报错了。</p>
+<h3 id="u5220_u9664_u64CD_u4F5C"><a href="#u5220_u9664_u64CD_u4F5C" class="headerlink" title="删除操作"></a>删除操作</h3><p>删除操作是加入操作的逆运算，其基本原理也类似。在删除时，现在 Trie 中找到对应的对象，然后依次递归地删除。
+在从子节点删除一个元素时，我们也一样要分配一个新的子节点，这个子节点的宽度比原来少1。
+之后将剩余的子元素按照规则放回新的子节点并维护 Bit Map 字段的值。最后用新的子节点替换原来的节点并递归向上进行。
+一般来讲，在递归时有如下几个情况：</p>
+<ol>
+<li>在子节点进行删除操作之后，子节点不再包含任何子元素，则删除当前子节点并返回空</li>
+<li>当前子节点只剩下一个元素，且这个元素为值元素，则应该降低树的高度，直接返回值元素</li>
+<li>当前子节点只剩下一个元素，且这个元素是子节点，则保留这个子节点，回到上一个节点</li>
+</ol>
+<h1 id="u6301_u4E45_u5316_HAMT"><a href="#u6301_u4E45_u5316_HAMT" class="headerlink" title="持久化 HAMT"></a>持久化 HAMT</h1><p>由于 HAMT 本质上还是 Trie，因此我们可以按照之前 Vector Trie 一样的策略来实现持久化。
+简单来说还是在需要修改节点时，不对原来的节点进行直接的修改，而是生成新节点并复制节点到根的路径。
+同样，通过在节点中添加 <code>id</code> 字段，我们也可以在 HAMT 上实现 Transient 以加快批量操作的速度。</p>
+<h1 id="u603B_u7ED3"><a href="#u603B_u7ED3" class="headerlink" title="总结"></a>总结</h1><p>在按照上述介绍的空间压缩方法和 Trie 操作方法实现了 HAMT 之后，还有一些问题需要注意：</p>
+<ol>
+<li>从算法分析上来讲，HAMT 的各项操作时间复杂度都在常数级别内，但是如前文所提，仍需要注意 Pop Count
+等操作的时间花费，尽量针对不同平台选用性能最高的实现方案</li>
+<li>HAMT 不像传统的 Hash Table 那样集中地分配大量空间，而是在每次加入和删除时重新生成子节点并分配小块的空间，
+因此内存申请的时间花费在这里不可以被忽略。事实上，Benchmark 表明 HAMT 的一般实现当中内存管理花费的时间是最显著的。
+在这种情况下，由容器自己维护一个内存池是必要的。也就是说，在每次生成新的节点时，并不直接申请新的内存，
+而是先从内存池当中尝试获取一个目标宽度的子节点。同理，在释放一个子节点的时候也是将节点返回给这一内存池。
+线程安全的内存池的实现又是另外一个巨大的主题了，这里也不再赘述</li>
+<li>HAMT 的设计是针对像 C 或 C++ 这样完面向内存、可以细力度控制数据结构在内存中布局的编程语言设计的，
+因此在 JVM 和 Golang 这种比较远离硬件的编程语言上进行实现，内存的痕迹和操作的性能均可能不能达到真正的理想状态。
+近期有一篇名为
+<a href="https://michael.steindorfer.name/publications/oopsla15.pdf" target="_blank" rel="noopener">Optimizing Hash-Array Mapped Tries for Fast and Lean Immutable JVM Collections</a>
+的论文讨论了在 JVM 上优化 HAMT 的实现，有兴趣的读者可以进一步阅读。</li>
+</ol>
+<p>综上所述，HAMT 是一种适合于实现持久化 Hash Map 的数据结构，下一篇文章将会介绍 HAMT 在 Go 语言下的实现，
+从而为我们的 Golang 持久化数据结构添加另一个重要的成员。</p>
+
+    </div>
+    <footer>
+        
+  
+  <div class="categories">
+    <a href="/categories/Functional-Go/">Functional Go</a>
+  </div>
+
+        
+  
+  <div class="tags">
+    <a href="/tags/Golang/">Golang</a>, <a href="/tags/go/">go</a>, <a href="/tags/functional-programming/">functional programming</a>, <a href="/tags/fp/">fp</a>, <a href="/tags/persist-datastructure/">persist datastructure</a>, <a href="/tags/immutable/">immutable</a>, <a href="/tags/essay/">essay</a>, <a href="/tags/hamt/">hamt</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2020/12/12/nvm-store/">Nvm Store: 第二届阿里数据库大赛参赛记录</a>
+      </li>
+    
+      <li>
+        <a href="/2020/02/24/how-to-architect-a-query-compiler/">SIGMOD 16 | How to Architect a Query Compiler</a>
+      </li>
+    
+      <li>
+        <a href="/2020/01/04/olap-distributed/">OLAP 任务的并发执行与调度</a>
+      </li>
+    
+      <li>
+        <a href="/2019/03/16/streaming-incremental-sql-execution/">Stream SQL 的执行原理与 Flink 的实现</a>
+      </li>
+    
+      <li>
+        <a href="/2018/11/01/sql-query-optimization-volcano/">SQL 查询优化原理与 Volcano Optimizer 介绍</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a target="_blank" rel="noopener" href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Functional-Go/">Functional Go</a><small>4</small></li>
+  
+    <li><a href="/categories/Mastering-Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>9</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/AWS/" style="font-size: 10px;">AWS</a> <a href="/tags/Algorithm/" style="font-size: 17.5px;">Algorithm</a> <a href="/tags/Apache-Flink/" style="font-size: 10px;">Apache Flink</a> <a href="/tags/Apple/" style="font-size: 10px;">Apple</a> <a href="/tags/Bezier-Path/" style="font-size: 10px;">Bezier Path</a> <a href="/tags/Big-Data/" style="font-size: 12.5px;">Big Data</a> <a href="/tags/Cascades/" style="font-size: 10px;">Cascades</a> <a href="/tags/Closure/" style="font-size: 10px;">Closure</a> <a href="/tags/Cloud/" style="font-size: 10px;">Cloud</a> <a href="/tags/Cocoa/" style="font-size: 10px;">Cocoa</a> <a href="/tags/Connected-Components/" style="font-size: 10px;">Connected Components</a> <a href="/tags/Data-structure/" style="font-size: 10px;">Data structure</a> <a href="/tags/Designing-Data-Intensive-Applications/" style="font-size: 10px;">Designing Data-Intensive Applications</a> <a href="/tags/Designing-Paradigm/" style="font-size: 10px;">Designing Paradigm</a> <a href="/tags/Distributed-System/" style="font-size: 12.5px;">Distributed System</a> <a href="/tags/Docker/" style="font-size: 10px;">Docker</a> <a href="/tags/Dokku/" style="font-size: 10px;">Dokku</a> <a href="/tags/EMR/" style="font-size: 10px;">EMR</a> <a href="/tags/ES6/" style="font-size: 10px;">ES6</a> <a href="/tags/ETL/" style="font-size: 10px;">ETL</a> <a href="/tags/Flink/" style="font-size: 10px;">Flink</a> <a href="/tags/Functional-Programing/" style="font-size: 10px;">Functional Programing</a> <a href="/tags/Functional-Programming/" style="font-size: 10px;">Functional Programming</a> <a href="/tags/GLSL/" style="font-size: 10px;">GLSL</a> <a href="/tags/GSoC/" style="font-size: 10px;">GSoC</a> <a href="/tags/Git/" style="font-size: 10px;">Git</a> <a href="/tags/Go/" style="font-size: 12.5px;">Go</a> <a href="/tags/Golang/" style="font-size: 17.5px;">Golang</a> <a href="/tags/Google/" style="font-size: 10px;">Google</a> <a href="/tags/Gourmet/" style="font-size: 10px;">Gourmet</a> <a href="/tags/Graph-Computing/" style="font-size: 10px;">Graph Computing</a> <a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Immutable/" style="font-size: 10px;">Immutable</a> <a href="/tags/Incremental-SQL/" style="font-size: 10px;">Incremental SQL</a> <a href="/tags/Intel/" style="font-size: 10px;">Intel</a> <a href="/tags/Interface-Builder/" style="font-size: 10px;">Interface Builder</a> <a href="/tags/IoT/" style="font-size: 10px;">IoT</a> <a href="/tags/Japan/" style="font-size: 10px;">Japan</a> <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Kylin/" style="font-size: 10px;">Kylin</a> <a href="/tags/Kyoto/" style="font-size: 10px;">Kyoto</a> <a href="/tags/Lazy-Evaluation/" style="font-size: 10px;">Lazy Evaluation</a> <a href="/tags/Linux/" style="font-size: 10px;">Linux</a> <a href="/tags/Log-Structured-Merge-Tree/" style="font-size: 10px;">Log-Structured Merge Tree</a> <a href="/tags/Materialized-View/" style="font-size: 10px;">Materialized View</a> <a href="/tags/NSControl/" style="font-size: 12.5px;">NSControl</a> <a href="/tags/NUC/" style="font-size: 10px;">NUC</a> <a href="/tags/NVM/" style="font-size: 10px;">NVM</a> <a href="/tags/OSX/" style="font-size: 15px;">OSX</a> <a href="/tags/Objective-C/" style="font-size: 12.5px;">Objective-C</a> <a href="/tags/Optimization/" style="font-size: 10px;">Optimization</a> <a href="/tags/Osaka/" style="font-size: 10px;">Osaka</a> <a href="/tags/PageRank/" style="font-size: 10px;">PageRank</a> <a href="/tags/Persistent-Memory/" style="font-size: 10px;">Persistent Memory</a> <a href="/tags/Pregel/" style="font-size: 10px;">Pregel</a> <a href="/tags/React/" style="font-size: 10px;">React</a> <a href="/tags/SQL/" style="font-size: 12.5px;">SQL</a> <a href="/tags/SVG/" style="font-size: 10px;">SVG</a> <a href="/tags/Scala/" style="font-size: 10px;">Scala</a> <a href="/tags/Scheduler/" style="font-size: 12.5px;">Scheduler</a> <a href="/tags/Splunk/" style="font-size: 10px;">Splunk</a> <a href="/tags/Stream-SQL/" style="font-size: 10px;">Stream SQL</a> <a href="/tags/Summary/" style="font-size: 10px;">Summary</a> <a href="/tags/Swift/" style="font-size: 10px;">Swift</a> <a href="/tags/Three-js/" style="font-size: 10px;">Three.js</a> <a href="/tags/Tokyo/" style="font-size: 10px;">Tokyo</a> <a href="/tags/Transmission/" style="font-size: 10px;">Transmission</a> <a href="/tags/Travel/" style="font-size: 10px;">Travel</a> <a href="/tags/Ubuntu/" style="font-size: 10px;">Ubuntu</a> <a href="/tags/User-Tracking/" style="font-size: 10px;">User Tracking</a> <a href="/tags/Volcano/" style="font-size: 10px;">Volcano</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/Y-Combinator/" style="font-size: 10px;">Y-Combinator</a> <a href="/tags/accelerate-meter/" style="font-size: 10px;">accelerate meter</a> <a href="/tags/allocator/" style="font-size: 10px;">allocator</a> <a href="/tags/bezier-path/" style="font-size: 12.5px;">bezier path</a> <a href="/tags/blender/" style="font-size: 12.5px;">blender</a> <a href="/tags/borg/" style="font-size: 10px;">borg</a> <a href="/tags/city/" style="font-size: 10px;">city</a> <a href="/tags/cli/" style="font-size: 10px;">cli</a> <a href="/tags/cocoa/" style="font-size: 15px;">cocoa</a> <a href="/tags/compiler/" style="font-size: 10px;">compiler</a> <a href="/tags/completion/" style="font-size: 10px;">completion</a> <a href="/tags/contenteditable/" style="font-size: 10px;">contenteditable</a> <a href="/tags/database/" style="font-size: 12.5px;">database</a> <a href="/tags/design/" style="font-size: 10px;">design</a> <a href="/tags/desktop/" style="font-size: 10px;">desktop</a> <a href="/tags/develop/" style="font-size: 10px;">develop</a> <a href="/tags/device-motion/" style="font-size: 10px;">device motion</a> <a href="/tags/distribute-storage/" style="font-size: 10px;">distribute storage</a> <a href="/tags/distributed-system/" style="font-size: 10px;">distributed system</a> <a href="/tags/diumoo/" style="font-size: 10px;">diumoo</a> <a href="/tags/douban/" style="font-size: 10px;">douban</a> <a href="/tags/drawing/" style="font-size: 17.5px;">drawing</a> <a href="/tags/editor/" style="font-size: 10px;">editor</a> <a href="/tags/essay/" style="font-size: 17.5px;">essay</a> <a href="/tags/export/" style="font-size: 10px;">export</a> <a href="/tags/filesystem/" style="font-size: 10px;">filesystem</a> <a href="/tags/font/" style="font-size: 12.5px;">font</a> <a href="/tags/fontawesome/" style="font-size: 10px;">fontawesome</a> <a href="/tags/fp/" style="font-size: 17.5px;">fp</a> <a href="/tags/functional-programming/" style="font-size: 20px;">functional programming</a> <a href="/tags/github/" style="font-size: 10px;">github</a> <a href="/tags/go/" style="font-size: 20px;">go</a> <a href="/tags/golang/" style="font-size: 12.5px;">golang</a> <a href="/tags/hamt/" style="font-size: 10px;">hamt</a> <a href="/tags/hashmap/" style="font-size: 10px;">hashmap</a> <a href="/tags/html/" style="font-size: 10px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/iOS/" style="font-size: 10px;">iOS</a> <a href="/tags/iOS-8/" style="font-size: 10px;">iOS 8</a> <a href="/tags/iPad/" style="font-size: 15px;">iPad</a> <a href="/tags/icon/" style="font-size: 10px;">icon</a> <a href="/tags/icon-font/" style="font-size: 12.5px;">icon font</a> <a href="/tags/icon-fontr/" style="font-size: 10px;">icon fontr</a> <a href="/tags/iconfontr/" style="font-size: 15px;">iconfontr</a> <a href="/tags/image/" style="font-size: 10px;">image</a> <a href="/tags/immutable/" style="font-size: 17.5px;">immutable</a> <a href="/tags/indexing/" style="font-size: 10px;">indexing</a> <a href="/tags/io-meter/" style="font-size: 10px;">io-meter</a> <a href="/tags/ionicons/" style="font-size: 10px;">ionicons</a> <a href="/tags/kubernetes/" style="font-size: 10px;">kubernetes</a> <a href="/tags/kv/" style="font-size: 10px;">kv</a> <a href="/tags/life/" style="font-size: 17.5px;">life</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/mac/" style="font-size: 10px;">mac</a> <a href="/tags/math/" style="font-size: 10px;">math</a> <a href="/tags/memory/" style="font-size: 10px;">memory</a> <a href="/tags/mobile/" style="font-size: 10px;">mobile</a> <a href="/tags/music/" style="font-size: 10px;">music</a> <a href="/tags/olap/" style="font-size: 10px;">olap</a> <a href="/tags/online-editor/" style="font-size: 10px;">online editor</a> <a href="/tags/open-source/" style="font-size: 10px;">open source</a> <a href="/tags/opensource/" style="font-size: 10px;">opensource</a> <a href="/tags/os/" style="font-size: 10px;">os</a> <a href="/tags/osx/" style="font-size: 15px;">osx</a> <a href="/tags/package/" style="font-size: 10px;">package</a> <a href="/tags/paper/" style="font-size: 12.5px;">paper</a> <a href="/tags/pencil/" style="font-size: 10px;">pencil</a> <a href="/tags/persist-datastructure/" style="font-size: 17.5px;">persist datastructure</a> <a href="/tags/programing/" style="font-size: 10px;">programing</a> <a href="/tags/programming/" style="font-size: 10px;">programming</a> <a href="/tags/rendering/" style="font-size: 10px;">rendering</a> <a href="/tags/review/" style="font-size: 10px;">review</a> <a href="/tags/rpc/" style="font-size: 10px;">rpc</a> <a href="/tags/scala/" style="font-size: 10px;">scala</a> <a href="/tags/schedule/" style="font-size: 10px;">schedule</a> <a href="/tags/selection/" style="font-size: 10px;">selection</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/shader/" style="font-size: 10px;">shader</a> <a href="/tags/sketch/" style="font-size: 10px;">sketch</a> <a href="/tags/sql/" style="font-size: 10px;">sql</a> <a href="/tags/stylus/" style="font-size: 10px;">stylus</a> <a href="/tags/summary/" style="font-size: 12.5px;">summary</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/swift/" style="font-size: 10px;">swift</a> <a href="/tags/taiwan/" style="font-size: 12.5px;">taiwan</a> <a href="/tags/tips/" style="font-size: 10px;">tips</a> <a href="/tags/travel/" style="font-size: 12.5px;">travel</a> <a href="/tags/utility/" style="font-size: 10px;">utility</a> <a href="/tags/vector-trie/" style="font-size: 12.5px;">vector trie</a> <a href="/tags/watch/" style="font-size: 10px;">watch</a> <a href="/tags/web/" style="font-size: 17.5px;">web</a> <a href="/tags/webGL/" style="font-size: 12.5px;">webGL</a> <a href="/tags/webgl/" style="font-size: 10px;">webgl</a> <a href="/tags/wu/" style="font-size: 10px;">wu</a> <a href="/tags/xcode/" style="font-size: 10px;">xcode</a> <a href="/tags/zocial/" style="font-size: 10px;">zocial</a> <a href="/tags/%E5%90%90%E6%A7%BD/" style="font-size: 10px;">吐槽</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2020 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"], linebreaks: { automatic:true }, EqnChunk: (MathJax.Hub.Browser.isMobile ? 10 : 50) },
+        tex2jax: { inlineMath: [ ["$", "$"], ["\\(","\\)"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno",skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']},
+        TeX: {  noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } }, Macros: { href: "{}" } },
+        messageStyle: "none"
+    }); 
+</script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+
+</body>
+
+</html>

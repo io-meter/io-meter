@@ -1,0 +1,367 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>Web 设计新趋势: 使用 SVG 代替 Web Icon Font | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="如果你还在使用 Icon Font 作为网页中显示图标的实现方案，那么你可能有点 Out 了。
+由于使用 Icon Font 显示图标存在一些缺陷，开发者们一直在致力于探索使用 SVG 作为替代的方法。
+这篇文章列举了目前 SVG 比较常见的使用方法。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="Web 设计新趋势: 使用 SVG 代替 Web Icon Font"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content=""/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a target="_blank" rel="noopener" href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2014/07/20/replace-icon-fonts-with-svg/" target="_blank">Web 设计新趋势: 使用 SVG 代替 Web Icon Font</a></h1>
+
+
+      
+        <time datetime="2014-07-20T08:20:01.000Z">2014-07-20</time>
+      
+    </header>
+    <div class="entry">
+      <p>如果你还在使用 Icon Font 作为网页中显示图标的实现方案，那么你可能有点 Out 了。
+由于使用 Icon Font 显示图标存在一些缺陷，开发者们一直在致力于探索使用 SVG 作为替代的方法。
+这篇文章列举了目前 SVG 比较常见的使用方法。</p>
+<a id="more"></a>
+<p>关于使用 Icon Font 的缺陷，这篇来自 CSS Trick 的 <a href="http://css-tricks.com/icon-fonts-vs-svg/" target="_blank" rel="noopener">《Inline SVG vs Icon Font》</a>
+可谓是总结的相当全面了。在我看来，Icon Font 的主要缺陷有以下几条：</p>
+<ol>
+<li>浏览器将其视为文字进行抗锯齿优化，有时得到的效果并没有想象中那么锐利。
+尤其是在不同系统下对文字进行抗锯齿的算法不同，可能会导致显示效果不同。</li>
+<li>Icon Font 作为一种字体，Icon 显示的大小和位置可能要受到<code>font-size</code>、<code>line-height</code>、<code>word-spacing</code>等等 CSS 属性的影响。
+Icon 所在容器的 CSS 样式可能对 Icon 的位置产生影响，调整起来很不方便。</li>
+<li>使用上存在不便。首先，加载一个包含数百图标的 Icon Font，却只使用其中几个图标，非常浪费加载时间。
+自己制作 Icon Font 以及把多个 Icon Font 中用到的图标整合成一个 Font 也非常不方便。</li>
+<li>为了实现最大程度的浏览器支持，可能要提供至少四种不同类型的字体文件。包括<code>TTF</code>、<code>WOFF</code>、<code>EOT</code>
+以及一个使用 SVG 格式定义的字体。</li>
+</ol>
+<p>开发者们想出了多种使用 SVG 的技巧来解决/缓解上述问题，下面我们来逐个盘点目前常见的使用方法。</p>
+<h1 id="img/object__u6807_u7B7E"><a href="#img/object__u6807_u7B7E" class="headerlink" title="img/object 标签"></a>img/object 标签</h1><p>使用 img 和 object 标签直接引用 SVG 是早期常见的使用方法。
+这种方法的缺点主要在于要求每个图标都单独保存成一个 SVG 文件，使用时也是单独请求的。
+如果在页面中使用的多个图标，每个都是单独请求的话会产生很多请求数，增加服务端的负载和拖慢页面加载速度，
+因此现在很少使用了。</p>
+<p>不过，在 IE 中可以使用 object 标签实现最后讨论的 SVG Defs/Symbols 的效果。</p>
+<h1 id="Inline_SVG"><a href="#Inline_SVG" class="headerlink" title="Inline SVG"></a>Inline SVG</h1><p>所谓 Inline SVG，就是直接把 SVG 写入 HTML 中，这种方法简单直接，而且具有最强的可调性。
+使用这种方法，你可以使用 CSS 的<code>fill</code>属性和<code>stroke</code>属性来控制填充颜色和边线的颜色，
+如果 SVG 图标包含多个部分，你甚至可以设置每个部分的样式。同时，使用 JavaScript 修改 SVG 和生成动画效果都可以实现。</p>
+<p>Inline SVG 作为 HTML 文档的一部分，不需要单独请求。临时需要修改某个图标的形状也比较方便。
+但是 Inline SVG 使用上比较繁琐，需要在页面中插入一大块 SVG 代码因此不适合手写，图标复用起来也比较麻烦。</p>
+<p>好在我们大部分的页面都是由某种模板渲染出来的，无论是使用 PHP、Jinja2 还是 ERuby 模板语言，
+都可可以定义一个函数来帮我们 include 这些 SVG。因此在很多情况下是很好的解决方案，
+其不适合的主要使用场景就是纯静态页面或者前后端分离客户端页面。</p>
+<h1 id="Data_URIs"><a href="#Data_URIs" class="headerlink" title="Data URIs"></a>Data URIs</h1><p>Data URIs 是一种不怎么常见的技巧。之前我们在 CSS 里定义元素的背景图片时，常使用像下面这种方式</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="selector-class">.icon</span> &#123;</span><br><span class="line">  <span class="attribute">backgound-image</span>: <span class="built_in">url</span>(icons/a.png)</span><br><span class="line">  <span class="comment">/* ... */</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>而现在，<code>url</code>当中可以放置的可以不仅仅是指向资源的 URL 链接，而可以是数据本身。使用 Data URIs，无论是图片还是 SVG，
+你都可以将其编码为 base64 并直接写入 CSS。譬如</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="selector-class">.icon</span>&#123; </span><br><span class="line">  <span class="attribute">background</span>: <span class="built_in">url</span>(data:text/svg+xml;base64,&lt;base64 encoded data&gt;)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>关于 base64 编码，请参考<a href="http://zh.wikipedia.org/wiki/Base64" target="_blank" rel="noopener">wiki</a>，Data URI 的格式定义如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">data:[&amp;lt;mime type&amp;gt;][;charset=&amp;lt;charset&amp;gt;][;base64],&amp;lt;encoded data&amp;gt;</span><br></pre></td></tr></table></figure>
+<p>使用这种方法，SVG Icon 使用起来和 Icon Font 一样只需要为元素添加 CSS 即可，所有的资源都可以整合在一个 CSS 文件中，
+不需要额外引用 SVG 文件。
+如果你在使用 <a href="http://gulpjs.com/" target="_blank" rel="noopener">Gulp</a> 或者 <a href="http://gruntjs.com/" target="_blank" rel="noopener">Grunt</a> 这样的 Build 工具，那么将 SVG 整合到一个 CSS
+当中是可以非常方便地自动化完成的。这个任务只有简单的字符串和编码处理，基本不需要依赖非 JavaScript 的库和资源。</p>
+<p>使用这种方法的缺点是不能方便地使用 CSS 修改 Icon 的颜色和边线属性。</p>
+<h1 id="SVG_Sprite"><a href="#SVG_Sprite" class="headerlink" title="SVG Sprite"></a>SVG Sprite</h1><p>目前，一些提供制作 Icon Font 功能的网站(如<a href="http://icomoon.io" target="_blank" rel="noopener">icomoon</a>)已经提供输出 SVG Sprites 功能了。
+SVG Sprites 可以看做上述 Data URIs 方法和之前使用位图的 Sprite 方法的组合。</p>
+<p>在 Icon Font 还没普及、图标还主要依靠位图显示的时候，前端工程师都会使用 Sprite 来减少图片请求的次数。
+其原理很简单：将所有的图标以一定的间隔排列起来组成一整张大图片，使用时对于某个 Icon，编写如下所示的 CSS。</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="selector-class">.icon-a</span> &#123;</span><br><span class="line">  <span class="attribute">background-image</span>: <span class="built_in">url</span>(/path/to/pic/contains/all/icons.png);</span><br><span class="line">  <span class="attribute">background-position</span>: <span class="number">0</span> <span class="number">120px</span> <span class="meta">!important</span>;</span><br><span class="line">  <span class="attribute">width</span>: <span class="number">24px</span>;</span><br><span class="line">  <span class="attribute">height</span>: <span class="number">24px</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>上述 CSS 通过设定<code>background-position</code>调整大图片在背景中的位移，只将某个单个 Icon 暴露出来，其他部分都切掉。
+对于所有的 Icon 都写成这样的 CSS 即可使用了。基础的 SVG Sprite 其实只是将原来的位图改成了SVG。</p>
+<p>SVG Sprite 相比于原来的位图 Sprite 的一个优点就是可以通过 CSS 调整 Icon 显示的大小。
+使用时还可以 Fallback 到位图的 Sprite，因此有极好的浏览器兼容性。
+不过和 Data URIs 方法一样它同样存在不能方便调整颜色样式的问题。</p>
+<p>目前辅助生成 SVG Sprites 的工具有 <a href="https://github.com/jkphl/grunt-iconizr" target="_blank" rel="noopener">grunt-iconizr</a>、
+<a href="https://github.com/shakyShane/gulp-svg-sprites" target="_blank" rel="noopener">gulp-svg-sprites</a> 等。
+使用这两个工具，只需将用到的 SVG 放到某个文件夹中就可以自动被拼合成 Sprite 并输出对应 CSS。
+两个工具都支持生成 PNG 格式的位图作为 Fallback，缺点是生成位图要依赖<a href="http://phantomjs.org/" target="_blank" rel="noopener">phantomjs</a>
+这个重量级 JS 库。</p>
+<h1 id="SVG_Defs/Symbols"><a href="#SVG_Defs/Symbols" class="headerlink" title="SVG Defs/Symbols"></a>SVG Defs/Symbols</h1><p>SVG Defs 和 Symbols 的原理类似，这里着重介绍一下 SVG Symbols 的使用，
+SVG Defs/Symbols 本质上是对 Sprite 的进一步优化。之前，我们需要使用相对位置来控制哪个图标被显示出来，
+但是其实 SVG 本身的定义允许你以某一种方式直接引用 SVG 中的某一部分。</p>
+<p>将多个图标整合成一个 SVG 中的多个 Symbols 之后是下面这样的</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot; style=&quot;display: none;&quot;&gt;</span><br><span class="line"></span><br><span class="line">    &lt;symbol id=&quot;circle-cross&quot; viewBox=&quot;0 0 32 32&quot;&gt;</span><br><span class="line">      &lt;title&gt;circle-cross icon&lt;/title&gt;</span><br><span class="line">      &lt;path d=&quot;M16 1.333q2.99 0 5.703 1.161t4.677 3.125 3.125 4.677 1.161 5.703-1.161 5.703-3.125 4.677-4.677 3.125-5.703 1.161-5.703-1.161-4.677-3.125-3.125-4.677-1.161-5.703 1.161-5.703 3.125-4.677 4.677-3.125 5.703-1.161zm0 2.667q-2.438 0-4.661.953t-3.828 2.557-2.557 3.828-.953 4.661.953 4.661 2.557 3.828 3.828 2.557 4.661.953 4.661-.953 3.828-2.557 2.557-3.828.953-4.661-.953-4.661-2.557-3.828-3.828-2.557-4.661-.953zm3.771 6.885q.552 0 .948.391t.396.943-.396.948l-2.833 2.833 2.833 2.823q.396.396.396.938 0 .552-.396.943t-.948.391-.938-.385l-2.833-2.823-2.823 2.823q-.385.385-.948.385-.552 0-.943-.385t-.391-.938q0-.563.385-.948l2.833-2.823-2.833-2.833q-.385-.385-.385-.938t.391-.948.943-.396.948.396l2.823 2.833 2.833-2.833q.396-.396.938-.396z&quot;/&gt;</span><br><span class="line">    &lt;/symbol&gt;</span><br><span class="line"></span><br><span class="line">    &lt;symbol id=&quot;circle-check&quot; viewBox=&quot;0 0 32 32&quot;&gt;</span><br><span class="line">      &lt;title&gt;circle-check icon&lt;/title&gt;</span><br><span class="line">      &lt;path d=&quot;M16 1.333q2.99 0 5.703 1.161t4.677 3.125 3.125 4.677 1.161 5.703-1.161 5.703-3.125 4.677-4.677 3.125-5.703 1.161-5.703-1.161-4.677-3.125-3.125-4.677-1.161-5.703 1.161-5.703 3.125-4.677 4.677-3.125 5.703-1.161zm0 2.667q-2.438 0-4.661.953t-3.828 2.557-2.557 3.828-.953 4.661.953 4.661 2.557 3.828 3.828 2.557 4.661.953 4.661-.953 3.828-2.557 2.557-3.828.953-4.661-.953-4.661-2.557-3.828-3.828-2.557-4.661-.953zm4.49 7.99q.552 0 .943.391t.391.943-.396.948l-5.656 5.656q-.385.385-.938.385-.563 0-.948-.385l-2.833-2.823q-.385-.385-.385-.948 0-.552.391-.943t.943-.391.948.396l1.885 1.885 4.708-4.719q.396-.396.948-.396z&quot;/&gt;</span><br><span class="line">    &lt;/symbol&gt;</span><br><span class="line"></span><br><span class="line">    &lt;!-- .... --&gt;</span><br><span class="line">&lt;/svg&gt;</span><br></pre></td></tr></table></figure>
+<p>每个 Symbol 设置一个 id 作为引用时的名字。使用 id 引用这个 SVG 中的 Icon 有两种方式。</p>
+<p>第一种，将上述 SVG 作为 body 的第一个元素插入在 HTML 中(Chrome 存在一个
+<a href="https://code.google.com/p/chromium/issues/detail?id=349175" target="_blank" rel="noopener">bug</a> 导致不在这里显示不出图像)，
+此后，在需要显示某个 Icon 的地方插入下面的代码即可：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">&lt;svg class=&quot;icon&quot;&gt;</span><br><span class="line">  &lt;use xlink:href=&quot;#circle-cross&quot;&gt;&lt;/use&gt;</span><br><span class="line">&lt;/svg&gt;</span><br></pre></td></tr></table></figure>
+<p>这里的<code>use</code>标签直接使用<code>#circle-cross</code>这个 id 引用了 SVG 中的图标。这种方式的浏览器兼容性较好。</p>
+<p>我更喜欢的是第二种方式，这种方式不需要在 body 开始的地方插入 SVG，而是使用完整路径引用 Icon。
+也就是：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">&lt;svg class=&quot;icon&quot;&gt;</span><br><span class="line">  &lt;use xlink:href=&quot;/img/posts/svg-icons.svg#circle-check&quot;&gt;&lt;/use&gt;</span><br><span class="line">&lt;/svg&gt;</span><br><span class="line">&lt;svg class=&quot;icon&quot;&gt;</span><br><span class="line">  &lt;use xlink:href=&quot;/img/posts/svg-icons.svg#circle-cross&quot;&gt;&lt;/use&gt;</span><br><span class="line">&lt;/svg&gt;</span><br></pre></td></tr></table></figure>
+<p>显示出来的效果就是下面这个样子(可以使用浏览器的 Debug 工具来检视下面的代码)。</p>
+<div style="border:1px solid #eee;background:#fff;padding:10px">
+<svg style="fill:black;width:64px;height:64px" xmlns="http://www.w3.org/2000/svg">
+  <use xlink:href="/img/posts/svg-icons.svg#circle-check"/>
+</svg>
+<svg style="fill:black;width:64px;height:64px" xmlns="http://www.w3.org/2000/svg">
+  <use xlink:href="/img/posts/svg-icons.svg#circle-cross"/>
+</svg>
+</div>
+
+<p>这种方式使用上跟<code>img</code>标签没有什么太大的差别了。好处在于所有的图标都在一个文件中，因此只会请求一次。
+这种不需要像 Sprite 那样繁琐的设置图片的位移。使用 id 命名图标并使用时直接使用 id 引用既直观又简单。
+其灵活性和 Inline SVG 几乎一样——你可以设置颜色、边线样式、大小等等。
+视浏览器的不同，有时你需要使用作为 SVG 标签的开始。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&lt;svg xmlns=&quot;http://www.w3.org/2000/svg&quot;&gt;</span><br></pre></td></tr></table></figure>
+<p>对于 IE 则需要使用<code>object</code>标签代替<code>&lt;svg&gt;&lt;use&gt;</code>。关于兼容性讨论详见
+<a href="http://css-tricks.com/svg-sprites-use-better-icon-fonts/" target="_blank" rel="noopener">这篇文章</a>。</p>
+<p>除了前面提到过的几个 Gulp 和 Grunt 的插件都已经支持 SVG Defs/Symbols 了之外，这里再推荐一个更轻量的 Gulp 插件
+<a href="https://github.com/Hiswe/gulp-svg-symbols" target="_blank" rel="noopener">gulp-svg-symbols</a>。如果只使用 SVG Symbols 而无需 Sprite 支持，
+那么使用 <a href="https://github.com/Hiswe/gulp-svg-symbols" target="_blank" rel="noopener">gulp-svg-symbols</a> 可以免去对 <a href="http://phantomjs.org/" target="_blank" rel="noopener">phantomjs</a>
+的依赖。</p>
+<h1 id="u7ED3_u8BED"><a href="#u7ED3_u8BED" class="headerlink" title="结语"></a>结语</h1><p>SVG Icons 作为一种 Icon Font 的替代，使用上具有灵活性好、显示效果好、可控性强等诸多优点。
+尤其是最后介绍的 SVG Defs/Symbols 这种方式，已经让 SVG Icon 变成了一种实用的解决方案。</p>
+<p>浏览器兼容性是前端领域永恒的话题，目前来看对 SVG 的支持情况确实没有 Web Font 那么好，
+其中，主流移动浏览器(Safari, Chrome, IE for Windows Phone)都已经基本兼容 SVG，
+但是桌面领域中仍然要面对 IE8 以下的浏览器，此外对 SVG Defs/Symbols 的支持也还存在差异。</p>
+<p>现阶段，如果对浏览器兼容性要求比较严苛(主要是支持 IE6-8)，则可以权衡考虑 Icon Font 和带 Fallback 的 SVG Sprite。
+否则的话，推荐使用 SVG Defs/Symbols 的方式代替 Icon Font。</p>
+<p>个人认为 SVG Icons 已经具备普及的条件了。</p>
+
+    </div>
+    <footer>
+        
+  
+  <div class="categories">
+    <a href="/categories/web/">web</a>
+  </div>
+
+        
+  
+  <div class="tags">
+    <a href="/tags/font/">font</a>, <a href="/tags/drawing/">drawing</a>, <a href="/tags/svg/">svg</a>, <a href="/tags/web/">web</a>, <a href="/tags/html/">html</a>, <a href="/tags/design/">design</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2020/12/12/nvm-store/">Nvm Store: 第二届阿里数据库大赛参赛记录</a>
+      </li>
+    
+      <li>
+        <a href="/2020/02/24/how-to-architect-a-query-compiler/">SIGMOD 16 | How to Architect a Query Compiler</a>
+      </li>
+    
+      <li>
+        <a href="/2020/01/04/olap-distributed/">OLAP 任务的并发执行与调度</a>
+      </li>
+    
+      <li>
+        <a href="/2019/03/16/streaming-incremental-sql-execution/">Stream SQL 的执行原理与 Flink 的实现</a>
+      </li>
+    
+      <li>
+        <a href="/2018/11/01/sql-query-optimization-volcano/">SQL 查询优化原理与 Volcano Optimizer 介绍</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a target="_blank" rel="noopener" href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Functional-Go/">Functional Go</a><small>4</small></li>
+  
+    <li><a href="/categories/Mastering-Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>9</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/AWS/" style="font-size: 10px;">AWS</a> <a href="/tags/Algorithm/" style="font-size: 17.5px;">Algorithm</a> <a href="/tags/Apache-Flink/" style="font-size: 10px;">Apache Flink</a> <a href="/tags/Apple/" style="font-size: 10px;">Apple</a> <a href="/tags/Bezier-Path/" style="font-size: 10px;">Bezier Path</a> <a href="/tags/Big-Data/" style="font-size: 12.5px;">Big Data</a> <a href="/tags/Cascades/" style="font-size: 10px;">Cascades</a> <a href="/tags/Closure/" style="font-size: 10px;">Closure</a> <a href="/tags/Cloud/" style="font-size: 10px;">Cloud</a> <a href="/tags/Cocoa/" style="font-size: 10px;">Cocoa</a> <a href="/tags/Connected-Components/" style="font-size: 10px;">Connected Components</a> <a href="/tags/Data-structure/" style="font-size: 10px;">Data structure</a> <a href="/tags/Designing-Data-Intensive-Applications/" style="font-size: 10px;">Designing Data-Intensive Applications</a> <a href="/tags/Designing-Paradigm/" style="font-size: 10px;">Designing Paradigm</a> <a href="/tags/Distributed-System/" style="font-size: 12.5px;">Distributed System</a> <a href="/tags/Docker/" style="font-size: 10px;">Docker</a> <a href="/tags/Dokku/" style="font-size: 10px;">Dokku</a> <a href="/tags/EMR/" style="font-size: 10px;">EMR</a> <a href="/tags/ES6/" style="font-size: 10px;">ES6</a> <a href="/tags/ETL/" style="font-size: 10px;">ETL</a> <a href="/tags/Flink/" style="font-size: 10px;">Flink</a> <a href="/tags/Functional-Programing/" style="font-size: 10px;">Functional Programing</a> <a href="/tags/Functional-Programming/" style="font-size: 10px;">Functional Programming</a> <a href="/tags/GLSL/" style="font-size: 10px;">GLSL</a> <a href="/tags/GSoC/" style="font-size: 10px;">GSoC</a> <a href="/tags/Git/" style="font-size: 10px;">Git</a> <a href="/tags/Go/" style="font-size: 12.5px;">Go</a> <a href="/tags/Golang/" style="font-size: 17.5px;">Golang</a> <a href="/tags/Google/" style="font-size: 10px;">Google</a> <a href="/tags/Gourmet/" style="font-size: 10px;">Gourmet</a> <a href="/tags/Graph-Computing/" style="font-size: 10px;">Graph Computing</a> <a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Immutable/" style="font-size: 10px;">Immutable</a> <a href="/tags/Incremental-SQL/" style="font-size: 10px;">Incremental SQL</a> <a href="/tags/Intel/" style="font-size: 10px;">Intel</a> <a href="/tags/Interface-Builder/" style="font-size: 10px;">Interface Builder</a> <a href="/tags/IoT/" style="font-size: 10px;">IoT</a> <a href="/tags/Japan/" style="font-size: 10px;">Japan</a> <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Kylin/" style="font-size: 10px;">Kylin</a> <a href="/tags/Kyoto/" style="font-size: 10px;">Kyoto</a> <a href="/tags/Lazy-Evaluation/" style="font-size: 10px;">Lazy Evaluation</a> <a href="/tags/Linux/" style="font-size: 10px;">Linux</a> <a href="/tags/Log-Structured-Merge-Tree/" style="font-size: 10px;">Log-Structured Merge Tree</a> <a href="/tags/Materialized-View/" style="font-size: 10px;">Materialized View</a> <a href="/tags/NSControl/" style="font-size: 12.5px;">NSControl</a> <a href="/tags/NUC/" style="font-size: 10px;">NUC</a> <a href="/tags/NVM/" style="font-size: 10px;">NVM</a> <a href="/tags/OSX/" style="font-size: 15px;">OSX</a> <a href="/tags/Objective-C/" style="font-size: 12.5px;">Objective-C</a> <a href="/tags/Optimization/" style="font-size: 10px;">Optimization</a> <a href="/tags/Osaka/" style="font-size: 10px;">Osaka</a> <a href="/tags/PageRank/" style="font-size: 10px;">PageRank</a> <a href="/tags/Persistent-Memory/" style="font-size: 10px;">Persistent Memory</a> <a href="/tags/Pregel/" style="font-size: 10px;">Pregel</a> <a href="/tags/React/" style="font-size: 10px;">React</a> <a href="/tags/SQL/" style="font-size: 12.5px;">SQL</a> <a href="/tags/SVG/" style="font-size: 10px;">SVG</a> <a href="/tags/Scala/" style="font-size: 10px;">Scala</a> <a href="/tags/Scheduler/" style="font-size: 12.5px;">Scheduler</a> <a href="/tags/Splunk/" style="font-size: 10px;">Splunk</a> <a href="/tags/Stream-SQL/" style="font-size: 10px;">Stream SQL</a> <a href="/tags/Summary/" style="font-size: 10px;">Summary</a> <a href="/tags/Swift/" style="font-size: 10px;">Swift</a> <a href="/tags/Three-js/" style="font-size: 10px;">Three.js</a> <a href="/tags/Tokyo/" style="font-size: 10px;">Tokyo</a> <a href="/tags/Transmission/" style="font-size: 10px;">Transmission</a> <a href="/tags/Travel/" style="font-size: 10px;">Travel</a> <a href="/tags/Ubuntu/" style="font-size: 10px;">Ubuntu</a> <a href="/tags/User-Tracking/" style="font-size: 10px;">User Tracking</a> <a href="/tags/Volcano/" style="font-size: 10px;">Volcano</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/Y-Combinator/" style="font-size: 10px;">Y-Combinator</a> <a href="/tags/accelerate-meter/" style="font-size: 10px;">accelerate meter</a> <a href="/tags/allocator/" style="font-size: 10px;">allocator</a> <a href="/tags/bezier-path/" style="font-size: 12.5px;">bezier path</a> <a href="/tags/blender/" style="font-size: 12.5px;">blender</a> <a href="/tags/borg/" style="font-size: 10px;">borg</a> <a href="/tags/city/" style="font-size: 10px;">city</a> <a href="/tags/cli/" style="font-size: 10px;">cli</a> <a href="/tags/cocoa/" style="font-size: 15px;">cocoa</a> <a href="/tags/compiler/" style="font-size: 10px;">compiler</a> <a href="/tags/completion/" style="font-size: 10px;">completion</a> <a href="/tags/contenteditable/" style="font-size: 10px;">contenteditable</a> <a href="/tags/database/" style="font-size: 12.5px;">database</a> <a href="/tags/design/" style="font-size: 10px;">design</a> <a href="/tags/desktop/" style="font-size: 10px;">desktop</a> <a href="/tags/develop/" style="font-size: 10px;">develop</a> <a href="/tags/device-motion/" style="font-size: 10px;">device motion</a> <a href="/tags/distribute-storage/" style="font-size: 10px;">distribute storage</a> <a href="/tags/distributed-system/" style="font-size: 10px;">distributed system</a> <a href="/tags/diumoo/" style="font-size: 10px;">diumoo</a> <a href="/tags/douban/" style="font-size: 10px;">douban</a> <a href="/tags/drawing/" style="font-size: 17.5px;">drawing</a> <a href="/tags/editor/" style="font-size: 10px;">editor</a> <a href="/tags/essay/" style="font-size: 17.5px;">essay</a> <a href="/tags/export/" style="font-size: 10px;">export</a> <a href="/tags/filesystem/" style="font-size: 10px;">filesystem</a> <a href="/tags/font/" style="font-size: 12.5px;">font</a> <a href="/tags/fontawesome/" style="font-size: 10px;">fontawesome</a> <a href="/tags/fp/" style="font-size: 17.5px;">fp</a> <a href="/tags/functional-programming/" style="font-size: 20px;">functional programming</a> <a href="/tags/github/" style="font-size: 10px;">github</a> <a href="/tags/go/" style="font-size: 20px;">go</a> <a href="/tags/golang/" style="font-size: 12.5px;">golang</a> <a href="/tags/hamt/" style="font-size: 10px;">hamt</a> <a href="/tags/hashmap/" style="font-size: 10px;">hashmap</a> <a href="/tags/html/" style="font-size: 10px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/iOS/" style="font-size: 10px;">iOS</a> <a href="/tags/iOS-8/" style="font-size: 10px;">iOS 8</a> <a href="/tags/iPad/" style="font-size: 15px;">iPad</a> <a href="/tags/icon/" style="font-size: 10px;">icon</a> <a href="/tags/icon-font/" style="font-size: 12.5px;">icon font</a> <a href="/tags/icon-fontr/" style="font-size: 10px;">icon fontr</a> <a href="/tags/iconfontr/" style="font-size: 15px;">iconfontr</a> <a href="/tags/image/" style="font-size: 10px;">image</a> <a href="/tags/immutable/" style="font-size: 17.5px;">immutable</a> <a href="/tags/indexing/" style="font-size: 10px;">indexing</a> <a href="/tags/io-meter/" style="font-size: 10px;">io-meter</a> <a href="/tags/ionicons/" style="font-size: 10px;">ionicons</a> <a href="/tags/kubernetes/" style="font-size: 10px;">kubernetes</a> <a href="/tags/kv/" style="font-size: 10px;">kv</a> <a href="/tags/life/" style="font-size: 17.5px;">life</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/mac/" style="font-size: 10px;">mac</a> <a href="/tags/math/" style="font-size: 10px;">math</a> <a href="/tags/memory/" style="font-size: 10px;">memory</a> <a href="/tags/mobile/" style="font-size: 10px;">mobile</a> <a href="/tags/music/" style="font-size: 10px;">music</a> <a href="/tags/olap/" style="font-size: 10px;">olap</a> <a href="/tags/online-editor/" style="font-size: 10px;">online editor</a> <a href="/tags/open-source/" style="font-size: 10px;">open source</a> <a href="/tags/opensource/" style="font-size: 10px;">opensource</a> <a href="/tags/os/" style="font-size: 10px;">os</a> <a href="/tags/osx/" style="font-size: 15px;">osx</a> <a href="/tags/package/" style="font-size: 10px;">package</a> <a href="/tags/paper/" style="font-size: 12.5px;">paper</a> <a href="/tags/pencil/" style="font-size: 10px;">pencil</a> <a href="/tags/persist-datastructure/" style="font-size: 17.5px;">persist datastructure</a> <a href="/tags/programing/" style="font-size: 10px;">programing</a> <a href="/tags/programming/" style="font-size: 10px;">programming</a> <a href="/tags/rendering/" style="font-size: 10px;">rendering</a> <a href="/tags/review/" style="font-size: 10px;">review</a> <a href="/tags/rpc/" style="font-size: 10px;">rpc</a> <a href="/tags/scala/" style="font-size: 10px;">scala</a> <a href="/tags/schedule/" style="font-size: 10px;">schedule</a> <a href="/tags/selection/" style="font-size: 10px;">selection</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/shader/" style="font-size: 10px;">shader</a> <a href="/tags/sketch/" style="font-size: 10px;">sketch</a> <a href="/tags/sql/" style="font-size: 10px;">sql</a> <a href="/tags/stylus/" style="font-size: 10px;">stylus</a> <a href="/tags/summary/" style="font-size: 12.5px;">summary</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/swift/" style="font-size: 10px;">swift</a> <a href="/tags/taiwan/" style="font-size: 12.5px;">taiwan</a> <a href="/tags/tips/" style="font-size: 10px;">tips</a> <a href="/tags/travel/" style="font-size: 12.5px;">travel</a> <a href="/tags/utility/" style="font-size: 10px;">utility</a> <a href="/tags/vector-trie/" style="font-size: 12.5px;">vector trie</a> <a href="/tags/watch/" style="font-size: 10px;">watch</a> <a href="/tags/web/" style="font-size: 17.5px;">web</a> <a href="/tags/webGL/" style="font-size: 12.5px;">webGL</a> <a href="/tags/webgl/" style="font-size: 10px;">webgl</a> <a href="/tags/wu/" style="font-size: 10px;">wu</a> <a href="/tags/xcode/" style="font-size: 10px;">xcode</a> <a href="/tags/zocial/" style="font-size: 10px;">zocial</a> <a href="/tags/%E5%90%90%E6%A7%BD/" style="font-size: 10px;">吐槽</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2020 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+
+</body>
+
+</html>

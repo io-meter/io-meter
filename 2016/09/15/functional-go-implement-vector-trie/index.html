@@ -1,0 +1,429 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>Functional Go: Vector Trie 的实现 | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="上一篇 文章介绍了多种实现函数式编程当中持久化数据结构的思路，
+其中重点对 Vector Trie 这种数据结构的实现原理进行了解释。这一次我们就使用 Golang 来初步地实现这种数据结构。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="Functional Go: Vector Trie 的实现"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content=""/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a target="_blank" rel="noopener" href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2016/09/15/functional-go-implement-vector-trie/" target="_blank">Functional Go: Vector Trie 的实现</a></h1>
+
+
+      
+        <time datetime="2016-09-15T08:47:52.000Z">2016-09-15</time>
+      
+    </header>
+    <div class="entry">
+      <p><a href="/2016/09/03/Functional-Go-persist-datastructure-intro/">上一篇</a> 文章介绍了多种实现函数式编程当中持久化数据结构的思路，
+其中重点对 Vector Trie 这种数据结构的实现原理进行了解释。这一次我们就使用 Golang 来初步地实现这种数据结构。</p>
+<a id="more"></a>
+<p>这篇文章是系列文章的一部分，如果还没有浏览过文章的其它部分请参考：</p>
+<ol>
+<li><a href="https://io-meter.com/2016/09/03/Functional-Go-persist-datastructure-intro/">持久化数据结构简介</a></li>
+<li><a href="https://io-meter.com/2016/09/15/functional-go-implement-vector-trie/">Vector Trie 的实现</a> (本文)</li>
+<li><a href="https://io-meter.com/2016/10/01/Functional-Go-Transient-and-Persistent/">Transient 及持久化</a> </li>
+</ol>
+<p>首先我们来回顾一下 Vector Trie 的设计思路，为了代替 ArrayList 这种数据结构以及兼顾高性能的随机访问和内存使用，
+Vector Trie 主要采用了以下几种设计：</p>
+<ol>
+<li>将 ArrayList 连续的地址空间切分成一段一段定长的数组</li>
+<li>使用 Trie 树结构将这些分段组织起来</li>
+<li>读取和写入的时候，利用 Trie 树检索的方法查找目标元素所在的位置</li>
+</ol>
+<p>值得注意的是，Vector Trie 作为一种高效的 ArrayList 替代，并非一定要用来实现持久化操作，
+在这篇文章当中，我们将会先完成一个不具备持久化能力的 Vector Trie 实现。将 Vector Trie
+转变为不可变数据结构以及 Transient 的实现将会留作下一篇文章的内容。</p>
+<h2 id="List__u7684_u8BBE_u8BA1"><a href="#List__u7684_u8BBE_u8BA1" class="headerlink" title="List 的设计"></a>List 的设计</h2><p>首先我们定义一些常数：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">const</span> (</span><br><span class="line">    SHIFT     = <span class="number">5</span></span><br><span class="line">    NODE_SIZE = (<span class="number">1</span> &lt;&lt; SHIFT)</span><br><span class="line">    MASK      = NODE_SIZE - <span class="number">1</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<p>其中，<code>NODE_SIZE</code> 是 List 内部节点的宽度，这里我们选用了通用的$2^{5}$，也就是 32 作为 Trie 树节点的宽度。
+这意味着每个 Trie 树节点将会最多有 32 个子节点。<code>SHIFT</code> 和 <code>MASK</code> 这两个常数将会在我们实现 Trie 树的过程中被用到。</p>
+<p>我们将要完成的 List 在 Golang 下接口定义是:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> List <span class="keyword">interface</span> &#123;</span><br><span class="line">    Get(n <span class="keyword">int</span>) (<span class="keyword">interface</span>&#123;&#125;, <span class="keyword">bool</span>)</span><br><span class="line">    Set(n <span class="keyword">int</span>, value <span class="keyword">interface</span>&#123;&#125;)</span><br><span class="line">    PushBack(value <span class="keyword">interface</span>&#123;&#125;)</span><br><span class="line">    RemoveBack() <span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">    Len() <span class="keyword">int</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在这一步我们还未考虑持久化的实现，每个操作会直接在原来的基础上进行修改，因此在这里不会返回新的对象。
+可以看到，目前的 List 定义非常简单，只包含四种基本的操作和获取当前 List 长度的 <code>Len</code> 方法。</p>
+<p>由于我们的 List 是以 Trie 树为基础的，先给出 Trie 节点的定义和构造函数：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> trieNode <span class="keyword">struct</span> &#123;</span><br><span class="line">    children []<span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">&#125; </span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">newTrieNode</span><span class="params">()</span> *<span class="title">trieNode</span></span> &#123;</span><br><span class="line">    <span class="keyword">return</span> &amp;trieNode&#123;</span><br><span class="line">        children: <span class="built_in">make</span>([]<span class="keyword">interface</span>&#123;&#125;, NODE_SIZE),</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以看到目前为止我们的内部节点非常简单，结构体只包含一个数组用来保存子节点。
+我们要将 List 的值元素保存在 Trie 树最底层的叶子节点，因此使用了<code>interface{}</code>这种通用类型的数组。
+这样我们就既可以使用它指向子节点，又可以用来保存值元素。
+在这里我为<code>trieNode</code>编写了两个方便的工具函数来分别获取子节点和值。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(node *trieNode)</span> <span class="title">getChildNode</span><span class="params">(index <span class="keyword">int</span>)</span> *<span class="title">trieNode</span></span> &#123;</span><br><span class="line">    <span class="keyword">if</span> child := node.children[index]; child != <span class="literal">nil</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> child.(*trieNode)</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(node *trieNode)</span> <span class="title">getChildValue</span><span class="params">(index <span class="keyword">int</span>)</span> <span class="title">interface</span></span>&#123;&#125; &#123;</span><br><span class="line">    <span class="keyword">return</span> node.children[index]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>由于在 Trie 树的内部节点中，最底层保存的是值，其它节点的<code>children</code>数组则保存指向子节点的引用，
+维护和记录 Trie 树的高度<code>level</code>是必要的。通过<code>level</code>的值访问 Trie 树的时候我们就可以知道什么时候改获取子节点，
+什么时候该获得值。这个<code>level</code>在查询 Trie 树的时候也很有用。</p>
+<p>作为访问 List 元素的入口， 我们数据的 Head 的定义如下:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> listHead <span class="keyword">struct</span> &#123;</span><br><span class="line">    <span class="built_in">len</span>    <span class="keyword">int</span></span><br><span class="line">    level  <span class="keyword">int</span></span><br><span class="line">    root   *trieNode</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这一结构体保存了 List 的长度、Trie 树的深度以及 Trie 树根节点的引用等信息，我们所有的 List 操作都将会由<code>listHead</code>
+来实现，因此它必须服从我们的<code>List</code>接口。</p>
+<p><code>listHead</code>的构造函数就是<code>List</code>的构造函数，在这里我们返回一个空的<code>listHead</code>:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">New</span><span class="params">()</span> <span class="title">List</span></span> &#123;</span><br><span class="line">    <span class="keyword">return</span> &amp;listHead&#123;<span class="number">0</span>, <span class="number">0</span>, <span class="literal">nil</span>&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在上述定义下，我们的<code>List</code>实现具有如下图所示的结构:</p>
+<p><img src="/img/posts/vector-trie-impl.png" alt="Vector Trie"></p>
+<p>为了简便起见，图中的 TrieNode 宽度只有 4。在这一结构的基础上，我们就可以实现 List 的一些基本操作了。</p>
+<h2 id="Get__u548C_Set"><a href="#Get__u548C_Set" class="headerlink" title="<code>Get</code> 和 <code>Set</code>"></a><code>Get</code> 和 <code>Set</code></h2><p>我们先来看 Vector Trie 的查询和修改操作。这两个操作非常相似，都需要根据给定的 Index 在 Trie 树中找到对应的位置，
+区别在于<code>Get</code>操作将会返回目标位置储存的元素而<code>Set</code>操作将会修改它。</p>
+<p>Trie 树的中文名称是前缀树，从这个名字当中就可以一窥这类数据结构的查询方法。
+简单来说，对于由 $n$ 个 Symbol $s_i$ 组成的关键字 $\mathcal{K}={s_0, s_1, \cdots, s_n}$，
+我们先使根节点为当前节点，之后使用 $s_0$ 查询得到的子节点作为当前节点，然后再依次使用 $s_1, s_2, \cdots$
+在当前节点上查询得到的子节点作为当前节点，得到一个最终节点作为结果。</p>
+<p>具体来说，在这里用户用来查询的关键字 $\mathcal{K}$ 是一个32位类型的整型数。
+我们要将这个整形数看作一连串符号的连接，最简单的做法当然是把这个整型树看作其二进制表示，
+每隔 $m$ 位看作一个独立的符号，这样从这个整型数的二进制表示的高位开始往下，就依次可以被划分成$s_0, s_1, \cdots, s_n$。
+由此我们也就可以将其用于 Trie 的查询。这也是为什么我们选择 $2^{m}$ 作为 TrieNode 的宽度的原因了，
+通过使用二进制位运算，我们可以非常快速的从整数当中获得 $s_i$ 的值。在程序中 $m$ 的值由 <code>SHIFT</code> 定义，我们使用 5 作为
+$m$，则每个 Symbol 的取值范围则是 $[0, 31]$，恰好是长度 32 的数组当中元素 Index 的范围，得到 Symbol 的值之后，
+我们可以直接从数组当中取得目标元素。</p>
+<p>下图展示了 $m = 2$ 时的这一过程:</p>
+<p><img src="/img/posts/persist-ds-trie-traverse.png" alt="Trie Traverse"></p>
+<p>另外需要注意的一点是，我们显然不会直接从 32 位的整数的最高位开始编码 $s_i$。原因在于，当数组元素较少时，
+列表里每个元素的 Index 数值都比较小，因此二进制位表示当中高位基本上都是 0， 因此创建这样一连串的只有 0
+位置不为空的树是非常不划算的行为，这也是为什么我们要记录和维护当前 Trie 树的高度。</p>
+<p>下面给出了 <code>Get</code> 方法的实现。由于 <code>Get</code> 方法是不会修改列表中的元素的，直接使用循环获取到目标元素即可。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(head *listHead)</span> <span class="title">Get</span><span class="params">(n <span class="keyword">int</span>)</span> <span class="params">(<span class="keyword">interface</span>&#123;&#125;, <span class="keyword">bool</span>)</span></span> &#123;</span><br><span class="line">    <span class="keyword">if</span> n &lt; <span class="number">0</span> || n &gt;= head.<span class="built_in">len</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span>, <span class="literal">false</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    root := head.root</span><br><span class="line">    <span class="keyword">for</span> lv := head.level - <span class="number">1</span>; ; lv-- &#123;</span><br><span class="line">    index := (n &gt;&gt; <span class="keyword">uint</span>(lv*SHIFT)) &amp; MASK</span><br><span class="line">    <span class="keyword">if</span> lv &lt;= <span class="number">0</span> &#123;</span><br><span class="line">        <span class="comment">// Arrived at leaves node, return value</span></span><br><span class="line">        <span class="keyword">return</span> root.getChildValue(index), <span class="literal">true</span></span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// Update root node</span></span><br><span class="line">        root = root.getChildNode(index)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><code>Set</code> 操作与之类似，但是我们这里使用递归的方法进行，这样做的目的是为了让 <code>Set</code>
+函数在递归调用的每次返回时可以复写当前节点，直至最后复写 <code>root</code> 节点。
+但是在未来实现持久化的时候，可以通过返回新的节点的方式获得从根节点到叶子节点这条路径的一个副本。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(head *listHead)</span> <span class="title">Set</span><span class="params">(n <span class="keyword">int</span>, value <span class="keyword">interface</span>&#123;&#125;)</span></span> &#123;</span><br><span class="line">    <span class="keyword">if</span> n &lt; <span class="number">0</span> || n &gt;= head.<span class="built_in">len</span> &#123;</span><br><span class="line">        <span class="built_in">panic</span>(<span class="string">"Index out of bound"</span>)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    head.root = setInNode(head.root, n, head.level, value)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">setInNode</span><span class="params">(root *trieNode, n <span class="keyword">int</span>, level <span class="keyword">int</span>, value <span class="keyword">interface</span>&#123;&#125;)</span> *<span class="title">trieNode</span></span> &#123;</span><br><span class="line">    index := (n &gt;&gt; <span class="keyword">uint</span>((level<span class="number">-1</span>)*SHIFT)) &amp; MASK</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> level == <span class="number">1</span> &#123;</span><br><span class="line">        root.children[index] = value</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        child := root.getChildNode(index)</span><br><span class="line">        root.children[index] = setInNode(child, n, level<span class="number">-1</span>, value)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> root</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>特别值得注意的是 <code>index = (n &gt;&gt; uint((level - 1)*SHIFT)) &amp; MASK</code> 这一语句了，
+它根据<code>level</code>的值计算当前应该用来查询子元素的$s_i$，也就是目标子元素在数组中的位置。
+其中 <code>SHIFT = 5</code>，<code>MASK = (1 &lt;&lt; SHIFT) - 1 = 31</code>，<code>MASK</code>的二进制表示从最低位开始向上恰好是 5 个 1，
+这样我们就把 <code>n</code> 每 5 位一组分为一个 Symbol 进行查询了。</p>
+<h1 id="tail__u4F18_u5316"><a href="#tail__u4F18_u5316" class="headerlink" title="<code>tail</code> 优化"></a><code>tail</code> 优化</h1><p>可以在 List 当中查询和修改元素之后，我们还需要允许在 List 当中添加和删除元素，
+不过在此之前，我们要先介绍我们将要采用的一种针对 Vector Trie 的优化手段：<code>tail</code> 优化。</p>
+<p>在 Vector Trie 所支持的 4 种基础操作 <code>Get</code>、<code>Set</code>、<code>PushBack</code>和<code>RemoveBack</code>中，
+只有后两种会修改列表中所储存的元素长度。同时也只有 <code>PushBack</code> 操作可能会分配新的内存空间。
+由于 <code>PushBack</code> 和 <code>RemoveBack</code> 是 List 所应该支持的高频操作，针对这两个操作进行性能优化是一件很有必要的事情。
+这两种操作都是直接作用于 List 尾部，参考链表的尾指针的思想，我们容易想到可以直接保留一个指向 Trie
+树最末尾元素节点的引用，这样每次对尾部进行操作就不需要进行耗时的 Trie 树查询操作了。</p>
+<p>Tail 优化技巧的应用思路如下：</p>
+<ol>
+<li><code>PushBack</code> 和 <code>RemoveBack</code> 操作直接作用于<code>tail</code>指针所指向的 <code>trieNode</code></li>
+<li><code>PushBack</code> 之前如果当前的 <code>tail</code> 已满，则将<code>tail</code>放回到 Trie 树上再创建一个新的</li>
+<li><code>RemoveBack</code> 之后，如果当前 <code>tail</code> 已空，则释放当前 <code>tail</code>，并将 Trie 树的最后一个 <code>trieNode</code> 取出作为新的 <code>tail</code></li>
+</ol>
+<p>我们总是保持 <code>tail</code> 段非空，也就是说 <code>tail</code> 要么是 <code>nil</code>，代表整个 List 当中没有储存任何元素，
+要么至少包含一个元素。这样的设计可以简化 <code>RemoveBack</code> 的实现，也可以提高未来可能会提供的 <code>GetLast</code> 等方法的操作性能。</p>
+<p>为了实现上述的操作，我们需要维护一个<code>offset</code>值，它代表的是列表中在 <code>tail</code> 节点之前的节点当中储存的元素的数量，
+同时也是 <code>tail</code> 节点中下标<code>0</code>的元素在整个 List 当中的 Index。在<code>Get</code>、<code>Set</code>操作之时，我们先检查目标 Index
+是否大于等于<code>offset</code>，如果为真，我们就直接在 <code>tail</code> 节点上进行操作。
+否则说明目标元素在 Trie 树当中，我们仍然使用之前的 Trie 树操作。
+下图展示添加 <code>tail</code> 之后的数据结构：</p>
+<p><img src="/img/posts/vector-trie-impl-with-tail.png" alt="Vector Trie with Tail"></p>
+<p>修改之后的<code>Get</code>和<code>Set</code>方法如下：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(head *listHead)</span> <span class="title">Get</span><span class="params">(n <span class="keyword">int</span>)</span> <span class="params">(<span class="keyword">interface</span>&#123;&#125;, <span class="keyword">bool</span>)</span></span> &#123;</span><br><span class="line">    <span class="keyword">if</span> n &lt; <span class="number">0</span> || n &gt;= head.<span class="built_in">len</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span>, <span class="literal">false</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> n &gt;= head.offset &#123;</span><br><span class="line">        <span class="keyword">return</span> head.tail.getChildValue(n - head.offset), <span class="literal">true</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Get elements in the trie</span></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(head *listHead)</span> <span class="title">Set</span><span class="params">(n <span class="keyword">int</span>, value <span class="keyword">interface</span>&#123;&#125;)</span></span> &#123;</span><br><span class="line">    <span class="keyword">if</span> n &lt; <span class="number">0</span> || n &gt;= head.<span class="built_in">len</span> &#123;</span><br><span class="line">        <span class="built_in">panic</span>(<span class="string">"Index out of bound"</span>)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> n &gt;= head.offset &#123;</span><br><span class="line">        head.tail = setTail(head.tail, n-head.offset, value)</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        head.root = setInNode(head.root, n, head.level, value)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">setTail</span><span class="params">(tail *trieNode, n <span class="keyword">int</span>, value <span class="keyword">interface</span>&#123;&#125;)</span> *<span class="title">trieNode</span></span> &#123;</span><br><span class="line">    <span class="keyword">if</span> tail == <span class="literal">nil</span> &#123;</span><br><span class="line">        tail = newTrieNode()</span><br><span class="line">    &#125;</span><br><span class="line">    tail.children[n] = value</span><br><span class="line">    <span class="keyword">return</span> tail</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="PushBack__u548C_RemoveBack"><a href="#PushBack__u548C_RemoveBack" class="headerlink" title="<code>PushBack</code> 和 <code>RemoveBack</code>"></a><code>PushBack</code> 和 <code>RemoveBack</code></h2><p>在加入 <code>tail</code> 之后，我们终于可以开始实现把元素插入和删除的操作了，目前我们只支持从数组尾部添加和删除元素。
+由于使用了 <code>tail</code> 优化，两个操作的主要实质内容其实都发生在 <code>tail</code> 节点上，
+但是在这一过程中需要考虑维护<code>tail</code>节点的问题。</p>
+<p>如前文所述，我们如果我们在试图进行<code>PushBack</code>的时候<code>tail</code>中的元素已满，那么我们需要将当前的<code>tail</code>节点放入 Trie 中，
+维护和更新<code>offset</code>的值，然后新建一个<code>tail</code>出来并把元素插入到新的<code>tail</code>上。
+由于<code>offset</code>是<code>tail</code>当中第一个元素在 List 中的位置，利用这一特点，
+我们可以在 Trie 树中找出<code>offset</code>位置的元素应该存在的位置，那里自然也就是<code>tail</code>应该被放置的地方。
+参考<code>setInNode</code>的递归实现，我们容易得到如下代码:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">putTail</span><span class="params">(root *trieNode, tail *trieNode, n <span class="keyword">int</span>, level <span class="keyword">int</span>)</span> *<span class="title">trieNode</span></span> &#123;</span><br><span class="line">    index := (n &gt;&gt; <span class="keyword">uint</span>((level<span class="number">-1</span>)*SHIFT)) &amp; MASK</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> root == <span class="literal">nil</span> &#123;</span><br><span class="line">        root = newTrieNode()</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> level == <span class="number">1</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> tail</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        root.children[index] = putTail(root.getChildNode(index), tail, n, level<span class="number">-1</span>)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> root</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>但是这一步过程当中存在一个问题，那就是如果当前的 Trie 树也是满的，在放入 <code>tail</code> 之时，
+必须先提高 Trie 树的深度，也就是使 <code>level</code> 增加 $1$。Trie 树等层数增长很容易实现，
+我们只需要新建一个<code>root</code>节点，然后将原来的<code>root</code>节点设置为新节点的第一个子节点。</p>
+<p>那我们该如何判断是否需要进行层增长的操作呢？在这里我们依然要利用<code>offset</code>的特点，
+由于在增加后的 Trie 树中<code>offset</code>所代表的 Index 将会可以在 Trie 树中查询到，
+因此对于 Trie 树的高度<code>level</code>，必须满足<code>(offset &gt;&gt; (level * SHIFT)) == 0</code>。
+通过这个表达式，我们就可以保证在<code>putTail</code>时 Trie 树的层数是足够高的了。</p>
+<p>下面的是<code>PushBack</code>的实现代码：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(head *listHead)</span> <span class="title">PushBack</span><span class="params">(value <span class="keyword">interface</span>&#123;&#125;)</span></span> &#123;</span><br><span class="line">    <span class="comment">// Increase the depth of tree while the capacity is not enough</span></span><br><span class="line">    <span class="keyword">if</span> head.<span class="built_in">len</span>-head.offset &lt; NODE_SIZE &#123;</span><br><span class="line">        <span class="comment">// Tail node has free space</span></span><br><span class="line">        head.tail = setTail(head.tail, head.<span class="built_in">len</span>-head.offset, value)</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// Tail node is full</span></span><br><span class="line">        n := head.offset</span><br><span class="line">        lv := head.level</span><br><span class="line">        root := head.root</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> lv == <span class="number">0</span> || (n&gt;&gt;<span class="keyword">uint</span>(lv*SHIFT)) &gt; <span class="number">0</span> &#123;</span><br><span class="line">            parent := newTrieNode()</span><br><span class="line">            parent.children[<span class="number">0</span>] = root</span><br><span class="line">            root = parent</span><br><span class="line">            lv++</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        head.root = putTail(root, head.tail, n, lv)</span><br><span class="line">        head.tail = <span class="literal">nil</span></span><br><span class="line">        head.tail = setTail(head.tail, <span class="number">0</span>, value)</span><br><span class="line"></span><br><span class="line">        head.level = lv</span><br><span class="line">        head.offset += NODE_SIZE</span><br><span class="line">    &#125;</span><br><span class="line">    head.<span class="built_in">len</span>++</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>因为我们会保证<code>tail</code>节点非空，所以<code>RemoveBack</code>也总是作用在<code>tail</code>上。它的实现很容易，需要注意的主要有以下3点:</p>
+<ol>
+<li>如果执行<code>RemoveBack</code>之后<code>tail</code>变成空的，则需要从 Trie 树里取出最后一个<code>trieNode</code>作为新的<code>tail</code></li>
+<li>如果执行<code>RemoveBack</code>之后 List 长度变为 0，则直接重置列表到空的状态</li>
+<li>如果从 Trie 树中取出节点之后<code>root</code>节点只有一个孩子，那么我们把<code>root</code>节点替换成它的孩子，由此 Trie 的高度减小 $1$</li>
+</ol>
+<p>下面是从 Trie 当中获得一个节点的代码:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">getTail</span><span class="params">(root *trieNode, n <span class="keyword">int</span>, level <span class="keyword">int</span>)</span> <span class="params">(*trieNode, *trieNode)</span></span> &#123;</span><br><span class="line">    index := (n &gt;&gt; <span class="keyword">uint</span>((level<span class="number">-1</span>)*SHIFT)) &amp; MASK</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> level == <span class="number">1</span> &#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">nil</span>, root</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        child, tail := getTail(root.getChildNode(index), n, level<span class="number">-1</span>)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> index == <span class="number">0</span> &amp;&amp; child == <span class="literal">nil</span> &#123;</span><br><span class="line">            <span class="comment">// The first element has been removed, which means current node</span></span><br><span class="line">            <span class="comment">// becomes empty, remove current node by returning nil</span></span><br><span class="line">            <span class="keyword">return</span> <span class="literal">nil</span>, tail</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="comment">// Current node is not empty</span></span><br><span class="line">            <span class="keyword">return</span> root, tail</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>为了能使用上述函数获得最后一个<code>trieNode</code>，我们使<code>n = len - 1</code>，也就是最后一个元素 Index。
+在取出<code>tail</code>之后，我们需要检查 Trie 是否需要降低层数。由于我们总是保证 Trie 树中的元素编号是从 0
+开始连续到达<code>offset - 1</code>的，因此如果<code>root</code>只剩下一个孩子，那么它一定是第<code>0</code>号孩子。
+设 Trie 的高度是<code>level</code>，<code>n = offset - 1</code>，那么也就有 <code>(n&gt;&gt;uint((lv-1)*SHIFT)) == 0</code>为真。
+通过这个判断我们就可以决定是否降低 Trie 树的层数了。</p>
+<p>完整的 <code>RemoveBack</code> 实现如下:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="params">(head *listHead)</span> <span class="title">RemoveBack</span><span class="params">()</span> <span class="title">interface</span></span>&#123;&#125; &#123;</span><br><span class="line">    <span class="keyword">if</span> head.<span class="built_in">len</span> == <span class="number">0</span> &#123;</span><br><span class="line">        <span class="built_in">panic</span>(<span class="string">"Remove from empty list"</span>)</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    value := head.tail.getChildValue(head.<span class="built_in">len</span> - head.offset - <span class="number">1</span>)</span><br><span class="line">    head.tail = setTail(head.tail, head.<span class="built_in">len</span>-head.offset<span class="number">-1</span>, <span class="literal">nil</span>) <span class="comment">// clear reference to release memory</span></span><br><span class="line"></span><br><span class="line">    head.<span class="built_in">len</span>--</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> head.<span class="built_in">len</span> == <span class="number">0</span> &#123;</span><br><span class="line">        head.level = <span class="number">0</span></span><br><span class="line">        head.offset = <span class="number">0</span></span><br><span class="line">        head.root = <span class="literal">nil</span></span><br><span class="line">        head.tail = <span class="literal">nil</span></span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> head.<span class="built_in">len</span> &lt;= head.offset &#123;</span><br><span class="line">            <span class="comment">// tail is empty, retrieve new tail from root</span></span><br><span class="line">            head.root, head.tail = getTail(head.root, head.<span class="built_in">len</span><span class="number">-1</span>, head.level)</span><br><span class="line">            head.offset -= NODE_SIZE</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// Reduce the depth of tree if root only have one child</span></span><br><span class="line">        n := head.offset - <span class="number">1</span></span><br><span class="line">        lv := head.level</span><br><span class="line">        root := head.root</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> lv &gt; <span class="number">1</span> &amp;&amp; (n&gt;&gt;<span class="keyword">uint</span>((lv<span class="number">-1</span>)*SHIFT)) == <span class="number">0</span> &#123;</span><br><span class="line">            root = root.getChildNode(<span class="number">0</span>)</span><br><span class="line">            lv--</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        head.root = root</span><br><span class="line">        head.level = lv</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> value</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="u6027_u80FD_u6D4B_u8BD5"><a href="#u6027_u80FD_u6D4B_u8BD5" class="headerlink" title="性能测试"></a>性能测试</h2><p>至此我们的 Vector Trie 就实现了，虽然持久化的功能尚未完成，但是我们已经拥有了一个可用的 List 容器类。
+接下来让我们测试一下这一容器的性能。我编写了如下的 Benchmark 代码:</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkPushBack</span><span class="params">(b *testing.B)</span></span> &#123;</span><br><span class="line">    list := New()</span><br><span class="line">    <span class="keyword">var</span> v <span class="keyword">interface</span>&#123;&#125;</span><br><span class="line">    <span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</span><br><span class="line">        list.PushBack(v)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkGet</span><span class="params">(b *testing.B)</span></span> &#123;</span><br><span class="line">    mask := (<span class="number">1</span> &lt;&lt; <span class="number">10</span>) - <span class="number">1</span></span><br><span class="line">    list := generateList(<span class="number">0</span>, mask+<span class="number">1</span>, <span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</span><br><span class="line">        list.Get(i &amp; mask)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkSet</span><span class="params">(b *testing.B)</span></span> &#123;</span><br><span class="line">    mask := (<span class="number">1</span> &lt;&lt; <span class="number">10</span>) - <span class="number">1</span></span><br><span class="line">    list := generateList(<span class="number">0</span>, mask+<span class="number">1</span>, <span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">var</span> v <span class="keyword">interface</span>&#123;&#125; = <span class="number">0</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</span><br><span class="line">        list.Set(i&amp;mask, v)</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">BenchmarkRemoveBack</span><span class="params">(b *testing.B)</span></span> &#123;</span><br><span class="line">    mask := (<span class="number">1</span> &lt;&lt; <span class="number">20</span>) - <span class="number">1</span></span><br><span class="line">    list := generateList(<span class="number">0</span>, mask+<span class="number">1</span>, <span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> i := <span class="number">0</span>; i &lt; b.N; i++ &#123;</span><br><span class="line">        <span class="keyword">if</span> list.Len() &gt; <span class="number">0</span> &#123;</span><br><span class="line">            list.RemoveBack()</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            b.StopTimer()</span><br><span class="line">            list = generateList(<span class="number">0</span>, mask+<span class="number">1</span>, <span class="number">1</span>)</span><br><span class="line">            b.StartTimer()</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>值得注意得是，在 Golang 中将原始数据类型如<code>int</code>等转换为<code>interface{}</code>其实会产生内存分配操作，
+因此会拖慢程序的运行，为了了解原始的操作性能，<code>Set</code>和<code>PushBack</code>操作使用的都是固定的<code>value</code>。
+<code>Get</code>操作则是在一个长度为 $1024$ 的 List 上进行循环的读操作。下面是 Benchmark 的结果:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">BenchmarkPushBack-2     20000000           67.8 ns/op       34 B/op     0 allocs/op</span><br><span class="line">BenchmarkGet-2          100000000          11.4 ns/op        0 B/op     0 allocs/op</span><br><span class="line">BenchmarkSet-2          50000000           20.6 ns/op        0 B/op     0 allocs/op</span><br><span class="line">BenchmarkRemoveBack-2   50000000           25.3 ns/op        0 B/op     0 allocs/op</span><br></pre></td></tr></table></figure>
+<p>由此可见，我们实现的 Vector trie 在 <code>Get</code>、<code>Set</code>和<code>RemoveBack</code>上的性能比较让人满意，基本控制在<code>30ns</code>以下，
+<code>PushBack</code>操作的时间略高于预期，经过进一步的分析发现时间主要花费在<code>runtime.scanobject</code>方法上，
+也就是说 Golang 自己的 GC 性能影响了我们的实现性能。在未来也许可以对我们<code>PushBack</code>时所进行的内存操作进行进一步的优化，
+从另一个角度来说，Golang 自己的 GC 性能也还有进一步提升的空间。</p>
+<h2 id="u603B_u7ED3"><a href="#u603B_u7ED3" class="headerlink" title="总结"></a>总结</h2><p>在这篇文章中，我们初步实现了不带持久化功能的 Vector Trie 并对其进行了简单的性能分析。</p>
+<p>从当前的实现中已经可以看到将其转变为不可变数据结构的曙光。在下一篇文章中我们将会继续讨论 Vector Trie，
+给出将其变化为不可变数据结构的最终实现方法和使其具备高性能读写的 Transient 数据结构的实现。</p>
+
+    </div>
+    <footer>
+        
+  
+  <div class="categories">
+    <a href="/categories/Functional-Go/">Functional Go</a>
+  </div>
+
+        
+  
+  <div class="tags">
+    <a href="/tags/Golang/">Golang</a>, <a href="/tags/go/">go</a>, <a href="/tags/functional-programming/">functional programming</a>, <a href="/tags/fp/">fp</a>, <a href="/tags/persist-datastructure/">persist datastructure</a>, <a href="/tags/immutable/">immutable</a>, <a href="/tags/essay/">essay</a>, <a href="/tags/vector-trie/">vector trie</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2020/12/12/nvm-store/">Nvm Store: 第二届阿里数据库大赛参赛记录</a>
+      </li>
+    
+      <li>
+        <a href="/2020/02/24/how-to-architect-a-query-compiler/">SIGMOD 16 | How to Architect a Query Compiler</a>
+      </li>
+    
+      <li>
+        <a href="/2020/01/04/olap-distributed/">OLAP 任务的并发执行与调度</a>
+      </li>
+    
+      <li>
+        <a href="/2019/03/16/streaming-incremental-sql-execution/">Stream SQL 的执行原理与 Flink 的实现</a>
+      </li>
+    
+      <li>
+        <a href="/2018/11/01/sql-query-optimization-volcano/">SQL 查询优化原理与 Volcano Optimizer 介绍</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a target="_blank" rel="noopener" href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Functional-Go/">Functional Go</a><small>4</small></li>
+  
+    <li><a href="/categories/Mastering-Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>9</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/AWS/" style="font-size: 10px;">AWS</a> <a href="/tags/Algorithm/" style="font-size: 17.5px;">Algorithm</a> <a href="/tags/Apache-Flink/" style="font-size: 10px;">Apache Flink</a> <a href="/tags/Apple/" style="font-size: 10px;">Apple</a> <a href="/tags/Bezier-Path/" style="font-size: 10px;">Bezier Path</a> <a href="/tags/Big-Data/" style="font-size: 12.5px;">Big Data</a> <a href="/tags/Cascades/" style="font-size: 10px;">Cascades</a> <a href="/tags/Closure/" style="font-size: 10px;">Closure</a> <a href="/tags/Cloud/" style="font-size: 10px;">Cloud</a> <a href="/tags/Cocoa/" style="font-size: 10px;">Cocoa</a> <a href="/tags/Connected-Components/" style="font-size: 10px;">Connected Components</a> <a href="/tags/Data-structure/" style="font-size: 10px;">Data structure</a> <a href="/tags/Designing-Data-Intensive-Applications/" style="font-size: 10px;">Designing Data-Intensive Applications</a> <a href="/tags/Designing-Paradigm/" style="font-size: 10px;">Designing Paradigm</a> <a href="/tags/Distributed-System/" style="font-size: 12.5px;">Distributed System</a> <a href="/tags/Docker/" style="font-size: 10px;">Docker</a> <a href="/tags/Dokku/" style="font-size: 10px;">Dokku</a> <a href="/tags/EMR/" style="font-size: 10px;">EMR</a> <a href="/tags/ES6/" style="font-size: 10px;">ES6</a> <a href="/tags/ETL/" style="font-size: 10px;">ETL</a> <a href="/tags/Flink/" style="font-size: 10px;">Flink</a> <a href="/tags/Functional-Programing/" style="font-size: 10px;">Functional Programing</a> <a href="/tags/Functional-Programming/" style="font-size: 10px;">Functional Programming</a> <a href="/tags/GLSL/" style="font-size: 10px;">GLSL</a> <a href="/tags/GSoC/" style="font-size: 10px;">GSoC</a> <a href="/tags/Git/" style="font-size: 10px;">Git</a> <a href="/tags/Go/" style="font-size: 12.5px;">Go</a> <a href="/tags/Golang/" style="font-size: 17.5px;">Golang</a> <a href="/tags/Google/" style="font-size: 10px;">Google</a> <a href="/tags/Gourmet/" style="font-size: 10px;">Gourmet</a> <a href="/tags/Graph-Computing/" style="font-size: 10px;">Graph Computing</a> <a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Immutable/" style="font-size: 10px;">Immutable</a> <a href="/tags/Incremental-SQL/" style="font-size: 10px;">Incremental SQL</a> <a href="/tags/Intel/" style="font-size: 10px;">Intel</a> <a href="/tags/Interface-Builder/" style="font-size: 10px;">Interface Builder</a> <a href="/tags/IoT/" style="font-size: 10px;">IoT</a> <a href="/tags/Japan/" style="font-size: 10px;">Japan</a> <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Kylin/" style="font-size: 10px;">Kylin</a> <a href="/tags/Kyoto/" style="font-size: 10px;">Kyoto</a> <a href="/tags/Lazy-Evaluation/" style="font-size: 10px;">Lazy Evaluation</a> <a href="/tags/Linux/" style="font-size: 10px;">Linux</a> <a href="/tags/Log-Structured-Merge-Tree/" style="font-size: 10px;">Log-Structured Merge Tree</a> <a href="/tags/Materialized-View/" style="font-size: 10px;">Materialized View</a> <a href="/tags/NSControl/" style="font-size: 12.5px;">NSControl</a> <a href="/tags/NUC/" style="font-size: 10px;">NUC</a> <a href="/tags/NVM/" style="font-size: 10px;">NVM</a> <a href="/tags/OSX/" style="font-size: 15px;">OSX</a> <a href="/tags/Objective-C/" style="font-size: 12.5px;">Objective-C</a> <a href="/tags/Optimization/" style="font-size: 10px;">Optimization</a> <a href="/tags/Osaka/" style="font-size: 10px;">Osaka</a> <a href="/tags/PageRank/" style="font-size: 10px;">PageRank</a> <a href="/tags/Persistent-Memory/" style="font-size: 10px;">Persistent Memory</a> <a href="/tags/Pregel/" style="font-size: 10px;">Pregel</a> <a href="/tags/React/" style="font-size: 10px;">React</a> <a href="/tags/SQL/" style="font-size: 12.5px;">SQL</a> <a href="/tags/SVG/" style="font-size: 10px;">SVG</a> <a href="/tags/Scala/" style="font-size: 10px;">Scala</a> <a href="/tags/Scheduler/" style="font-size: 12.5px;">Scheduler</a> <a href="/tags/Splunk/" style="font-size: 10px;">Splunk</a> <a href="/tags/Stream-SQL/" style="font-size: 10px;">Stream SQL</a> <a href="/tags/Summary/" style="font-size: 10px;">Summary</a> <a href="/tags/Swift/" style="font-size: 10px;">Swift</a> <a href="/tags/Three-js/" style="font-size: 10px;">Three.js</a> <a href="/tags/Tokyo/" style="font-size: 10px;">Tokyo</a> <a href="/tags/Transmission/" style="font-size: 10px;">Transmission</a> <a href="/tags/Travel/" style="font-size: 10px;">Travel</a> <a href="/tags/Ubuntu/" style="font-size: 10px;">Ubuntu</a> <a href="/tags/User-Tracking/" style="font-size: 10px;">User Tracking</a> <a href="/tags/Volcano/" style="font-size: 10px;">Volcano</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/Y-Combinator/" style="font-size: 10px;">Y-Combinator</a> <a href="/tags/accelerate-meter/" style="font-size: 10px;">accelerate meter</a> <a href="/tags/allocator/" style="font-size: 10px;">allocator</a> <a href="/tags/bezier-path/" style="font-size: 12.5px;">bezier path</a> <a href="/tags/blender/" style="font-size: 12.5px;">blender</a> <a href="/tags/borg/" style="font-size: 10px;">borg</a> <a href="/tags/city/" style="font-size: 10px;">city</a> <a href="/tags/cli/" style="font-size: 10px;">cli</a> <a href="/tags/cocoa/" style="font-size: 15px;">cocoa</a> <a href="/tags/compiler/" style="font-size: 10px;">compiler</a> <a href="/tags/completion/" style="font-size: 10px;">completion</a> <a href="/tags/contenteditable/" style="font-size: 10px;">contenteditable</a> <a href="/tags/database/" style="font-size: 12.5px;">database</a> <a href="/tags/design/" style="font-size: 10px;">design</a> <a href="/tags/desktop/" style="font-size: 10px;">desktop</a> <a href="/tags/develop/" style="font-size: 10px;">develop</a> <a href="/tags/device-motion/" style="font-size: 10px;">device motion</a> <a href="/tags/distribute-storage/" style="font-size: 10px;">distribute storage</a> <a href="/tags/distributed-system/" style="font-size: 10px;">distributed system</a> <a href="/tags/diumoo/" style="font-size: 10px;">diumoo</a> <a href="/tags/douban/" style="font-size: 10px;">douban</a> <a href="/tags/drawing/" style="font-size: 17.5px;">drawing</a> <a href="/tags/editor/" style="font-size: 10px;">editor</a> <a href="/tags/essay/" style="font-size: 17.5px;">essay</a> <a href="/tags/export/" style="font-size: 10px;">export</a> <a href="/tags/filesystem/" style="font-size: 10px;">filesystem</a> <a href="/tags/font/" style="font-size: 12.5px;">font</a> <a href="/tags/fontawesome/" style="font-size: 10px;">fontawesome</a> <a href="/tags/fp/" style="font-size: 17.5px;">fp</a> <a href="/tags/functional-programming/" style="font-size: 20px;">functional programming</a> <a href="/tags/github/" style="font-size: 10px;">github</a> <a href="/tags/go/" style="font-size: 20px;">go</a> <a href="/tags/golang/" style="font-size: 12.5px;">golang</a> <a href="/tags/hamt/" style="font-size: 10px;">hamt</a> <a href="/tags/hashmap/" style="font-size: 10px;">hashmap</a> <a href="/tags/html/" style="font-size: 10px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/iOS/" style="font-size: 10px;">iOS</a> <a href="/tags/iOS-8/" style="font-size: 10px;">iOS 8</a> <a href="/tags/iPad/" style="font-size: 15px;">iPad</a> <a href="/tags/icon/" style="font-size: 10px;">icon</a> <a href="/tags/icon-font/" style="font-size: 12.5px;">icon font</a> <a href="/tags/icon-fontr/" style="font-size: 10px;">icon fontr</a> <a href="/tags/iconfontr/" style="font-size: 15px;">iconfontr</a> <a href="/tags/image/" style="font-size: 10px;">image</a> <a href="/tags/immutable/" style="font-size: 17.5px;">immutable</a> <a href="/tags/indexing/" style="font-size: 10px;">indexing</a> <a href="/tags/io-meter/" style="font-size: 10px;">io-meter</a> <a href="/tags/ionicons/" style="font-size: 10px;">ionicons</a> <a href="/tags/kubernetes/" style="font-size: 10px;">kubernetes</a> <a href="/tags/kv/" style="font-size: 10px;">kv</a> <a href="/tags/life/" style="font-size: 17.5px;">life</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/mac/" style="font-size: 10px;">mac</a> <a href="/tags/math/" style="font-size: 10px;">math</a> <a href="/tags/memory/" style="font-size: 10px;">memory</a> <a href="/tags/mobile/" style="font-size: 10px;">mobile</a> <a href="/tags/music/" style="font-size: 10px;">music</a> <a href="/tags/olap/" style="font-size: 10px;">olap</a> <a href="/tags/online-editor/" style="font-size: 10px;">online editor</a> <a href="/tags/open-source/" style="font-size: 10px;">open source</a> <a href="/tags/opensource/" style="font-size: 10px;">opensource</a> <a href="/tags/os/" style="font-size: 10px;">os</a> <a href="/tags/osx/" style="font-size: 15px;">osx</a> <a href="/tags/package/" style="font-size: 10px;">package</a> <a href="/tags/paper/" style="font-size: 12.5px;">paper</a> <a href="/tags/pencil/" style="font-size: 10px;">pencil</a> <a href="/tags/persist-datastructure/" style="font-size: 17.5px;">persist datastructure</a> <a href="/tags/programing/" style="font-size: 10px;">programing</a> <a href="/tags/programming/" style="font-size: 10px;">programming</a> <a href="/tags/rendering/" style="font-size: 10px;">rendering</a> <a href="/tags/review/" style="font-size: 10px;">review</a> <a href="/tags/rpc/" style="font-size: 10px;">rpc</a> <a href="/tags/scala/" style="font-size: 10px;">scala</a> <a href="/tags/schedule/" style="font-size: 10px;">schedule</a> <a href="/tags/selection/" style="font-size: 10px;">selection</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/shader/" style="font-size: 10px;">shader</a> <a href="/tags/sketch/" style="font-size: 10px;">sketch</a> <a href="/tags/sql/" style="font-size: 10px;">sql</a> <a href="/tags/stylus/" style="font-size: 10px;">stylus</a> <a href="/tags/summary/" style="font-size: 12.5px;">summary</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/swift/" style="font-size: 10px;">swift</a> <a href="/tags/taiwan/" style="font-size: 12.5px;">taiwan</a> <a href="/tags/tips/" style="font-size: 10px;">tips</a> <a href="/tags/travel/" style="font-size: 12.5px;">travel</a> <a href="/tags/utility/" style="font-size: 10px;">utility</a> <a href="/tags/vector-trie/" style="font-size: 12.5px;">vector trie</a> <a href="/tags/watch/" style="font-size: 10px;">watch</a> <a href="/tags/web/" style="font-size: 17.5px;">web</a> <a href="/tags/webGL/" style="font-size: 12.5px;">webGL</a> <a href="/tags/webgl/" style="font-size: 10px;">webgl</a> <a href="/tags/wu/" style="font-size: 10px;">wu</a> <a href="/tags/xcode/" style="font-size: 10px;">xcode</a> <a href="/tags/zocial/" style="font-size: 10px;">zocial</a> <a href="/tags/%E5%90%90%E6%A7%BD/" style="font-size: 10px;">吐槽</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2020 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"], linebreaks: { automatic:true }, EqnChunk: (MathJax.Hub.Browser.isMobile ? 10 : 50) },
+        tex2jax: { inlineMath: [ ["$", "$"], ["\\(","\\)"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno",skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']},
+        TeX: {  noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } }, Macros: { href: "{}" } },
+        messageStyle: "none"
+    }); 
+</script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+
+</body>
+
+</html>

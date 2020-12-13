@@ -1,0 +1,404 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>分布式索引设计实验 in Go | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="作为一个 Go 语言门外汉，这段时间刚刚使用 Go 实现了一个分布式索引系统的仿真实验，
+这篇文章就来总结一下实现过程和经验。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="分布式索引设计实验 in Go"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content=""/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a target="_blank" rel="noopener" href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2014/06/22/distribute-indexing-experimentin-go/" target="_blank">分布式索引设计实验 in Go</a></h1>
+
+
+      
+        <time datetime="2014-06-22T08:34:07.000Z">2014-06-22</time>
+      
+    </header>
+    <div class="entry">
+      <p>作为一个 Go 语言门外汉，这段时间刚刚使用 Go 实现了一个分布式索引系统的仿真实验，
+这篇文章就来总结一下实现过程和经验。</p>
+<a id="more"></a>
+<p>分布式储存的索引技术是分布式储存的一个技术重点，为了验证一种索引的设计，
+自然要设计一个仿真测试来验证各项性能指标是否令人满意。</p>
+<p>在实现系统之前，我对 Go 语言的认知水平还很初级，选择并不熟悉的 Go 语言作为实现语言的原因主要由以下几条：</p>
+<ol>
+<li>Go 语言有比较方便的包管理方案，譬如使用<code>go get</code>命令和第三方的 <a href="https://github.com/tools/godep" target="_blank" rel="noopener">godep</a>
+包来实现依赖管理非常方便。在实验中因为要使用第三方的 B+ Tree 实现，因此 Go
+语言成为了一个很好的选择</li>
+<li>Go 语言有出色的编译和执行速度。作为一种编译执行的语言，既能像脚本语言那样获得这么好的编译速度，
+又可以获得较好的执行效率，这对于一个要填充较大数据量的仿真实验来说是一个相当吸引人的特性。</li>
+<li>Go 语言的语法相对简洁又不失强大。虽然最初接触时，感觉 Go 语言的语法比较纠结。
+但是相比起来要比 C++ 简洁很多，功能反过来又比 C 更为丰富。带有垃圾回收的特性使其最终脱颖而出。</li>
+</ol>
+<p>下面详细介绍系统的设计。</p>
+<h2 id="Problem_Description"><a href="#Problem_Description" class="headerlink" title="Problem Description"></a>Problem Description</h2><p>在介绍我设计的系统之前，先介绍一下问题以及对应的需求。同时，在这一步还会尽可能地将问题简化。</p>
+<p>假定我们有一个由 $n$ 个储存节点组成的分布式储存系统，每个节点分别储存了总体数据的一部分。
+随后有一段连续的查询请求，这些查询请求可能随机访问系统中的任何一个节点。
+如果被请求的节点当中不包含这个数据，那么它要负责到对应的节点中去寻找数据并返回给客户端。</p>
+<p>一个简单的双层索引的设计是：每个节点都有一个 Local Index 和一个 Global Index。
+在接收到查询之后，先在 Local Index 当中查找，查找失败之后，再在 Global Index 中查找可能包含目标数据的节点。
+此外我们还希望，如果一个查询多对应的目标数据在整个系统中都不存在，那么应该尽可能早的发现，
+从而避免转发查询这个成本较高的操作。所以在双层索引中，我们希望在查找 Global Index 的时候，
+就可以尽可能确定查询的目标数据是否存在。</p>
+<p>一般用 False Positive 这个指标来衡量上述需求。所谓 False Positive，简单来说可以认为是一个系统中不存在的数据，
+在 Global Index 当中查询的时候认为他是存在的。Global Index 最直接的设计就是把每个节点的 Local Index
+原封不动地放在一起。这种方法可以保证没有 False Positive，但是却要占用较大的空间，
+必须要进行一定的 Trade Off，使得在空间可以接受的范围内实现尽可能低的 False Positive 值。</p>
+<p>此外还要求查询 Global Index 的查询成本要远少于 Local Index，
+在这种情况下，我们可以把双层的索引模型改为总是先查找 Global Index，决定所在节点之后，再查找 Local Index。</p>
+<p>为了简化问题，整个测试的系统中储存的数据看成是静态的。也就是说，实验的步骤是先将所有的测试数据插入系统，
+再执行测试查询。测试过程中，也不考虑为数据建立冗余备份等问题。</p>
+<h2 id="Model"><a href="#Model" class="headerlink" title="Model"></a>Model</h2><p>在我设计的系统中，使用的三个重要的模型和数据结构分别是：</p>
+<ol>
+<li>Fat Tree</li>
+<li>B+ Tree</li>
+<li>Bloom Filter</li>
+</ol>
+<p>下面分别介绍这几个模型及其作用。</p>
+<h3 id="Fat_Tree"><a href="#Fat_Tree" class="headerlink" title="Fat Tree"></a>Fat Tree</h3><p><a href="http://en.wikipedia.org/wiki/Fat_tree" target="_blank" rel="noopener">Fat Tree</a> 并不是什么储存数据的数据结构，而是一种常见的网络拓扑模型。
+为了计算搜索请求从一个服务器转发到另一个服务器的时间消耗，就可以使用 Fat Tree 这种结构。</p>
+<p>将 Fat Tree 称为树其实有点不准确，他其实更像是一种星型的网络。一个三层的 Fat Tree 结构包含核心层、
+聚合层和边缘层三个层次，都有路由器构成。设 Fat Tree 中的每个路由有 $k$ 个端口，
+我们把边缘层的每个路由的端口一半用来连接主机，一半用来链接聚合层。同时把
+$\frac{k}{2}$ 个边缘层的路由与 $\frac{k}{2}$ 个聚合层的节点放在一起，构成一个完全二分图，称之为一个 Pod。
+每个聚合层的路由和 $\frac{k}{2}$ 个核心层的节点链接，同一个 Pod 中不同的聚合层路由连接的核心层路由是不重复的。
+显而易见，我们需要 $\frac{k^2}{4}$ 个核心层路由，可以连接的主机总数是 $\frac{k^3}{4}$ 。</p>
+<p>由以上方式构造出的网络，有一个特点是每个路由的 $k$ 个端口都被利用了。整个网络中，任意两个主机之间通信，
+经过的边数只有三种可能：</p>
+<ol>
+<li>同一个边缘层路由所连接的主机之间需经过 2 条边</li>
+<li>同一个 Pod 不同边缘层路由所连接的主机之间需经过 4 条边</li>
+<li>不同 Pod 中的主机之间需经过 6 条边</li>
+</ol>
+<p>一个 $k=4$ 的 Fat Tree 的例子如下图所示：</p>
+<p><img src="/img/posts/fattree.png" alt="Fat Tree"></p>
+<p>将主机从左到右编号，给定 $k$ 、通信发起节点 a 和目标节点 b，用 Go 编写的计算跳转次数的函数如下。
+因在我们的系统中，b 要把查找结果返回给 a，因此所有的路由次数都乘了二。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">TransferCost</span><span class="params">(k, a, b <span class="keyword">int</span>)</span> <span class="title">int</span></span> &#123;</span><br><span class="line">    hk := k / <span class="number">2</span></span><br><span class="line">    <span class="keyword">switch</span> &#123;</span><br><span class="line">    <span class="keyword">case</span> a/hk == b/hk:</span><br><span class="line">        <span class="keyword">return</span> <span class="number">4</span></span><br><span class="line">    <span class="keyword">case</span> a/k == b/k:</span><br><span class="line">        <span class="keyword">return</span> <span class="number">8</span></span><br><span class="line">    <span class="keyword">default</span>:</span><br><span class="line">        <span class="keyword">return</span> <span class="number">12</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="B+_Tree"><a href="#B+_Tree" class="headerlink" title="B+ Tree"></a>B+ Tree</h3><p>关于 <a href="http://en.wikipedia.org/wiki/B%2B_tree" target="_blank" rel="noopener">B+ Tree</a> 的内容不用赘述了，它是一种常见的索引结构。
+它用于储存 $n$ 个元素的空间复杂度是 $O(n)$，插入、查找和删除的时间复杂度都是 $O(\log_b n)$，
+是一种非常有效率的索引方式。</p>
+<p>前面说过，之所以选择 Go 语言来编写这个实验，一个重要的原因就在于 Go 方便的依赖管理机制，
+你可以直接使用托管在 Github 等处的代码，只需要使用<code>go get</code>命令将代码抓取过来即可。
+在这里，我使用了 <a href="https://github.com/cznic/b/" target="_blank" rel="noopener">cznic/b</a> 这个第三方库。</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">go get github.com/cznic/b/</span><br></pre></td></tr></table></figure>
+<p>在本文中只使用了一个依赖关系，但是对于有多个依赖的项目，我们可能需要一个类似于 Python 的 pip 或者 ruby 的 gem
+这样的工具。更近一步，为了隔离不同项目的环境，一个类似 ruby bundle 的工具将会极大地提高生产力。
+<a href="https://github.com/pote/gpm" target="_blank" rel="noopener">gpm</a> 和 <a href="https://github.com/pote/gvp" target="_blank" rel="noopener">gvp</a> 搭档使用是一个比较好的解决方案。</p>
+<p>我使用 B+ Tree 作为实验中每个节点的 Local Index，为了计算查询 B+ Tree 的计算成本，
+可以充分利用 Go 语言提供的函数式编程的能力，使用闭包获得上下文环境来统计比较次数。
+<code>cznic/b</code>这个 B+ Tree 实现允许传入一个函数作为比较 Key 大小的函数。我使用了下面的结构体定义一个 Node 。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">type</span> Node <span class="keyword">struct</span> &#123;</span><br><span class="line">    id          <span class="keyword">int</span></span><br><span class="line">    bloomSize   <span class="keyword">int</span></span><br><span class="line">    hashCount   <span class="keyword">int</span></span><br><span class="line">    cmpCount    <span class="keyword">int</span> <span class="comment">// a field to count comparing on this node</span></span><br><span class="line">    bplusTree   *b.Tree</span><br><span class="line">    bloomFilter []<span class="keyword">uint64</span></span><br><span class="line">    itemCount   <span class="keyword">int</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>用下面的方法来初始化一个 Node 及其 B+ Tree。</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">n := <span class="built_in">new</span>(Node)</span><br><span class="line">n.bplusTree = b.TreeNew(<span class="function"><span class="keyword">func</span><span class="params">(a, b <span class="keyword">interface</span>&#123;&#125;)</span> <span class="title">int</span></span> &#123;</span><br><span class="line">        na := a.(<span class="keyword">uint64</span>)</span><br><span class="line">        nb := b.(<span class="keyword">uint64</span>)</span><br><span class="line">        n.cmpCount++ <span class="comment">// count comparing</span></span><br><span class="line">        <span class="keyword">switch</span> &#123;</span><br><span class="line">        <span class="keyword">case</span> na &gt; nb:</span><br><span class="line">            <span class="keyword">return</span> <span class="number">1</span></span><br><span class="line">        <span class="keyword">case</span> na == nb:</span><br><span class="line">            <span class="keyword">return</span> <span class="number">0</span></span><br><span class="line">        <span class="keyword">default</span>:</span><br><span class="line">            <span class="keyword">return</span> <span class="number">-1</span></span><br><span class="line">        &#125;</span><br><span class="line">    &#125;)</span><br></pre></td></tr></table></figure>
+<p>得益于 Go 支持匿名函数以及闭包，我们能够比较优雅的实现这个功能。</p>
+<h3 id="Bloom_Filter"><a href="#Bloom_Filter" class="headerlink" title="Bloom Filter"></a>Bloom Filter</h3><p>在 Global Index 这里，我选择了一个非常简单的解决方案：<a href="http://en.wikipedia.org/wiki/Bloom_filter" target="_blank" rel="noopener">Bloom Filter</a>。
+简单来说， Bloom Filter 就是在插入数据时使用 $k$ 个不同的哈希函数，把一个 Key 映射到一个整型数组上的不同的位置，
+并将对应的位置标记为1。在查询的时候，对请求的键使用相同的哈希函数进行哈希，检查对应的 $k$ 个位置是否都为 1。
+如果是的话，键对应的就值很可能存在，否则一定不存在。</p>
+<p>为了节省空间，我们以单个二进制位为单位进行标记，设数组中的所有<code>Int</code>元素共有 $m$ 个比特位，储存的数据共有 $n$ 个，
+那么理论上对 Bloom Filter 查询的 False Positive 概率的估计公式为：</p>
+<p>$$\left(1-e^{-kn/m} \right)^k$$</p>
+<p>从上面的公式可以看出，Bloom Filter 虽然有实现简单、占用空间小的优点，但是储存的数据量越大，False Positive 的概率越高，
+过滤的效果也越差。同时，Bloom Filter 对于删除元素的操作没有很方便的处理方法，
+在删除时维护 Bloom Filter 的复杂度比较高。</p>
+<p>在不考虑删除元素的情况下， Bloom Filter 还是很好的一个选择。
+而且 Go 语言的标准库中，已经提供了 MD5、SHA1、ADLER32 以及 CRC64 等哈希算法的实现，只需 import 进来即可使用，
+非常方便：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> (</span><br><span class="line">    <span class="string">"crypto/md5"</span></span><br><span class="line">    <span class="string">"crypto/sha1"</span></span><br><span class="line">    <span class="string">"hash/adler32"</span></span><br><span class="line">    <span class="string">"hash/crc64"</span></span><br><span class="line">)</span><br></pre></td></tr></table></figure>
+<h2 id="u6D4B_u8BD5_u6570_u636E_u7684_u751F_u6210_u53CA_u6587_u4EF6_u8BFB_u53D6"><a href="#u6D4B_u8BD5_u6570_u636E_u7684_u751F_u6210_u53CA_u6587_u4EF6_u8BFB_u53D6" class="headerlink" title="测试数据的生成及文件读取"></a>测试数据的生成及文件读取</h2><p>为了测试我们设计的系统的性能，需要生成一些特定分布的测试数据以及对应的查询数据。
+两种比较常用的分布是均匀分布和 <a href="http://en.wikipedia.org/wiki/Zipf_distribution" target="_blank" rel="noopener">Zipf</a> 分布。
+特别值得一提的是 Zipf 分布，包括英语中单词的出现频率在内，很多重要的数据都服从这一分布。
+因此在搜索引擎使用的关键词索引系统中就应该特别重视这种分布。</p>
+<p>为了简化问题，这里采取了事先生成一批两种分布的测试数据，在测试的时候依次读出并插入索引的方案。
+测试数据都是整型数字，并且作为键插入到 B+ Tree 中。使用 Python 中的 numpy 库生成特定分布的随机数据的方法如下：</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"></span><br><span class="line">np.random.normal(<span class="number">0</span>, <span class="number">1280000</span>, <span class="number">100000</span>).astype(int) <span class="comment"># 生成 100000 个 0~1280000 之内的均匀分布随机数</span></span><br><span class="line">np.random.zipf(<span class="number">2</span>, <span class="number">100000</span>) <span class="comment"># 生成参数 a=2 的 100000 个 Zipf 分布的随机数</span></span><br></pre></td></tr></table></figure>
+<p>将生成的数据保存成文本文件，接下来只要在 Go 程序里读取出来就好了。作为一个 Python 重度用户，
+在这里我很想使用类似 Generator 那样的语法，让函数每次输出一个文件中的数字。 Go 语言虽然没有<code>yield</code>那样的语法，
+但是可以通过 channel 和 goroutine 来实现相近的功能。写出来是像下面这样：</p>
+<figure class="highlight go"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">func</span> <span class="title">iterFile</span><span class="params">(filepath <span class="keyword">string</span>)</span> <span class="title">chan</span> <span class="title">uint64</span></span> &#123;</span><br><span class="line">    ch := <span class="built_in">make</span>(<span class="keyword">chan</span> <span class="keyword">uint64</span>)</span><br><span class="line">    <span class="keyword">go</span> <span class="function"><span class="keyword">func</span><span class="params">()</span></span> &#123;</span><br><span class="line">        fi, err := os.Open(filepath)</span><br><span class="line">        <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">            <span class="built_in">panic</span>(err)</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">defer</span> fi.Close()</span><br><span class="line">        <span class="keyword">var</span> i <span class="keyword">uint64</span></span><br><span class="line">        <span class="keyword">for</span> &#123;</span><br><span class="line">            _, err := fmt.Fscanf(fi, <span class="string">"%d"</span>, &amp;i)</span><br><span class="line">            <span class="keyword">if</span> err != <span class="literal">nil</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> err == io.EOF &#123;</span><br><span class="line">                    <span class="keyword">break</span></span><br><span class="line">                &#125;</span><br><span class="line">                <span class="built_in">panic</span>(err)</span><br><span class="line">            &#125;</span><br><span class="line">            ch &lt;- i</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="built_in">close</span>(ch)</span><br><span class="line">    &#125;()</span><br><span class="line">    <span class="keyword">return</span> ch</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>值得注意的是<code>defer fi.Close()</code>这行，<code>defer</code>关键字生成的指令会在当前 goroutine
+结束的时候执行，避免忘记释放文件的问题，是一个很优雅的语法。
+更方便是，我们还可以可以使用<code>for</code>循环来不断从 channel 中取数值。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">for i := range iterFile(&quot;somefile.txt&quot;) &#123;</span><br><span class="line">    // do somthing ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在研究 channel 的时候，我发现尽管在函数中可以同时返回多个值，但 Go 语言中并没有元组这样的类型。
+所以也就不能建立一次传输多个值的 channel （除非使用<code>interface{}</code>），这也算关于 Go 语言的一个小细节吧。</p>
+<h2 id="u8FDB_u884C_u4EFF_u771F_u5B9E_u9A8C"><a href="#u8FDB_u884C_u4EFF_u771F_u5B9E_u9A8C" class="headerlink" title="进行仿真实验"></a>进行仿真实验</h2><p>为了均衡各个服务器储存的数据量，可以先对要插入的键进行哈希处理，
+再根据哈希过的值决定存放在哪个节点。这样可以很好地将 Zipf 这样密度分布不平衡的数据均匀的分散开。
+接下来就可以进行仿真实验了。</p>
+<p>对均匀分布和 Zipf 分布的数据进行 100000 次查询的仿真结果如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">* Testing Uniform Distribution Sparse Set</span><br><span class="line"></span><br><span class="line">Inserting Keys ...</span><br><span class="line">Keys Inserted:               235195</span><br><span class="line"></span><br><span class="line">Testing Point Search ...</span><br><span class="line">Average Comparing:           2.18</span><br><span class="line">Average OK Comparing:        10.02</span><br><span class="line">Average Fail Comparing:      10.90</span><br><span class="line">Average Transfer Cost:       2.50</span><br><span class="line">False Positive Proportion:   3.92%</span><br><span class="line"></span><br><span class="line">* Testing Zipf Distribution Sparse Set</span><br><span class="line"></span><br><span class="line">Inserting Keys ...</span><br><span class="line">Keys Inserted:               230581</span><br><span class="line"></span><br><span class="line">Testing Point Search ...</span><br><span class="line">Average Comparing:           8.06</span><br><span class="line">Average OK Comparing:        9.58</span><br><span class="line">Average Fail Comparing:      10.92</span><br><span class="line">Average Transfer Cost:       9.78</span><br><span class="line">False Positive Proportion:   3.42%</span><br></pre></td></tr></table></figure>
+<h2 id="u603B_u7ED3"><a href="#u603B_u7ED3" class="headerlink" title="总结"></a>总结</h2><p>这篇文章总结了我最近实现的一个简单的分布式索引仿真测试的程序。
+当前的系统设计其实过于简单了，譬如没有考虑到数据的冗余备份等问题。但是总体来看对于两种分布，
+系统的表现还是令人满意的。 </p>
+<p>在实现程序的过程中，我对 Go 语言的一些方面有了更多的了解。
+在我看来， Go 语言是一种很有前景的语言，也许在一些场合下仍然无法取代 C，但是相比起来 C++ 似乎不再有竞争力。
+当然，Go 现在还缺乏一些 GUI 库、科学计算库等等，不过我相信随着时间的流逝它会展现出越来越强的生命力。</p>
+
+    </div>
+    <footer>
+        
+  
+  <div class="categories">
+    <a href="/categories/essay/">essay</a>
+  </div>
+
+        
+  
+  <div class="tags">
+    <a href="/tags/Go/">Go</a>, <a href="/tags/distribute-storage/">distribute storage</a>, <a href="/tags/indexing/">indexing</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2020/12/12/nvm-store/">Nvm Store: 第二届阿里数据库大赛参赛记录</a>
+      </li>
+    
+      <li>
+        <a href="/2020/02/24/how-to-architect-a-query-compiler/">SIGMOD 16 | How to Architect a Query Compiler</a>
+      </li>
+    
+      <li>
+        <a href="/2020/01/04/olap-distributed/">OLAP 任务的并发执行与调度</a>
+      </li>
+    
+      <li>
+        <a href="/2019/03/16/streaming-incremental-sql-execution/">Stream SQL 的执行原理与 Flink 的实现</a>
+      </li>
+    
+      <li>
+        <a href="/2018/11/01/sql-query-optimization-volcano/">SQL 查询优化原理与 Volcano Optimizer 介绍</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a target="_blank" rel="noopener" href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Functional-Go/">Functional Go</a><small>4</small></li>
+  
+    <li><a href="/categories/Mastering-Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>9</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/AWS/" style="font-size: 10px;">AWS</a> <a href="/tags/Algorithm/" style="font-size: 17.5px;">Algorithm</a> <a href="/tags/Apache-Flink/" style="font-size: 10px;">Apache Flink</a> <a href="/tags/Apple/" style="font-size: 10px;">Apple</a> <a href="/tags/Bezier-Path/" style="font-size: 10px;">Bezier Path</a> <a href="/tags/Big-Data/" style="font-size: 12.5px;">Big Data</a> <a href="/tags/Cascades/" style="font-size: 10px;">Cascades</a> <a href="/tags/Closure/" style="font-size: 10px;">Closure</a> <a href="/tags/Cloud/" style="font-size: 10px;">Cloud</a> <a href="/tags/Cocoa/" style="font-size: 10px;">Cocoa</a> <a href="/tags/Connected-Components/" style="font-size: 10px;">Connected Components</a> <a href="/tags/Data-structure/" style="font-size: 10px;">Data structure</a> <a href="/tags/Designing-Data-Intensive-Applications/" style="font-size: 10px;">Designing Data-Intensive Applications</a> <a href="/tags/Designing-Paradigm/" style="font-size: 10px;">Designing Paradigm</a> <a href="/tags/Distributed-System/" style="font-size: 12.5px;">Distributed System</a> <a href="/tags/Docker/" style="font-size: 10px;">Docker</a> <a href="/tags/Dokku/" style="font-size: 10px;">Dokku</a> <a href="/tags/EMR/" style="font-size: 10px;">EMR</a> <a href="/tags/ES6/" style="font-size: 10px;">ES6</a> <a href="/tags/ETL/" style="font-size: 10px;">ETL</a> <a href="/tags/Flink/" style="font-size: 10px;">Flink</a> <a href="/tags/Functional-Programing/" style="font-size: 10px;">Functional Programing</a> <a href="/tags/Functional-Programming/" style="font-size: 10px;">Functional Programming</a> <a href="/tags/GLSL/" style="font-size: 10px;">GLSL</a> <a href="/tags/GSoC/" style="font-size: 10px;">GSoC</a> <a href="/tags/Git/" style="font-size: 10px;">Git</a> <a href="/tags/Go/" style="font-size: 12.5px;">Go</a> <a href="/tags/Golang/" style="font-size: 17.5px;">Golang</a> <a href="/tags/Google/" style="font-size: 10px;">Google</a> <a href="/tags/Gourmet/" style="font-size: 10px;">Gourmet</a> <a href="/tags/Graph-Computing/" style="font-size: 10px;">Graph Computing</a> <a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Immutable/" style="font-size: 10px;">Immutable</a> <a href="/tags/Incremental-SQL/" style="font-size: 10px;">Incremental SQL</a> <a href="/tags/Intel/" style="font-size: 10px;">Intel</a> <a href="/tags/Interface-Builder/" style="font-size: 10px;">Interface Builder</a> <a href="/tags/IoT/" style="font-size: 10px;">IoT</a> <a href="/tags/Japan/" style="font-size: 10px;">Japan</a> <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Kylin/" style="font-size: 10px;">Kylin</a> <a href="/tags/Kyoto/" style="font-size: 10px;">Kyoto</a> <a href="/tags/Lazy-Evaluation/" style="font-size: 10px;">Lazy Evaluation</a> <a href="/tags/Linux/" style="font-size: 10px;">Linux</a> <a href="/tags/Log-Structured-Merge-Tree/" style="font-size: 10px;">Log-Structured Merge Tree</a> <a href="/tags/Materialized-View/" style="font-size: 10px;">Materialized View</a> <a href="/tags/NSControl/" style="font-size: 12.5px;">NSControl</a> <a href="/tags/NUC/" style="font-size: 10px;">NUC</a> <a href="/tags/NVM/" style="font-size: 10px;">NVM</a> <a href="/tags/OSX/" style="font-size: 15px;">OSX</a> <a href="/tags/Objective-C/" style="font-size: 12.5px;">Objective-C</a> <a href="/tags/Optimization/" style="font-size: 10px;">Optimization</a> <a href="/tags/Osaka/" style="font-size: 10px;">Osaka</a> <a href="/tags/PageRank/" style="font-size: 10px;">PageRank</a> <a href="/tags/Persistent-Memory/" style="font-size: 10px;">Persistent Memory</a> <a href="/tags/Pregel/" style="font-size: 10px;">Pregel</a> <a href="/tags/React/" style="font-size: 10px;">React</a> <a href="/tags/SQL/" style="font-size: 12.5px;">SQL</a> <a href="/tags/SVG/" style="font-size: 10px;">SVG</a> <a href="/tags/Scala/" style="font-size: 10px;">Scala</a> <a href="/tags/Scheduler/" style="font-size: 12.5px;">Scheduler</a> <a href="/tags/Splunk/" style="font-size: 10px;">Splunk</a> <a href="/tags/Stream-SQL/" style="font-size: 10px;">Stream SQL</a> <a href="/tags/Summary/" style="font-size: 10px;">Summary</a> <a href="/tags/Swift/" style="font-size: 10px;">Swift</a> <a href="/tags/Three-js/" style="font-size: 10px;">Three.js</a> <a href="/tags/Tokyo/" style="font-size: 10px;">Tokyo</a> <a href="/tags/Transmission/" style="font-size: 10px;">Transmission</a> <a href="/tags/Travel/" style="font-size: 10px;">Travel</a> <a href="/tags/Ubuntu/" style="font-size: 10px;">Ubuntu</a> <a href="/tags/User-Tracking/" style="font-size: 10px;">User Tracking</a> <a href="/tags/Volcano/" style="font-size: 10px;">Volcano</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/Y-Combinator/" style="font-size: 10px;">Y-Combinator</a> <a href="/tags/accelerate-meter/" style="font-size: 10px;">accelerate meter</a> <a href="/tags/allocator/" style="font-size: 10px;">allocator</a> <a href="/tags/bezier-path/" style="font-size: 12.5px;">bezier path</a> <a href="/tags/blender/" style="font-size: 12.5px;">blender</a> <a href="/tags/borg/" style="font-size: 10px;">borg</a> <a href="/tags/city/" style="font-size: 10px;">city</a> <a href="/tags/cli/" style="font-size: 10px;">cli</a> <a href="/tags/cocoa/" style="font-size: 15px;">cocoa</a> <a href="/tags/compiler/" style="font-size: 10px;">compiler</a> <a href="/tags/completion/" style="font-size: 10px;">completion</a> <a href="/tags/contenteditable/" style="font-size: 10px;">contenteditable</a> <a href="/tags/database/" style="font-size: 12.5px;">database</a> <a href="/tags/design/" style="font-size: 10px;">design</a> <a href="/tags/desktop/" style="font-size: 10px;">desktop</a> <a href="/tags/develop/" style="font-size: 10px;">develop</a> <a href="/tags/device-motion/" style="font-size: 10px;">device motion</a> <a href="/tags/distribute-storage/" style="font-size: 10px;">distribute storage</a> <a href="/tags/distributed-system/" style="font-size: 10px;">distributed system</a> <a href="/tags/diumoo/" style="font-size: 10px;">diumoo</a> <a href="/tags/douban/" style="font-size: 10px;">douban</a> <a href="/tags/drawing/" style="font-size: 17.5px;">drawing</a> <a href="/tags/editor/" style="font-size: 10px;">editor</a> <a href="/tags/essay/" style="font-size: 17.5px;">essay</a> <a href="/tags/export/" style="font-size: 10px;">export</a> <a href="/tags/filesystem/" style="font-size: 10px;">filesystem</a> <a href="/tags/font/" style="font-size: 12.5px;">font</a> <a href="/tags/fontawesome/" style="font-size: 10px;">fontawesome</a> <a href="/tags/fp/" style="font-size: 17.5px;">fp</a> <a href="/tags/functional-programming/" style="font-size: 20px;">functional programming</a> <a href="/tags/github/" style="font-size: 10px;">github</a> <a href="/tags/go/" style="font-size: 20px;">go</a> <a href="/tags/golang/" style="font-size: 12.5px;">golang</a> <a href="/tags/hamt/" style="font-size: 10px;">hamt</a> <a href="/tags/hashmap/" style="font-size: 10px;">hashmap</a> <a href="/tags/html/" style="font-size: 10px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/iOS/" style="font-size: 10px;">iOS</a> <a href="/tags/iOS-8/" style="font-size: 10px;">iOS 8</a> <a href="/tags/iPad/" style="font-size: 15px;">iPad</a> <a href="/tags/icon/" style="font-size: 10px;">icon</a> <a href="/tags/icon-font/" style="font-size: 12.5px;">icon font</a> <a href="/tags/icon-fontr/" style="font-size: 10px;">icon fontr</a> <a href="/tags/iconfontr/" style="font-size: 15px;">iconfontr</a> <a href="/tags/image/" style="font-size: 10px;">image</a> <a href="/tags/immutable/" style="font-size: 17.5px;">immutable</a> <a href="/tags/indexing/" style="font-size: 10px;">indexing</a> <a href="/tags/io-meter/" style="font-size: 10px;">io-meter</a> <a href="/tags/ionicons/" style="font-size: 10px;">ionicons</a> <a href="/tags/kubernetes/" style="font-size: 10px;">kubernetes</a> <a href="/tags/kv/" style="font-size: 10px;">kv</a> <a href="/tags/life/" style="font-size: 17.5px;">life</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/mac/" style="font-size: 10px;">mac</a> <a href="/tags/math/" style="font-size: 10px;">math</a> <a href="/tags/memory/" style="font-size: 10px;">memory</a> <a href="/tags/mobile/" style="font-size: 10px;">mobile</a> <a href="/tags/music/" style="font-size: 10px;">music</a> <a href="/tags/olap/" style="font-size: 10px;">olap</a> <a href="/tags/online-editor/" style="font-size: 10px;">online editor</a> <a href="/tags/open-source/" style="font-size: 10px;">open source</a> <a href="/tags/opensource/" style="font-size: 10px;">opensource</a> <a href="/tags/os/" style="font-size: 10px;">os</a> <a href="/tags/osx/" style="font-size: 15px;">osx</a> <a href="/tags/package/" style="font-size: 10px;">package</a> <a href="/tags/paper/" style="font-size: 12.5px;">paper</a> <a href="/tags/pencil/" style="font-size: 10px;">pencil</a> <a href="/tags/persist-datastructure/" style="font-size: 17.5px;">persist datastructure</a> <a href="/tags/programing/" style="font-size: 10px;">programing</a> <a href="/tags/programming/" style="font-size: 10px;">programming</a> <a href="/tags/rendering/" style="font-size: 10px;">rendering</a> <a href="/tags/review/" style="font-size: 10px;">review</a> <a href="/tags/rpc/" style="font-size: 10px;">rpc</a> <a href="/tags/scala/" style="font-size: 10px;">scala</a> <a href="/tags/schedule/" style="font-size: 10px;">schedule</a> <a href="/tags/selection/" style="font-size: 10px;">selection</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/shader/" style="font-size: 10px;">shader</a> <a href="/tags/sketch/" style="font-size: 10px;">sketch</a> <a href="/tags/sql/" style="font-size: 10px;">sql</a> <a href="/tags/stylus/" style="font-size: 10px;">stylus</a> <a href="/tags/summary/" style="font-size: 12.5px;">summary</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/swift/" style="font-size: 10px;">swift</a> <a href="/tags/taiwan/" style="font-size: 12.5px;">taiwan</a> <a href="/tags/tips/" style="font-size: 10px;">tips</a> <a href="/tags/travel/" style="font-size: 12.5px;">travel</a> <a href="/tags/utility/" style="font-size: 10px;">utility</a> <a href="/tags/vector-trie/" style="font-size: 12.5px;">vector trie</a> <a href="/tags/watch/" style="font-size: 10px;">watch</a> <a href="/tags/web/" style="font-size: 17.5px;">web</a> <a href="/tags/webGL/" style="font-size: 12.5px;">webGL</a> <a href="/tags/webgl/" style="font-size: 10px;">webgl</a> <a href="/tags/wu/" style="font-size: 10px;">wu</a> <a href="/tags/xcode/" style="font-size: 10px;">xcode</a> <a href="/tags/zocial/" style="font-size: 10px;">zocial</a> <a href="/tags/%E5%90%90%E6%A7%BD/" style="font-size: 10px;">吐槽</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2020 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"], linebreaks: { automatic:true }, EqnChunk: (MathJax.Hub.Browser.isMobile ? 10 : 50) },
+        tex2jax: { inlineMath: [ ["$", "$"], ["\\(","\\)"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno",skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']},
+        TeX: {  noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } }, Macros: { href: "{}" } },
+        messageStyle: "none"
+    }); 
+</script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+
+</body>
+
+</html>

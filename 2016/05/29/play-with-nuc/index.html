@@ -1,0 +1,421 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>Play with Intel NUC | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="话说最近入手了一台 Intel NUC 用来做下载机，买回来之后为了更加充分的利用这台小主机的性能，那么呢，我就做了三件小事：
+第一件事就是给 NUC 装上了 Ubuntu 14.04 系统，并配置了 Docker 和 Dokku 的环境；第二件事呢，部署了 Transmission 下载服务和NFS；
+第三件事，就是给 NUC 安装了 Splunk 做 Monitor。如果说还有什么其他事情的话，
+那就是写了这篇博客，供大家娱乐娱乐，这也是很大的，但是关键还是前面那三件小事儿。很惭愧，只做了一点微小的工作。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="Play with Intel NUC"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content=""/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a target="_blank" rel="noopener" href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2016/05/29/play-with-nuc/" target="_blank">Play with Intel NUC</a></h1>
+
+
+      
+        <time datetime="2016-05-29T04:50:22.000Z">2016-05-29</time>
+      
+    </header>
+    <div class="entry">
+      <p>话说最近入手了一台 Intel NUC 用来做下载机，买回来之后为了更加充分的利用这台小主机的性能，那么呢，我就做了三件小事：
+第一件事就是给 NUC 装上了 Ubuntu 14.04 系统，并配置了 Docker 和 Dokku 的环境；第二件事呢，部署了 Transmission 下载服务和NFS；
+第三件事，就是给 NUC 安装了 Splunk 做 Monitor。如果说还有什么其他事情的话，
+那就是写了这篇博客，供大家娱乐娱乐，这也是很大的，但是关键还是前面那三件小事儿。很惭愧，只做了一点微小的工作。</p>
+<a id="more"></a>
+<h1 id="Intel_NUC__u7B80_u4ECB"><a href="#Intel_NUC__u7B80_u4ECB" class="headerlink" title="Intel NUC 简介"></a>Intel NUC 简介</h1><p>所谓的 <a href="http://www.intel.com/content/www/us/en/nuc/overview.html" target="_blank" rel="noopener">Intel NUC</a>，
+指的就是下图当中由 Intel 原厂提供的小主机。NUC 迄今为止已经出到第六代了,
+其配置从低端的 i3 版本到高端的 i7 版本都有。Intel NUC 原装配置是不含内存和硬盘的，但是一般的淘宝店家都会提供套餐。
+最新的 6 代 NUC 分为薄厚两种，厚版除了一块插在主板上的 SSD 外，还可以另配一块笔记本硬盘或 SSD。
+尽管无论哪个版本的 NUC，其 CPU 等都是配置的笔记本级别的低电压硬件，不能和台式机相比。
+但是作为 x86 架构的微型主机，NUC 的性能还是相当令人满意的。除了可以流畅运行包括 Windows 在内的各种操作系统，
+最新的第六代还可以支持 4K 视频显示。</p>
+<p><img src="/img/posts/intel-nuc.png" alt="Intel NUC"></p>
+<p>要说我买 Intel NUC 这件事，那可以说也是历史的行程。之前在学校的时候，我一直使用实验室的主机做下载机，
+现在毕业了，原来的主机自然不好继续使用，但是我还是有固定的下载需求的。如果能在内网做部署一台下载机，
+我就可以让它离线挂机下载，下载到的视频文件还是直接在线串流播放，避免了再下载到笔记本上的繁琐操作。</p>
+<p>单就下载这个功能来说，其实并不需要太好的性能。现在有的路由器和开发版都可以处理得了。
+在我面前的选择主要是树莓派、Intel NUC 和 Gen 8 三种。这里要提一下 HP 的 Gen 8，它是专门开发来家用的 NAS，
+可以说最为符合我的需求。Gen 8 具有良好的扩展性，可以挂载多块大容量硬盘，CPU 也可以更换。
+最终选择 NUC 的原因在于，它相对于 ARM 架构的树莓派更加具有适用性，性能也比较强。而 Gen 8 原装的 CPU
+略微不能满足的需求，升级 CPU 的成本也比较高。NUC 还有一个优点是内置硬件和接口非常齐全，视频上支持 HDMI 和 DP 两种接口，
+自带千兆以太网卡、蓝牙和 WIFI，除此之外还有红外接口等。</p>
+<p>在综合以上这些考虑之后，我就念了两句诗，最终购买了配备 i3 CPU 的 NUC6i3SYH 版本。淘宝套餐当中还包括 8G 内存、
+128G SSD 和遥控器。这样以后如果有屏幕或电视的话，NUC 也可以用来做家用的媒体中心。</p>
+<h1 id="u5B89_u88C5_Ubuntu_14-04__u548C_Dokku"><a href="#u5B89_u88C5_Ubuntu_14-04__u548C_Dokku" class="headerlink" title="安装 Ubuntu 14.04 和 Dokku"></a>安装 Ubuntu 14.04 和 Dokku</h1><p>Ubuntu 14.04 并不是 NUC 的首选。事实上，Intel 官方的 Linux 显卡驱动只兼容到 15.10 ，
+这导致在 14.04 下的显示性能会比较差。当时我最终还是选用它的原因在于而我希望部署的 Dokku
+目前仍然被 Lock 在作为 LTS 版本的 14.04 上。</p>
+<p>为什么一定要考虑 <a href="https://github.com/dokku/dokku" target="_blank" rel="noopener">Dokku</a> 呢？Dokku 是一个极精简的 PaaS 平台，它可以在你的 VPS 和主机上模拟 Heroku
+那样的使用体验——只需要将你写好的代码仓库 push 到主机上，Dokku 就会替你完成一系列部署工作，
+将你的 Web 服务运行在一个 Docker container 当中并配置好 Nginx，这使得你可以方便地自定义域名。
+再加上 Dokku 提供一系列方便的插件用来管理各种 Service ，比如各种关系型数据库、NoSQL、memcached 等等，
+这些服务都是跑在各自的 Docker 容器内，具有很好的隔离性。Dokku 甚至有一个插件帮你加入和配置 <a href="https://letsencrypt.org/" target="_blank" rel="noopener">Let’s Encrypt</a> 证书。
+这一系列方便的特性使得想要充分利用 NUC 性能部署更多服务的我来说是具有极大吸引力的。</p>
+<p>NUC 到货的时候系统是预装的 Windows，想要在没有屏幕的情况下换装成 Ubuntu 还是花费了我一些心思。
+后来还遇到 NUC 在家里的 WIFI 环境中丢包严重的问题，总之颇费了一些周折。在系统准备好了之后，
+就正式开始 Dokku 的安装过程了。</p>
+<p>在一般情况下，我们只需要在终端当中执行下述命令就可以成功安装 Dokku 了。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">wget https://raw.githubusercontent.com/dokku/dokku/v0.5.7/bootstrap.sh</span><br><span class="line">sudo DOKKU_TAG=v0.5.7 bash bootstrap.sh</span><br></pre></td></tr></table></figure>
+<p>这一命令会依次完成检查环境、安装必备依赖安装并设置 Dokku 的工作。然而这一招在国内的网络上并不好使，
+究其原因，还是因为部分资源收到了 GFW 的干扰，导致安装缓慢以至于无法安装。如果有条件的话，建议先配置好代理或 VPN
+等翻墙方案再安装。除此之外，我在安装的最后一步还遇到了 <code>gnu_utils</code> 爆出的 HTTPS 认证错误。
+导致依赖安装完成之后无法继续。这一方面可能是国内网络的原因，另一方面可能跟 Dokku 使用的一个第三方镜像源托管站
+<a href="https://packagecloud.io" target="_blank" rel="noopener">Package Cloud</a> 自身的问题有关。解决这一问题的方法是我们先手动把缺失的最后几个包使用 Wget
+工具下载下来，再使用 <code>dpkg</code> 命令手动安装。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">wget https://packagecloud.io/dokku/dokku/packages/ubuntu/trusty/gliderlabs-sigil_0.4.0_amd64.deb</span><br><span class="line">wget https://packagecloud.io/dokku/dokku/packages/ubuntu/trusty/sshcommand_0.4.0_amd64.deb</span><br><span class="line">wget https://packagecloud.io/dokku/dokku/packages/ubuntu/trusty/sigil_0.4.0_amd64.deb</span><br><span class="line">wget https://packagecloud.io/dokku/dokku/packages/ubuntu/trusty/dokku_0.5.7_amd64.deb</span><br><span class="line">wget https://packagecloud.io/dokku/dokku/packages/ubuntu/trusty/herokuish_0.3.13_amd64.deb</span><br><span class="line"></span><br><span class="line">dpkg -i gliderlabs-sigil_0.4.0_amd64.deb sshcommand_0.4.0_amd64.deb sigil_0.4.0_amd64.deb dokku_0.5.7_amd64.deb herokuish_0.3.13_amd64.deb</span><br></pre></td></tr></table></figure>
+<p>注意，在这里最好将 <code>herokuish</code> 这个包最后一个安装，这个包实际上是 Dokku 整个功能的核心，它会给 Docker import
+一个叫做 <a href="https://github.com/gliderlabs/herokuish" target="_blank" rel="noopener">Herokuish</a> 的镜像，这个镜像则是另一个类似 PaaS 工具 <a href="https://deis.io/" target="_blank" rel="noopener">Deis</a> 提供的。
+由于众所周知的原因，从 DockerHub 当中导入镜像的速度十分缓慢，因此在这一步很容易出错。建议一定要使用 Tmux 或 Screen
+这样的工具保证进程可以在后台执行。在 <code>heorkuish</code> 安装的最后一步会在对应的 Docker Image 之中执行 <code>herokuish install</code>
+命令，这一过程很遗憾也是会因为网络原因失败的。如果你使用的是代理方式翻墙，此时在 Docker 
+当中运行的命令可能无法获得你的代理配置，因此在这一步最好在 VPN 环境下进行操作，或者直接使用下面的命令进入 Docker
+容器手动执行。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">docker run -it gliderlabs/herokuish /bin/bash</span><br><span class="line"></span><br><span class="line"># Now in docker environment</span><br><span class="line">export http_proxy=[your proxy config]</span><br><span class="line">export https_proxy=$http_proxy</span><br><span class="line"></span><br><span class="line">herokuish install</span><br><span class="line">ln /bin/herokuish /start</span><br><span class="line">ln /bin/herokuish /exec</span><br><span class="line">ln /bin/herokuish /build</span><br><span class="line">exit # Exit from docker</span><br><span class="line"></span><br><span class="line"># Out of Docker</span><br><span class="line">docker ps -a # Find containter id of recent changes</span><br><span class="line">docker commit [container id] gliderlabs/herokuish:latest</span><br></pre></td></tr></table></figure>
+<p>这样，我们就完成了基本的设置。最后，我们只需要在主机上执行下述命令就可以完成 Dokku 的初始化设置，
+在这一步当中，Dokku 将会自动为系统添加一个名叫 dokku 的新用户，并提供一些交互式的选项以供选择。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">dokku plugins-install-dependencies</span><br></pre></td></tr></table></figure>
+<p>Dokku 的实现原理是什么呢？其实 Dokku 本身只是一系列脚本和插件组成的插件集合，这些脚本的做用是方便用户管理和修改配置。
+模拟 Heroku 的工作主要是 Herokuish 提供的，这个包会模仿 Heroku 的行为来检查你所要部署的代码类型、
+自动安装依赖并 build 成 Docker Images。这一工具提供的功能几乎和 Heroku 完全一样，甚至大多数为 Heroku 编写的 buildpack
+都可以无缝拿来使用。唯一的区别是 Dokku 使用 Docker 作为容器而 Heroku 则实用的是自己开发的容器系统。</p>
+<p><code>sshcommand</code> 也是一个重要的命令，当你使用 <code>git push</code> 将代码 Push 到 Dokku 这里时，Dokku 需要使用你的 Public Key
+来验证你的身份。在这一步当中，使用平常使用 Public Key 登录的方法将 <code>id_rsa.pub</code> 的内容加到 <code>.ssh/authorized_keys</code>
+里是不管用的——<code>git</code>使用不同的方法来验证。因此需要使用 sshcommand 来添加公钥。例如:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cat .ssh/id_rsa.pub|sudo sshcommand acl-add dokku chase@chase-nuc</span><br></pre></td></tr></table></figure>
+<p>只需要将你的 <code>id_rsa.pub</code> 的内容作为 <code>sshcommand</code> 的标准输入即可，这一步可以通过 <code>ssh</code> 来做，
+从而也可以把本地机器的公钥加入。</p>
+<p>接下来就可以像使用 Heroku 那样使用 Dokku 了，更详细的 Deploy 教程可以查看 Dokku
+的<a href="http://dokku.viewdocs.io/dokku~v0.5.7/application-deployment/" target="_blank" rel="noopener">官方文档</a>。</p>
+<h1 id="Transmission__26amp_3B_NFS"><a href="#Transmission__26amp_3B_NFS" class="headerlink" title="Transmission &amp; NFS"></a>Transmission &amp; NFS</h1><p>配置完 Dokku，要做的第一件事当然就是将 Transmission 部署进去了。<a href="https://www.transmissionbt.com" target="_blank" rel="noopener">Transmission</a>
+是一款知名的 BT 客户端，他的主要特点就是提供了 Web 访问接口，从而很适合用来安装在下载机上进行远程控制。
+把 Transmission 部署在 Docker 里其实不算是罕见的需求了，Github 上已经有一批现成的 Dockerfile。
+参考其中两个，我修改出来一个适合部署在 Dokku 中的版本。因为 Dokku 实际上是允许使用 Dockerfile 进行 Build，
+所以要注意的问题主要只有一下几点：</p>
+<ol>
+<li>Transmission 默认需要开放 <code>51413</code> 端口的 TCP 和 UDP 访问作为 Peer 连入的端口，但是如果直接在 Dockerfile
+里 EXPOSE 出来，Dokku 会自动使用 Nginx 为这些端口设置代理，而 Nginx 是不支持 UDP 代理的，
+所以我们并不在 Dockerfile 中指定 Expose 端口</li>
+<li>Dokku 会自动为 Build 出来的 Docker Image 添加一个 <code>PORT</code> 环境变量，默认会使用 Nginx 将对应域名的 <code>80</code>
+端口 Proxy 到 Docker 容器的这个端口，因此我们希望将 Transmission 的 Web Interface 暴露到这里</li>
+<li>很自然地，我们需要为 Transmission 所在的 Docker 容器挂载一些外部文件系统。
+其中下载目的位置希望能够映射到主机的固定位置。但是 Dockerfile 本身并不支持直接指定主机挂载的目录。</li>
+<li>Dokku 的 zero down time deploy 功能会在重新部署的时候检查新的容器是否启动成功，
+只有在启动成功之后才会关闭老的容器。这一功能在部署一般的 Web 服务时非常方便，
+但是在部署 Transmission 时，由于 Docker 会绑定 PEERPORT，因此会导致新的进程无法启动成功。
+因此需要 disable 这个功能，同样在每次部署之前也要手动 Shutdown 老的容器。</li>
+</ol>
+<p>为了解决这些问题，最后只能手动地完成一些设置工作。我将修改好的 Dockerfile 和运行脚本放在了 GitHub 上的
+<a href="https://github.com/shanzi/dokku-transmission" target="_blank" rel="noopener">dokku-transmission</a> 仓库上了。如果要使用它，只需要先 clone 下来，
+然后在 Dokku 所在机器上执行下述命令新建 App :</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker apps:create [your_app_name]</span><br></pre></td></tr></table></figure>
+<p>预先为 App 设置一些环境变量，譬如 Web Interface 的用户名和密码等:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">docker config:set [your_app_name] USERNAME=[username] PASSWORD=[password] PEERPORT=51413</span><br></pre></td></tr></table></figure>
+<p>在之后，最重要的一步就是使用 Dokku 为运行 App 添加一些 Docker Options，这些 Docker Options
+将会在 Dokku 每次启动 Docker 容器时追加作为参数，因此我们可以在这里指定主机相关的设置:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">export $PEERPORT=51413</span><br><span class="line">dokku docker-options:add [your_app_name] deploy,run &quot;-v [PATH_ON_HOST_MACHINE]:/root/Downloads -p $PEERPORT/udp -p $PEERPORT/tcp&quot;</span><br></pre></td></tr></table></figure>
+<p>我们可以用如下命令禁用掉 Dokku 对我们的 Transmission app 进行 zero down time 检查:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">dokku checks:disable [your_app_name]</span><br></pre></td></tr></table></figure>
+<p>最后，只需将仓库 Push 到 Dokku 这里，Transmission 进程就可以跑起来了。</p>
+<p>尽管使用上麻烦一点，但是好在我们并不需要频繁地更新我们的 App。Dokku
+会帮我们做好进程的守护工作——在应用挂掉或者系统启动时都会自动帮我们启动进程。</p>
+<p>下图就是 Transmission Web Interface 部署成功后的样子了，终于可以开心的下载 BT 资源了！</p>
+<p><img src="/img/posts/transmission.png" alt="Transmission Web"></p>
+<p>把东西下载到了 NUC 上，还要想办法把这些东西通过网络暴露出来访问。除了传统的 HTTP server
+和 FTP 等方法，我选择了使用 NFS。这样在其他机器上就可以将 NUC 上对应的文件夹通过网络挂载起来了。</p>
+<p>安装 NFS 的方法，来自 Digital Ocean 的<a href="https://www.digitalocean.com/community/tutorials/how-to-set-up-an-nfs-mount-on-ubuntu-14-04" target="_blank" rel="noopener">这篇文章</a>
+讲的很好了。简单来说我们只需要通过 <code>sudo apt-get install nfs-kernel-server</code> 命令来安装 NFS Server，
+之后再在 <code>/etc/exports</code> 文件中配置目录设定即可。需要注意的是，如果想要 Mac 可以挂载 NUC 暴露出来的 NFS，
+必须要添加 <code>insecure</code> 选项，否则会连接失败(尽管可以通过在终端中输入命令成功挂载)。我的配置文件内容如下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/var/nfs 192.168.0.0/24(rw,sync,no_subtree_check,insecure)</span><br></pre></td></tr></table></figure>
+<p>接下来就可以在 Mac 上通过 Finder 的 Go &gt; Connect to Server 功能直接挂载 NFS 了。</p>
+<p><img src="/img/posts/nfs.png" alt="NFS"></p>
+<p>顺便说一下，NFS 除了这种使用，还可以代替传统的 Volume 挂载方法，作为向 Docker 容器提供储存的一种解决方案。
+此外，大规模分布式使用中，还有 <a href="https://github.com/ClusterHQ/flocker" target="_blank" rel="noopener">Flocker</a> 这种工具。
+不过杀鸡焉用牛刀，在 NUC 上我就选择了简单直接的解决方案。</p>
+<h1 id="Splunk_for_Monitor"><a href="#Splunk_for_Monitor" class="headerlink" title="Splunk for Monitor"></a>Splunk for Monitor</h1><p>利益相关，这里就稍微介绍一下 <a href="http://splunk.com" target="_blank" rel="noopener">Splunk</a> 吧。一般原始的方式处理 Log 当中的数据，我们都是直接写出简单的脚本来扫描 Log
+文件进行处理。这种方法对于偶尔的需求还是可以处理的，但是一来需要做很多重复操作，二来不适合数据量大以及分布式的应用。
+传统的脚本处理方法也并不怎么用户友好。那么一种同时面向技术和非技术类用户的产品就应运而生。
+这样的工具完成了以下几个工作:</p>
+<ol>
+<li>Log 的收集: 从单机或分布式节点当中收集 Log 数据，发送到处理节点</li>
+<li>Log 的索引: 对收集到的 Log 数据建立索引，方便日后查询</li>
+<li>Log 的分析: 允许使用一定的接口从索引当中检索结果和数据并拿来可视化</li>
+</ol>
+<p>Splunk 是目前较为成熟的企业 Log 数据处理工具。与之相似的比较成熟的解决方案就是 <a href="https://www.elastic.co/products" target="_blank" rel="noopener">ELK</a> 了。
+ELK 分别代表 Elasticsearch、Logstash 和 Kibana，这三个组件分别完成了索引、Log 收集和可视化三部分的工作，
+是目前炙手可热的开源解决方案。互联网企业很多都选择了这种开源的技术，可以说对 Splunk 的产品造成了很大的威胁。</p>
+<p>回到 Splunk，尽管它的免费版本一天只能处理 500M 的数据量，但对于 NUC 上的使用已经足够了。Splunk 作为企业应用，
+总体来说使用体验和部署的友好程度还是不错的。从<a href="https://www.splunk.com/en_us/download/splunk-enterprise.html" target="_blank" rel="noopener">这里</a>
+下载 Splunk 对应 Linux 的安装包，安装或解压到 <code>/opt/splunk</code> 即可。安装结束之后我们需要第一次运行一下
+<code>/opt/splunk/bin/splunk</code> 程序， 这一步 Splunk 会要求我们接受 License 等，我们用下面一条命令全部跳过:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/opt/splunk/bin/splunk enable boot-start --accept-license --answer-yes --no-prompt</span><br></pre></td></tr></table></figure>
+<p>这一步同时也会安装一些 <code>init</code> 脚本到系统当中，Splunk 服务此时就已经安装成功了，我们可以使用下述命令启动它:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">service splunk start</span><br></pre></td></tr></table></figure>
+<p>Splunk 进行可视化的原理是什么呢？其实它定义了一门叫 SPL 的语言专门用来进行查询，查询的结果都可以以表格的形式显示出来。
+而 Splunk 的可视化图表也可以以 SPL 的搜索结果作为输入，因此就可以以一种流水管线的形式将数据送入可视化组件进行表示。
+Splunk 还支持 Realtime 的数据展示，这正是我们所需要的。</p>
+<p>我的计划是将 Splunk 作为系统的 Monitor。让他可以显示当前 CPU、内存和硬盘等的使用情况。原理很简单，
+既然 Splunk 是一个 Log 处理工具，那我们以一定的时间间隔将 CPU 占用、内存占用等情况以 Log 的形式打印出来，
+这样 Splunk 不久可以处理了么？事实上 Splunk 官方就有一个 <a href="https://splunkbase.splunk.com/app/273/" target="_blank" rel="noopener">Splunk App for *NIX</a>
+为我们提供了一个(很丑的) Web 界面来配置这些东西。值得注意的是，在使用之前必须通过 <code>sudo apt-get install sysstat</code>
+安装必须的命令。</p>
+<p>下图展示了使用 SPL 进行检索的示意图，使用 Log 检索工具，我们就不用每次编写脚本来查询我们在 Log 当中感兴趣的点，
+更可以瞬间就得到统计以及变换后的结果并将结果输入到可视化模块进行可视化。Splunk 以及 SPL 的使用是一个大主题，
+而且考虑到写的越来越像软文了，我还是就此打住吧。</p>
+<p><img src="/img/posts/spl-search.png" alt="SPL Search"></p>
+<p>将每种类型的数据输出成可视化图表之后还可以将其作为 Dashboard 的一个 Panel 保存下来，
+这样每次访问的时候就可以从主页上看到一个概览了。除了系统的各项指标，我还配置了 Nginx 的访问次数统计和
+ssh 次数的每日热度图。最终结果如下:</p>
+<p><img src="/img/posts/splunk-dashboard.png" alt="Splunk Dashboard"></p>
+<p>最后我还将 Splunk 配置在了 Nginx 之后使用 VHOST 访问，由于 Splunk 默认是在 <code>0.0.0.0</code> 上绑定自己的 Web
+服务的，因此外界还可以直接访问，这是我不希望的。因此通过修改 <code>/opt/splunk/etc/system/local/web.conf</code>
+配置，填入一下内容就可以改变 Splunk Web 服务绑定的 Host 地址了。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[settings]</span><br><span class="line">enableSplunkWebSSL = 0</span><br><span class="line">server.socket_host = 127.0.0.1</span><br></pre></td></tr></table></figure>
+<h1 id="u603B_u7ED3"><a href="#u603B_u7ED3" class="headerlink" title="总结"></a>总结</h1><p>我的 Intel NUC 买回来两周，终于有时间好好把玩一下了。目前部署的服务对机器性能的利用率仍然很低，
+未来还要好好想想有什么有趣的应用才行。总体看来，Intel x86 架构的 Mini PC 虽然价格较贵，
+但是从性能和适用性上来讲还是比 ARM 开发版和路由器等更强一点，简单来说就是像我这样不怎么有时间折腾的人的选择。
+当然诸如树莓派这种开发板添置各种有趣的传感器更为方便，很适合作为 Internet of Things 的一个处理节点，
+以后如果有时间也应该研究一下。</p>
+
+    </div>
+    <footer>
+        
+        
+  
+  <div class="tags">
+    <a href="/tags/NUC/">NUC</a>, <a href="/tags/Linux/">Linux</a>, <a href="/tags/Docker/">Docker</a>, <a href="/tags/Dokku/">Dokku</a>, <a href="/tags/Splunk/">Splunk</a>, <a href="/tags/Ubuntu/">Ubuntu</a>, <a href="/tags/Intel/">Intel</a>, <a href="/tags/IoT/">IoT</a>, <a href="/tags/Transmission/">Transmission</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2020/12/12/nvm-store/">Nvm Store: 第二届阿里数据库大赛参赛记录</a>
+      </li>
+    
+      <li>
+        <a href="/2020/02/24/how-to-architect-a-query-compiler/">SIGMOD 16 | How to Architect a Query Compiler</a>
+      </li>
+    
+      <li>
+        <a href="/2020/01/04/olap-distributed/">OLAP 任务的并发执行与调度</a>
+      </li>
+    
+      <li>
+        <a href="/2019/03/16/streaming-incremental-sql-execution/">Stream SQL 的执行原理与 Flink 的实现</a>
+      </li>
+    
+      <li>
+        <a href="/2018/11/01/sql-query-optimization-volcano/">SQL 查询优化原理与 Volcano Optimizer 介绍</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a target="_blank" rel="noopener" href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Functional-Go/">Functional Go</a><small>4</small></li>
+  
+    <li><a href="/categories/Mastering-Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>9</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/AWS/" style="font-size: 10px;">AWS</a> <a href="/tags/Algorithm/" style="font-size: 17.5px;">Algorithm</a> <a href="/tags/Apache-Flink/" style="font-size: 10px;">Apache Flink</a> <a href="/tags/Apple/" style="font-size: 10px;">Apple</a> <a href="/tags/Bezier-Path/" style="font-size: 10px;">Bezier Path</a> <a href="/tags/Big-Data/" style="font-size: 12.5px;">Big Data</a> <a href="/tags/Cascades/" style="font-size: 10px;">Cascades</a> <a href="/tags/Closure/" style="font-size: 10px;">Closure</a> <a href="/tags/Cloud/" style="font-size: 10px;">Cloud</a> <a href="/tags/Cocoa/" style="font-size: 10px;">Cocoa</a> <a href="/tags/Connected-Components/" style="font-size: 10px;">Connected Components</a> <a href="/tags/Data-structure/" style="font-size: 10px;">Data structure</a> <a href="/tags/Designing-Data-Intensive-Applications/" style="font-size: 10px;">Designing Data-Intensive Applications</a> <a href="/tags/Designing-Paradigm/" style="font-size: 10px;">Designing Paradigm</a> <a href="/tags/Distributed-System/" style="font-size: 12.5px;">Distributed System</a> <a href="/tags/Docker/" style="font-size: 10px;">Docker</a> <a href="/tags/Dokku/" style="font-size: 10px;">Dokku</a> <a href="/tags/EMR/" style="font-size: 10px;">EMR</a> <a href="/tags/ES6/" style="font-size: 10px;">ES6</a> <a href="/tags/ETL/" style="font-size: 10px;">ETL</a> <a href="/tags/Flink/" style="font-size: 10px;">Flink</a> <a href="/tags/Functional-Programing/" style="font-size: 10px;">Functional Programing</a> <a href="/tags/Functional-Programming/" style="font-size: 10px;">Functional Programming</a> <a href="/tags/GLSL/" style="font-size: 10px;">GLSL</a> <a href="/tags/GSoC/" style="font-size: 10px;">GSoC</a> <a href="/tags/Git/" style="font-size: 10px;">Git</a> <a href="/tags/Go/" style="font-size: 12.5px;">Go</a> <a href="/tags/Golang/" style="font-size: 17.5px;">Golang</a> <a href="/tags/Google/" style="font-size: 10px;">Google</a> <a href="/tags/Gourmet/" style="font-size: 10px;">Gourmet</a> <a href="/tags/Graph-Computing/" style="font-size: 10px;">Graph Computing</a> <a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Immutable/" style="font-size: 10px;">Immutable</a> <a href="/tags/Incremental-SQL/" style="font-size: 10px;">Incremental SQL</a> <a href="/tags/Intel/" style="font-size: 10px;">Intel</a> <a href="/tags/Interface-Builder/" style="font-size: 10px;">Interface Builder</a> <a href="/tags/IoT/" style="font-size: 10px;">IoT</a> <a href="/tags/Japan/" style="font-size: 10px;">Japan</a> <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Kylin/" style="font-size: 10px;">Kylin</a> <a href="/tags/Kyoto/" style="font-size: 10px;">Kyoto</a> <a href="/tags/Lazy-Evaluation/" style="font-size: 10px;">Lazy Evaluation</a> <a href="/tags/Linux/" style="font-size: 10px;">Linux</a> <a href="/tags/Log-Structured-Merge-Tree/" style="font-size: 10px;">Log-Structured Merge Tree</a> <a href="/tags/Materialized-View/" style="font-size: 10px;">Materialized View</a> <a href="/tags/NSControl/" style="font-size: 12.5px;">NSControl</a> <a href="/tags/NUC/" style="font-size: 10px;">NUC</a> <a href="/tags/NVM/" style="font-size: 10px;">NVM</a> <a href="/tags/OSX/" style="font-size: 15px;">OSX</a> <a href="/tags/Objective-C/" style="font-size: 12.5px;">Objective-C</a> <a href="/tags/Optimization/" style="font-size: 10px;">Optimization</a> <a href="/tags/Osaka/" style="font-size: 10px;">Osaka</a> <a href="/tags/PageRank/" style="font-size: 10px;">PageRank</a> <a href="/tags/Persistent-Memory/" style="font-size: 10px;">Persistent Memory</a> <a href="/tags/Pregel/" style="font-size: 10px;">Pregel</a> <a href="/tags/React/" style="font-size: 10px;">React</a> <a href="/tags/SQL/" style="font-size: 12.5px;">SQL</a> <a href="/tags/SVG/" style="font-size: 10px;">SVG</a> <a href="/tags/Scala/" style="font-size: 10px;">Scala</a> <a href="/tags/Scheduler/" style="font-size: 12.5px;">Scheduler</a> <a href="/tags/Splunk/" style="font-size: 10px;">Splunk</a> <a href="/tags/Stream-SQL/" style="font-size: 10px;">Stream SQL</a> <a href="/tags/Summary/" style="font-size: 10px;">Summary</a> <a href="/tags/Swift/" style="font-size: 10px;">Swift</a> <a href="/tags/Three-js/" style="font-size: 10px;">Three.js</a> <a href="/tags/Tokyo/" style="font-size: 10px;">Tokyo</a> <a href="/tags/Transmission/" style="font-size: 10px;">Transmission</a> <a href="/tags/Travel/" style="font-size: 10px;">Travel</a> <a href="/tags/Ubuntu/" style="font-size: 10px;">Ubuntu</a> <a href="/tags/User-Tracking/" style="font-size: 10px;">User Tracking</a> <a href="/tags/Volcano/" style="font-size: 10px;">Volcano</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/Y-Combinator/" style="font-size: 10px;">Y-Combinator</a> <a href="/tags/accelerate-meter/" style="font-size: 10px;">accelerate meter</a> <a href="/tags/allocator/" style="font-size: 10px;">allocator</a> <a href="/tags/bezier-path/" style="font-size: 12.5px;">bezier path</a> <a href="/tags/blender/" style="font-size: 12.5px;">blender</a> <a href="/tags/borg/" style="font-size: 10px;">borg</a> <a href="/tags/city/" style="font-size: 10px;">city</a> <a href="/tags/cli/" style="font-size: 10px;">cli</a> <a href="/tags/cocoa/" style="font-size: 15px;">cocoa</a> <a href="/tags/compiler/" style="font-size: 10px;">compiler</a> <a href="/tags/completion/" style="font-size: 10px;">completion</a> <a href="/tags/contenteditable/" style="font-size: 10px;">contenteditable</a> <a href="/tags/database/" style="font-size: 12.5px;">database</a> <a href="/tags/design/" style="font-size: 10px;">design</a> <a href="/tags/desktop/" style="font-size: 10px;">desktop</a> <a href="/tags/develop/" style="font-size: 10px;">develop</a> <a href="/tags/device-motion/" style="font-size: 10px;">device motion</a> <a href="/tags/distribute-storage/" style="font-size: 10px;">distribute storage</a> <a href="/tags/distributed-system/" style="font-size: 10px;">distributed system</a> <a href="/tags/diumoo/" style="font-size: 10px;">diumoo</a> <a href="/tags/douban/" style="font-size: 10px;">douban</a> <a href="/tags/drawing/" style="font-size: 17.5px;">drawing</a> <a href="/tags/editor/" style="font-size: 10px;">editor</a> <a href="/tags/essay/" style="font-size: 17.5px;">essay</a> <a href="/tags/export/" style="font-size: 10px;">export</a> <a href="/tags/filesystem/" style="font-size: 10px;">filesystem</a> <a href="/tags/font/" style="font-size: 12.5px;">font</a> <a href="/tags/fontawesome/" style="font-size: 10px;">fontawesome</a> <a href="/tags/fp/" style="font-size: 17.5px;">fp</a> <a href="/tags/functional-programming/" style="font-size: 20px;">functional programming</a> <a href="/tags/github/" style="font-size: 10px;">github</a> <a href="/tags/go/" style="font-size: 20px;">go</a> <a href="/tags/golang/" style="font-size: 12.5px;">golang</a> <a href="/tags/hamt/" style="font-size: 10px;">hamt</a> <a href="/tags/hashmap/" style="font-size: 10px;">hashmap</a> <a href="/tags/html/" style="font-size: 10px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/iOS/" style="font-size: 10px;">iOS</a> <a href="/tags/iOS-8/" style="font-size: 10px;">iOS 8</a> <a href="/tags/iPad/" style="font-size: 15px;">iPad</a> <a href="/tags/icon/" style="font-size: 10px;">icon</a> <a href="/tags/icon-font/" style="font-size: 12.5px;">icon font</a> <a href="/tags/icon-fontr/" style="font-size: 10px;">icon fontr</a> <a href="/tags/iconfontr/" style="font-size: 15px;">iconfontr</a> <a href="/tags/image/" style="font-size: 10px;">image</a> <a href="/tags/immutable/" style="font-size: 17.5px;">immutable</a> <a href="/tags/indexing/" style="font-size: 10px;">indexing</a> <a href="/tags/io-meter/" style="font-size: 10px;">io-meter</a> <a href="/tags/ionicons/" style="font-size: 10px;">ionicons</a> <a href="/tags/kubernetes/" style="font-size: 10px;">kubernetes</a> <a href="/tags/kv/" style="font-size: 10px;">kv</a> <a href="/tags/life/" style="font-size: 17.5px;">life</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/mac/" style="font-size: 10px;">mac</a> <a href="/tags/math/" style="font-size: 10px;">math</a> <a href="/tags/memory/" style="font-size: 10px;">memory</a> <a href="/tags/mobile/" style="font-size: 10px;">mobile</a> <a href="/tags/music/" style="font-size: 10px;">music</a> <a href="/tags/olap/" style="font-size: 10px;">olap</a> <a href="/tags/online-editor/" style="font-size: 10px;">online editor</a> <a href="/tags/open-source/" style="font-size: 10px;">open source</a> <a href="/tags/opensource/" style="font-size: 10px;">opensource</a> <a href="/tags/os/" style="font-size: 10px;">os</a> <a href="/tags/osx/" style="font-size: 15px;">osx</a> <a href="/tags/package/" style="font-size: 10px;">package</a> <a href="/tags/paper/" style="font-size: 12.5px;">paper</a> <a href="/tags/pencil/" style="font-size: 10px;">pencil</a> <a href="/tags/persist-datastructure/" style="font-size: 17.5px;">persist datastructure</a> <a href="/tags/programing/" style="font-size: 10px;">programing</a> <a href="/tags/programming/" style="font-size: 10px;">programming</a> <a href="/tags/rendering/" style="font-size: 10px;">rendering</a> <a href="/tags/review/" style="font-size: 10px;">review</a> <a href="/tags/rpc/" style="font-size: 10px;">rpc</a> <a href="/tags/scala/" style="font-size: 10px;">scala</a> <a href="/tags/schedule/" style="font-size: 10px;">schedule</a> <a href="/tags/selection/" style="font-size: 10px;">selection</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/shader/" style="font-size: 10px;">shader</a> <a href="/tags/sketch/" style="font-size: 10px;">sketch</a> <a href="/tags/sql/" style="font-size: 10px;">sql</a> <a href="/tags/stylus/" style="font-size: 10px;">stylus</a> <a href="/tags/summary/" style="font-size: 12.5px;">summary</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/swift/" style="font-size: 10px;">swift</a> <a href="/tags/taiwan/" style="font-size: 12.5px;">taiwan</a> <a href="/tags/tips/" style="font-size: 10px;">tips</a> <a href="/tags/travel/" style="font-size: 12.5px;">travel</a> <a href="/tags/utility/" style="font-size: 10px;">utility</a> <a href="/tags/vector-trie/" style="font-size: 12.5px;">vector trie</a> <a href="/tags/watch/" style="font-size: 10px;">watch</a> <a href="/tags/web/" style="font-size: 17.5px;">web</a> <a href="/tags/webGL/" style="font-size: 12.5px;">webGL</a> <a href="/tags/webgl/" style="font-size: 10px;">webgl</a> <a href="/tags/wu/" style="font-size: 10px;">wu</a> <a href="/tags/xcode/" style="font-size: 10px;">xcode</a> <a href="/tags/zocial/" style="font-size: 10px;">zocial</a> <a href="/tags/%E5%90%90%E6%A7%BD/" style="font-size: 10px;">吐槽</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2020 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+
+</body>
+
+</html>

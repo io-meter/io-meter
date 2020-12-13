@@ -1,0 +1,313 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>Let Rocket Fly | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="最近完成了我第一个相对完整的 WebGL 页面 (点这里)，
+主要内容是一只可以旋转交互的小火箭。这篇文章就主要记录一下这个小项目的制作
+过程。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="Let Rocket Fly"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content=""/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a target="_blank" rel="noopener" href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2014/04/05/let-rocket-fly/" target="_blank">Let Rocket Fly</a></h1>
+
+
+      
+        <time datetime="2014-04-05T06:53:12.000Z">2014-04-05</time>
+      
+    </header>
+    <div class="entry">
+      <p>最近完成了我第一个相对完整的 WebGL 页面 <a href="http://sjtug.github.io" target="_blank" rel="noopener">(点这里)</a>，
+主要内容是一只可以旋转交互的小火箭。这篇文章就主要记录一下这个小项目的制作
+过程。</p>
+<a id="more"></a>
+<h2 id="Logo__u8BBE_u8BA1"><a href="#Logo__u8BBE_u8BA1" class="headerlink" title="Logo 设计"></a>Logo 设计</h2><p>这个项目是作为我们新近成立的一个同好会类型的组织 SJTUG 的第一个页面。在
+开始制作时，对于作为页面主题的组织 Logo 其实还没有什么想法。偶然的情况下
+发现小火箭这种形象很适合作为 Logo，适当调整一下，做一个交互的东西也比较方便，
+因此就果断的朝这个方向构思了。</p>
+<p>首先是在矢量绘图软件中大概的完成 Logo 的平面形象，主要是从 Google Image 上搜索
+出来一些已有的图案作为参考。用 CorelDRAW 绘制的 Logo 成图如下。</p>
+<p><img src="/img/posts/Rocket480.png" alt="rocket" title="Rocket Logo"></p>
+<p>在这里，记得要将 Logo 输出成不同的分辨率，以便于适配 Retina 的屏幕分辨率，
+对于移动设备和不支持 WebGL 的浏览器，应该要能 fallback 到静态的图片。
+支持 Retina 显示图片的话，可以用 <a href="http://retinajs.com" target="_blank" rel="noopener">retina.js</a>，也可以像
+我这里一样使用 CSS 。一个可以支持大多数设备的 CSS Media 选择代码如下所示：</p>
+<figure class="highlight css"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br></pre></td><td class="code"><pre><span class="line">@<span class="keyword">media</span>	only screen and (-webkit-min-device-pixel-ratio: <span class="number">1.3</span>),</span><br><span class="line">only screen and (-o-min-device-pixel-ratio: <span class="number">13</span>/<span class="number">10</span>),</span><br><span class="line">only screen and (min-resolution: <span class="number">120dpi</span>)</span><br><span class="line">&#123;</span><br><span class="line">    <span class="comment">/* Things for retina display */</span></span><br><span class="line">    <span class="selector-id">#logo</span> &#123;</span><br><span class="line">        <span class="attribute">background-image</span>: <span class="built_in">url</span>(/img/Rocket960.png);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">``` </span><br><span class="line"></span><br><span class="line">## <span class="selector-tag">Blender</span> 建模与导出</span><br><span class="line"></span><br><span class="line">得益于 <span class="selector-tag">Three</span><span class="selector-class">.js</span> 提供了一个方便的 <span class="selector-tag">Blender</span> 导出脚本， 制作基于 <span class="selector-tag">Web</span> 的 3<span class="selector-tag">D</span> 交互也方便很多。</span><br><span class="line">在这里使用的 [Blender](http://blender.org) 虽然不及总所周知的 MAYA 或者 3Ds MAX 那么出名，</span><br><span class="line">但是作为一个开源的软件，其功能、易用性都是可圈可点的，自 2<span class="selector-class">.50</span> 版本其<span class="selector-tag">UI</span>变得非常成熟了。</span><br><span class="line"></span><br><span class="line">这个小火箭的形体是非常简单的，建模并不需要花费很多时间，在建模的时候简单的绘制一个参考</span><br><span class="line">图作为参考会方便很多。最后得到的模型截图如下：</span><br><span class="line"></span><br><span class="line">![blender model](/img/posts/blender-rocket.png "blender model")</span><br><span class="line"></span><br><span class="line">在图中显示的橘色条纹并不是贴图的效果。实际上，在这个例子中，既没有必要，也应该尽量避免</span><br><span class="line">使用贴图。因为贴图的文件大小本身除了会拖慢页面的加载速度，在制作过程中为了得到比较好的</span><br><span class="line">效果，还要模型进行 <span class="selector-tag">UV</span> 展开等操作。此外使用贴图的话，条纹的边缘很有可能变的略显模糊。</span><br><span class="line"></span><br><span class="line">那么该如何制作这个条纹呢？其实很简单，就是在飞船主体的表面用 <span class="selector-tag">knife</span> 工具切出条纹所在的</span><br><span class="line">表面，然后选择起来作为一个组赋予一个颜色。着这个过程中难免会出现非四边形的表面，</span><br><span class="line">之前的 <span class="selector-tag">Blender</span> 是不支持超过四个边的多边形的，那时必须要非常小心的增加不少边才能达到目的，</span><br><span class="line">而且线框显示出来也不好看，还好较新的版本已经基本解决这个问题了。</span><br><span class="line"></span><br><span class="line">虽然如此，超过四条边的多边形还是不建议出现的，不过由于我们的材质是纯色的，</span><br><span class="line">而且并不需要移动节点位置，因此显示出来不会有很大的问题。条纹的基本情况就是下图所示了。</span><br><span class="line"></span><br><span class="line">![stripe on rocket](/img/posts/blender-rocket-faces-knife.png "stripe on rocket")</span><br><span class="line"></span><br><span class="line">接下来是导出的工作，虽然 <span class="selector-tag">Three</span><span class="selector-class">.js</span> 提供的导出工具是支持导出颜色和材质的，但是在使用中</span><br><span class="line">发现，也许是因为色彩系统的不一致，输出的模型在显示出来颜色并不正确，因此需要再手动</span><br><span class="line">编辑一下输出的文件来调整颜色。</span><br><span class="line"></span><br><span class="line">主要需要修改的是 `<span class="selector-tag">materials</span>` 字段下每个材质的 `<span class="selector-tag">color</span>` 属性</span><br><span class="line">这个属性实质上相当于整形值，比如白色的十六进制表示 `0<span class="selector-tag">xffffff</span>` 转化过来应该是 </span><br><span class="line">`255^3 + 255^2 +255 = 16777215`。此外，在 `embeds` 字段当中内嵌的 `material` </span><br><span class="line">字段也是需要修改 `<span class="selector-tag">colorDiffuse</span>` 属性的， 只不过此时颜色是由 <span class="selector-tag">RGB</span> 三个颜色值组成的列表，值</span><br><span class="line">最大是 `1<span class="selector-class">.0</span>`，因此要把整形的颜色分量值除以 `255`。</span><br><span class="line"></span><br><span class="line">因为这里使用的是纯色的材质，不需要 <span class="selector-tag">Lambert</span> 光照模型，因此我们在输出的 <span class="selector-tag">json</span> 中把所有的</span><br><span class="line">`<span class="selector-tag">lambert</span>` 和 `<span class="selector-tag">MeshLambertMaterial</span>` 都分别改成 `<span class="selector-tag">basic</span>` 和 `<span class="selector-tag">MeshBasicMaterial</span>`。</span><br><span class="line"></span><br><span class="line">## 使用 <span class="selector-tag">Three</span><span class="selector-class">.js</span> 导入模型</span><br><span class="line"></span><br><span class="line"><span class="selector-tag">Three</span><span class="selector-class">.js</span> 提供了将模型导入的类和函数，将其导入的代码很简单:</span><br><span class="line"></span><br><span class="line">```<span class="selector-tag">javascript</span></span><br><span class="line">var loader = new THREE.SceneLoader();</span><br><span class="line">loader.load("/js/rocket.json", function(s)&#123;</span><br><span class="line">  scene = s.scene;</span><br><span class="line">  // do something to the scene</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+<p>回调函数中的 <code>s.scene</code> 参数就是读出来的场景对象。为了能对火焰和飞船主体分别制作动画，我将他们
+分成两个对象放置在场景中，然后在这里要分别取出来。在上面代码 do something 注释的地方
+将两个物体分别赋给两个全局变量以便于之后调用。顺便还要旋转调整物体，让它和静态 Logo
+ 的位置角度都接近一致。最后把事先建立好的摄影机放到场景中。因为是使用<code>BasicMaterial</code>
+所以灯光不是必须的。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">rocket = s.objects[<span class="string">'Rocket'</span>];</span><br><span class="line">fire = s.objects[<span class="string">'Fire'</span>];</span><br><span class="line"></span><br><span class="line"><span class="comment">// rotate objects here</span></span><br><span class="line">rocket.rotateOnAxis(rot_axis, <span class="number">1.508</span>);</span><br><span class="line">rocket.translateOnAxis(trans_axis, <span class="number">-2</span>)</span><br><span class="line">rocket.rotateOnAxis(rot_lean, <span class="number">-0.63</span>);</span><br><span class="line"></span><br><span class="line">fire.rotateOnAxis(rot_axis, <span class="number">1.508</span>);</span><br><span class="line">fire.translateOnAxis(trans_axis, <span class="number">-2</span>)</span><br><span class="line">fire.rotateOnAxis(rot_lean, <span class="number">-0.63</span>);</span><br><span class="line"></span><br><span class="line">scene.add(camera);</span><br></pre></td></tr></table></figure>
+<p>至于将 webGL 的 <code>canvas</code> 对象放置到页面中的过程这里就不赘述了。为了和静态logo一致，放置
+一个橘色的带有 <code>border-radis: 50%</code> 属性的 <code>div</code> 到 <code>canvas</code> 对象后面，正好是一个圆形背景。</p>
+<h2 id="u521B_u5EFA_u4EA4_u4E92"><a href="#u521B_u5EFA_u4EA4_u4E92" class="headerlink" title="创建交互"></a>创建交互</h2><p>在上面的代码已经提到过创建动态交互的基础函数了。在较新版本的 Three.js 里，可以用<code>rotateOnAxis</code> 
+来实现物体绕轴旋转的变换，而不仅仅只能绕直角坐标系的 XYZ 轴旋转了。我们使用这个函数使小火箭可以
+绕自己指向的轴进行旋转。</p>
+<p>此外还可以对摄像机进行变换。摄像机最有用一个属性是 <code>position</code>，用来设定摄像机的位置。此外还有一个
+非常神奇的函数，那就是 <code>lookAt</code>。<code>lookAt</code> 函数指定摄像机指向的点，Three.js 会调整摄像机的朝向使得
+摄像机恰好“看向”这个点。</p>
+<p>在最后的交互中，不但火箭会绕着自己的轴旋转，在鼠标扫过指定链接时还需要有一种加速感觉，
+也就是让小火箭产生些微的震动。这其实就是通过让摄像机 <code>lookAt</code> 的点不断随机震动实现的。</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">axis_s.set(-<span class="built_in">Math</span>.random(), -<span class="built_in">Math</span>.random(), <span class="number">0</span>);</span><br><span class="line">axis_s.multiplyScalar(<span class="number">0.4</span>);</span><br><span class="line">camera.lookAt(axis_s);</span><br></pre></td></tr></table></figure>
+<p>让火箭的火焰不断震动则是通过设定 <code>scale</code> 属性:</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">if</span>(firescale&gt;=<span class="number">1</span>) firescale = firel - firer*<span class="built_in">Math</span>.random();</span><br><span class="line"><span class="keyword">else</span> firescale = firel + firer*<span class="built_in">Math</span>.random();</span><br><span class="line">fire.scale.z = firescale;</span><br></pre></td></tr></table></figure>
+<p>最后就是动画的效果了，如何让小火箭旋转的动画看起来更平滑？经过各种尝试，最后是通过限制
+火箭旋转的速度来实现的。抽象来说，把页面上每个点映射到火箭的一个旋转和角度。当鼠标
+移动时，并不是实时的就把火箭调整到这个位置，而是假设鼠标是一个目标，代表火箭实际状态的
+点去不断追击鼠标。同时我们还考虑两点之间的距离作为追击速度的的参数，距离越近，速度越慢。
+最后就形成了这种有加速的动画的感觉。</p>
+<h2 id="u603B_u7ED3"><a href="#u603B_u7ED3" class="headerlink" title="总结"></a>总结</h2><p>这个小火箭算是我第一个 webGL 的小尝试，得益于 Three.js 的强大功能，最后实际手写的 JavaScript
+只有 136 行，时间大约花费在两天。在这个过程中，主要的精力都放在调整模型和交互上面了，具体来说
+就是需要对于模型和动画的感觉进行细致的调整，不断地尝试最后才能得到一个比较好的效果。实际上，
+往往实现在脑海里觉得不错的效果，真正制作出来真正看在眼里就会觉得非常奇怪。</p>
+<p>这个小项目的代码是静态托管在 Github pages 上的，源代码可以在 <a href="https://github.com/sjtug/sjtug.github.io" target="_blank" rel="noopener">这里</a>
+找到。  </p>
+
+    </div>
+    <footer>
+        
+  
+  <div class="categories">
+    <a href="/categories/web/">web</a>
+  </div>
+
+        
+  
+  <div class="tags">
+    <a href="/tags/webGL/">webGL</a>, <a href="/tags/blender/">blender</a>, <a href="/tags/Three-js/">Three.js</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2020/12/12/nvm-store/">Nvm Store: 第二届阿里数据库大赛参赛记录</a>
+      </li>
+    
+      <li>
+        <a href="/2020/02/24/how-to-architect-a-query-compiler/">SIGMOD 16 | How to Architect a Query Compiler</a>
+      </li>
+    
+      <li>
+        <a href="/2020/01/04/olap-distributed/">OLAP 任务的并发执行与调度</a>
+      </li>
+    
+      <li>
+        <a href="/2019/03/16/streaming-incremental-sql-execution/">Stream SQL 的执行原理与 Flink 的实现</a>
+      </li>
+    
+      <li>
+        <a href="/2018/11/01/sql-query-optimization-volcano/">SQL 查询优化原理与 Volcano Optimizer 介绍</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a target="_blank" rel="noopener" href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Functional-Go/">Functional Go</a><small>4</small></li>
+  
+    <li><a href="/categories/Mastering-Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>9</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/AWS/" style="font-size: 10px;">AWS</a> <a href="/tags/Algorithm/" style="font-size: 17.5px;">Algorithm</a> <a href="/tags/Apache-Flink/" style="font-size: 10px;">Apache Flink</a> <a href="/tags/Apple/" style="font-size: 10px;">Apple</a> <a href="/tags/Bezier-Path/" style="font-size: 10px;">Bezier Path</a> <a href="/tags/Big-Data/" style="font-size: 12.5px;">Big Data</a> <a href="/tags/Cascades/" style="font-size: 10px;">Cascades</a> <a href="/tags/Closure/" style="font-size: 10px;">Closure</a> <a href="/tags/Cloud/" style="font-size: 10px;">Cloud</a> <a href="/tags/Cocoa/" style="font-size: 10px;">Cocoa</a> <a href="/tags/Connected-Components/" style="font-size: 10px;">Connected Components</a> <a href="/tags/Data-structure/" style="font-size: 10px;">Data structure</a> <a href="/tags/Designing-Data-Intensive-Applications/" style="font-size: 10px;">Designing Data-Intensive Applications</a> <a href="/tags/Designing-Paradigm/" style="font-size: 10px;">Designing Paradigm</a> <a href="/tags/Distributed-System/" style="font-size: 12.5px;">Distributed System</a> <a href="/tags/Docker/" style="font-size: 10px;">Docker</a> <a href="/tags/Dokku/" style="font-size: 10px;">Dokku</a> <a href="/tags/EMR/" style="font-size: 10px;">EMR</a> <a href="/tags/ES6/" style="font-size: 10px;">ES6</a> <a href="/tags/ETL/" style="font-size: 10px;">ETL</a> <a href="/tags/Flink/" style="font-size: 10px;">Flink</a> <a href="/tags/Functional-Programing/" style="font-size: 10px;">Functional Programing</a> <a href="/tags/Functional-Programming/" style="font-size: 10px;">Functional Programming</a> <a href="/tags/GLSL/" style="font-size: 10px;">GLSL</a> <a href="/tags/GSoC/" style="font-size: 10px;">GSoC</a> <a href="/tags/Git/" style="font-size: 10px;">Git</a> <a href="/tags/Go/" style="font-size: 12.5px;">Go</a> <a href="/tags/Golang/" style="font-size: 17.5px;">Golang</a> <a href="/tags/Google/" style="font-size: 10px;">Google</a> <a href="/tags/Gourmet/" style="font-size: 10px;">Gourmet</a> <a href="/tags/Graph-Computing/" style="font-size: 10px;">Graph Computing</a> <a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Immutable/" style="font-size: 10px;">Immutable</a> <a href="/tags/Incremental-SQL/" style="font-size: 10px;">Incremental SQL</a> <a href="/tags/Intel/" style="font-size: 10px;">Intel</a> <a href="/tags/Interface-Builder/" style="font-size: 10px;">Interface Builder</a> <a href="/tags/IoT/" style="font-size: 10px;">IoT</a> <a href="/tags/Japan/" style="font-size: 10px;">Japan</a> <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Kylin/" style="font-size: 10px;">Kylin</a> <a href="/tags/Kyoto/" style="font-size: 10px;">Kyoto</a> <a href="/tags/Lazy-Evaluation/" style="font-size: 10px;">Lazy Evaluation</a> <a href="/tags/Linux/" style="font-size: 10px;">Linux</a> <a href="/tags/Log-Structured-Merge-Tree/" style="font-size: 10px;">Log-Structured Merge Tree</a> <a href="/tags/Materialized-View/" style="font-size: 10px;">Materialized View</a> <a href="/tags/NSControl/" style="font-size: 12.5px;">NSControl</a> <a href="/tags/NUC/" style="font-size: 10px;">NUC</a> <a href="/tags/NVM/" style="font-size: 10px;">NVM</a> <a href="/tags/OSX/" style="font-size: 15px;">OSX</a> <a href="/tags/Objective-C/" style="font-size: 12.5px;">Objective-C</a> <a href="/tags/Optimization/" style="font-size: 10px;">Optimization</a> <a href="/tags/Osaka/" style="font-size: 10px;">Osaka</a> <a href="/tags/PageRank/" style="font-size: 10px;">PageRank</a> <a href="/tags/Persistent-Memory/" style="font-size: 10px;">Persistent Memory</a> <a href="/tags/Pregel/" style="font-size: 10px;">Pregel</a> <a href="/tags/React/" style="font-size: 10px;">React</a> <a href="/tags/SQL/" style="font-size: 12.5px;">SQL</a> <a href="/tags/SVG/" style="font-size: 10px;">SVG</a> <a href="/tags/Scala/" style="font-size: 10px;">Scala</a> <a href="/tags/Scheduler/" style="font-size: 12.5px;">Scheduler</a> <a href="/tags/Splunk/" style="font-size: 10px;">Splunk</a> <a href="/tags/Stream-SQL/" style="font-size: 10px;">Stream SQL</a> <a href="/tags/Summary/" style="font-size: 10px;">Summary</a> <a href="/tags/Swift/" style="font-size: 10px;">Swift</a> <a href="/tags/Three-js/" style="font-size: 10px;">Three.js</a> <a href="/tags/Tokyo/" style="font-size: 10px;">Tokyo</a> <a href="/tags/Transmission/" style="font-size: 10px;">Transmission</a> <a href="/tags/Travel/" style="font-size: 10px;">Travel</a> <a href="/tags/Ubuntu/" style="font-size: 10px;">Ubuntu</a> <a href="/tags/User-Tracking/" style="font-size: 10px;">User Tracking</a> <a href="/tags/Volcano/" style="font-size: 10px;">Volcano</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/Y-Combinator/" style="font-size: 10px;">Y-Combinator</a> <a href="/tags/accelerate-meter/" style="font-size: 10px;">accelerate meter</a> <a href="/tags/allocator/" style="font-size: 10px;">allocator</a> <a href="/tags/bezier-path/" style="font-size: 12.5px;">bezier path</a> <a href="/tags/blender/" style="font-size: 12.5px;">blender</a> <a href="/tags/borg/" style="font-size: 10px;">borg</a> <a href="/tags/city/" style="font-size: 10px;">city</a> <a href="/tags/cli/" style="font-size: 10px;">cli</a> <a href="/tags/cocoa/" style="font-size: 15px;">cocoa</a> <a href="/tags/compiler/" style="font-size: 10px;">compiler</a> <a href="/tags/completion/" style="font-size: 10px;">completion</a> <a href="/tags/contenteditable/" style="font-size: 10px;">contenteditable</a> <a href="/tags/database/" style="font-size: 12.5px;">database</a> <a href="/tags/design/" style="font-size: 10px;">design</a> <a href="/tags/desktop/" style="font-size: 10px;">desktop</a> <a href="/tags/develop/" style="font-size: 10px;">develop</a> <a href="/tags/device-motion/" style="font-size: 10px;">device motion</a> <a href="/tags/distribute-storage/" style="font-size: 10px;">distribute storage</a> <a href="/tags/distributed-system/" style="font-size: 10px;">distributed system</a> <a href="/tags/diumoo/" style="font-size: 10px;">diumoo</a> <a href="/tags/douban/" style="font-size: 10px;">douban</a> <a href="/tags/drawing/" style="font-size: 17.5px;">drawing</a> <a href="/tags/editor/" style="font-size: 10px;">editor</a> <a href="/tags/essay/" style="font-size: 17.5px;">essay</a> <a href="/tags/export/" style="font-size: 10px;">export</a> <a href="/tags/filesystem/" style="font-size: 10px;">filesystem</a> <a href="/tags/font/" style="font-size: 12.5px;">font</a> <a href="/tags/fontawesome/" style="font-size: 10px;">fontawesome</a> <a href="/tags/fp/" style="font-size: 17.5px;">fp</a> <a href="/tags/functional-programming/" style="font-size: 20px;">functional programming</a> <a href="/tags/github/" style="font-size: 10px;">github</a> <a href="/tags/go/" style="font-size: 20px;">go</a> <a href="/tags/golang/" style="font-size: 12.5px;">golang</a> <a href="/tags/hamt/" style="font-size: 10px;">hamt</a> <a href="/tags/hashmap/" style="font-size: 10px;">hashmap</a> <a href="/tags/html/" style="font-size: 10px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/iOS/" style="font-size: 10px;">iOS</a> <a href="/tags/iOS-8/" style="font-size: 10px;">iOS 8</a> <a href="/tags/iPad/" style="font-size: 15px;">iPad</a> <a href="/tags/icon/" style="font-size: 10px;">icon</a> <a href="/tags/icon-font/" style="font-size: 12.5px;">icon font</a> <a href="/tags/icon-fontr/" style="font-size: 10px;">icon fontr</a> <a href="/tags/iconfontr/" style="font-size: 15px;">iconfontr</a> <a href="/tags/image/" style="font-size: 10px;">image</a> <a href="/tags/immutable/" style="font-size: 17.5px;">immutable</a> <a href="/tags/indexing/" style="font-size: 10px;">indexing</a> <a href="/tags/io-meter/" style="font-size: 10px;">io-meter</a> <a href="/tags/ionicons/" style="font-size: 10px;">ionicons</a> <a href="/tags/kubernetes/" style="font-size: 10px;">kubernetes</a> <a href="/tags/kv/" style="font-size: 10px;">kv</a> <a href="/tags/life/" style="font-size: 17.5px;">life</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/mac/" style="font-size: 10px;">mac</a> <a href="/tags/math/" style="font-size: 10px;">math</a> <a href="/tags/memory/" style="font-size: 10px;">memory</a> <a href="/tags/mobile/" style="font-size: 10px;">mobile</a> <a href="/tags/music/" style="font-size: 10px;">music</a> <a href="/tags/olap/" style="font-size: 10px;">olap</a> <a href="/tags/online-editor/" style="font-size: 10px;">online editor</a> <a href="/tags/open-source/" style="font-size: 10px;">open source</a> <a href="/tags/opensource/" style="font-size: 10px;">opensource</a> <a href="/tags/os/" style="font-size: 10px;">os</a> <a href="/tags/osx/" style="font-size: 15px;">osx</a> <a href="/tags/package/" style="font-size: 10px;">package</a> <a href="/tags/paper/" style="font-size: 12.5px;">paper</a> <a href="/tags/pencil/" style="font-size: 10px;">pencil</a> <a href="/tags/persist-datastructure/" style="font-size: 17.5px;">persist datastructure</a> <a href="/tags/programing/" style="font-size: 10px;">programing</a> <a href="/tags/programming/" style="font-size: 10px;">programming</a> <a href="/tags/rendering/" style="font-size: 10px;">rendering</a> <a href="/tags/review/" style="font-size: 10px;">review</a> <a href="/tags/rpc/" style="font-size: 10px;">rpc</a> <a href="/tags/scala/" style="font-size: 10px;">scala</a> <a href="/tags/schedule/" style="font-size: 10px;">schedule</a> <a href="/tags/selection/" style="font-size: 10px;">selection</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/shader/" style="font-size: 10px;">shader</a> <a href="/tags/sketch/" style="font-size: 10px;">sketch</a> <a href="/tags/sql/" style="font-size: 10px;">sql</a> <a href="/tags/stylus/" style="font-size: 10px;">stylus</a> <a href="/tags/summary/" style="font-size: 12.5px;">summary</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/swift/" style="font-size: 10px;">swift</a> <a href="/tags/taiwan/" style="font-size: 12.5px;">taiwan</a> <a href="/tags/tips/" style="font-size: 10px;">tips</a> <a href="/tags/travel/" style="font-size: 12.5px;">travel</a> <a href="/tags/utility/" style="font-size: 10px;">utility</a> <a href="/tags/vector-trie/" style="font-size: 12.5px;">vector trie</a> <a href="/tags/watch/" style="font-size: 10px;">watch</a> <a href="/tags/web/" style="font-size: 17.5px;">web</a> <a href="/tags/webGL/" style="font-size: 12.5px;">webGL</a> <a href="/tags/webgl/" style="font-size: 10px;">webgl</a> <a href="/tags/wu/" style="font-size: 10px;">wu</a> <a href="/tags/xcode/" style="font-size: 10px;">xcode</a> <a href="/tags/zocial/" style="font-size: 10px;">zocial</a> <a href="/tags/%E5%90%90%E6%A7%BD/" style="font-size: 10px;">吐槽</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2020 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+
+</body>
+
+</html>

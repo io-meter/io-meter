@@ -1,0 +1,359 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>diumoo 开源啦 | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="在接近三年的维护空荡期之后，我终于又抽出时间为 diumoo 发布了一个修复多个严重问题的 1.5.0 版本，
+这一版本也将会成为 diumoo 开发过程当中的一个里程碑: diumoo 在 GitHub 上正式开源了！">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="diumoo 开源啦"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content=""/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a target="_blank" rel="noopener" href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2016/06/18/diumoo-is-open-sourced/" target="_blank">diumoo 开源啦</a></h1>
+
+
+      
+        <time datetime="2016-06-18T06:03:16.000Z">2016-06-18</time>
+      
+    </header>
+    <div class="entry">
+      <p>在接近三年的维护空荡期之后，我终于又抽出时间为 diumoo 发布了一个修复多个严重问题的 <a href="https://github.com/shanzi/diumoo/releases" target="_blank" rel="noopener">1.5.0 版本</a>，
+这一版本也将会成为 diumoo 开发过程当中的一个里程碑: diumoo 在 GitHub 上正式开源了！</p>
+<a id="more"></a>
+<p>粗略算来，自 <a href="http://diumoo.net" target="_blank" rel="noopener">diumoo</a> 发布已经接近五年了。diumoo 作为我第一个比较成功的 App，
+中间经过数个小版本更新和两个大的版本的更新，终于一路走到今天。在此次更新之前，diumoo 
+经历了长达两年的维护空档期，直到最近因豆瓣方面的页面调整而导致的严重问题，才终于迫使我又拿起这个项目。
+在此，我不得不向所有支持 diumoo 的用户们表示歉意。</p>
+<p>经过一段时间的考虑，我终于确信只有将 diumoo 开源，才能让此项目长期发展下去——在开源的开发模式下，
+diumoo 不会再因为我一个开发者不能活跃维护而迟迟不能更新了。
+而我也更希望在开源之后，其他开发者可以加入其中，按照自己的想法定制和修改 diumoo，
+从而衍生出更多更好的选择。这样即使用户最后不再使用 diumoo，它也可以继续实现自己的价值。</p>
+<p>总之，欢迎各位有能力的开发者在关注 <a href="https://github.com/shanzi/diumoo" target="_blank" rel="noopener">diumoo 在 GitHub 上的仓库</a>。
+在接下来的文章里，我会稍微介绍一下 diumoo 的开发历程。</p>
+<h1 id="u8D77_u6E90"><a href="#u8D77_u6E90" class="headerlink" title="起源"></a>起源</h1><p>diumoo 的开发大约开始于我读大三的时候，当时在自己的联想 Y450 电脑上折腾出来一个 Hackintosh，也就是俗称的黑苹果。
+因此逐渐将主力操作系统从 Linux 切换到 OSX 上了。在当时，豆瓣电台是 Mac 上听音乐最好的选择之一，它以优秀的推荐算法著称，
+很多其他的竞争对手尚未发展起来。但是长期以来，豆瓣仍奉行 Web 服务为主的特点，不要说 Mac App，
+连移动应用也没有给予足够的重视。</p>
+<p>我对当时可以找到的一些电台 App 不甚满意，因此想要自己开发一个。当时的我比较熟悉的是 Web 开发和一点 Qt 开发，
+对于 OSX 开发完全没有经验。因此最初想法其实是使用 Web 技术开发这一 App 然后将其打包成原生应用发布。
+像 <a href="https://github.com/electron/electron" target="_blank" rel="noopener">Electron</a> 这么方便的工具还没有出现，因此开发遇到了不少困难。
+制作出来一些 Prototype 之后自己都很不满意，因此下定决心要使用 Native 的 Cocoa API 进行开发。</p>
+<p>从零入门 Objective-C 是一件挺困难的事情，在真正接触之前我其实一直不怎么喜欢它奇怪的语法，
+而且当时的 Objective-C 还没有 ARC 这种方便的 GC 功能，在开发 diumoo 时尤其是在内存管理和多线程并发过程当中遇到很多问题，
+然而就这样磕磕绊绊，竟然也终于完成了一个较为稳定的版本——尽管那个版本时不时还是会突然崩溃，
+但是稳定性已经满足了最低的需求。也就是在这个时候，我将 diumoo 的第一个版本发布出去了。</p>
+<p>diumoo 取得了预料之外的成功，前几天的下载量都超过千次。与此同时，很多博客也陆续推荐和介绍了 diumoo，
+那段时间真是晚上都兴奋的睡不着。当时 App 的 UI 主要就是在状态栏上的一个 Menu 构成，
+添加了一些诸如声音渐变的效果，最主要的 Feature 其实是添加了一个所谓的 Desktop Wave 的功能。
+这个功能被很多用户所喜爱。</p>
+<p><img src="/img/posts/diumoo-old.jpg" alt="最早的 diumoo"></p>
+<p>这一版本让我最惊讶的时候是被当时的电脑报的一个栏目推荐了。在当时纸媒虽然已经开始走下坡路，
+但是电脑报在一般熟悉计算机的人心中还是又很高的地位的。总之，尽管第一个版本的 diumoo 还有很多问题，
+却仍然得到了很多用户的认可和支持。也有很多用户通过各种渠道为 diumoo 捐款，令我非常感动。</p>
+<p>另外一个必须提到的事情是，diumoo 的另一个主要开发者 <a href="https://github.com/AnakinMac" target="_blank" rel="noopener">AnakinMac</a>
+也是在这一阶段主动加入到开发行列的。作为一个野生 OSX 开发者，很多地方我都写的很糟糕，从 Anakin
+那里我学到了很多东西。</p>
+<h1 id="u53D1_u5C55"><a href="#u53D1_u5C55" class="headerlink" title="发展"></a>发展</h1><p>在此后一段时间，Apple 的产品越来越受欢迎，Mac OS 的开发速度也开始加快，并且从 iOS 上吸收过来很多东西。
+此后，Objective-C 2.0 发布，从此 Mac 开发者可以使用 ARC 进行内存管理，再也不需要手动操作引用计数了。
+另一个重大的改变是，之前 Mac 上使用的 <code>QuickTime.Framework</code> 被弃用，取而代之的是从 iOS 上引入的 <code>AVFoundation</code>，
+这导致 diumoo 在新版本的 OSX 上无法运行。此时 diumoo 还在活跃维护的阶段，因此很快就开始编写新的版本。</p>
+<p>新版本的 diumoo 几乎是完全重写的代码，从 UI 到内核都进行了完全的重构。Apple 也很快发布了配备
+Retina 屏幕的 Macbook Pro，因此对于 Retina 的支持也被规划在内。尽管 <code>AVFoundation</code> 对开发者更友好一些，
+但是底层音频的 API 没有 <code>QuickTime.Framework</code> 暴露的多。尽管可以使用 <code>CoreAudio</code>
+来获得更底层的访问，我们最终还是决定放弃实现 Desktop Wave 这种功能。
+另一个放弃它的原因在于尽管看起来很炫酷，这一功能对 CPU 的占用还是比较大的，因此容易导致过热。</p>
+<p>在这一版本，除了全新的 UI 和音乐播放内核，我们把重点放在了实现 Time Machine 和 diumoo search 这两个功能上。
+使用 Time Machine，用户可以浏览和检索已经播放过的歌曲并且跳回原来的歌曲播放。其中使用 Time Machine 
+的形式浏览歌曲历史的功能，是我有一天在学校吃完发走在路上，突发奇想得到的 Idea，这可能是我在 diumoo
+整个设计当中做出的最有创意的事情了。</p>
+<p><img src="/img/posts/diumoo-timemachine.png" alt="Time Machine"></p>
+<p>在 Time Machine 当中，用户在历史中翻看自己播放过的歌曲记录，遇到想要再听一遍歌曲只需要点击 Restore 按钮，
+diumoo 就可以开始播放了。这一 API 在后来的 OSX 当中逐渐被淡化了，使用的 App 不多，而 diumoo
+这种使用方式也许也是最另类的吧。除此之外，这个版本的 diumoo 还可以使用 search 功能直接找到听过的歌曲：</p>
+<p><img src="/img/posts/diumoo-search.png" alt="diumoo Search"></p>
+<p>尽管有一些用户捐款，但是作为一个穷学生，当时的我慢慢有点承受不了维护 diumoo
+的一些开销，比如域名和服务器的租用费用等。当时的 Mac Apple Store 也在上升期，
+很多 App 都转移到商店发布了。同时，商店作为一个发布平台，也可以让 diumoo 接触到更多的用户。
+因此就跟 Anakin 商量要不要上架一个收费的版本，象征性地收取一点费用用来 Cover 一些固定开支。
+毕竟就捐款来说，连 Mac Apple Store 每年的订阅费用都不够。</p>
+<p>因此 Anakin 同学就购买了 Mac App Store 的账号。然而在 Mac App Store 上发布收费软件的复杂性超出了我们的预期，
+迫于老版本 diumoo 已经存在严重的运行问题的情况，我们只好先发布了一个功能不完整的 Lite 版。
+这个版本是一个巨大的错误，因为并没有提供为了这一版本开发的独特功能，仅仅是因为上架存在困难而提供的临时解决方案，
+评价并不是很好。最终，我们还是将 diumoo 直接上架到 Mac Apple Store 上去免费发布了。在此也要特别感谢
+Anakin 同学一直以来订阅 Mac Apple Store 以维持 diumoo 上架的贡献。</p>
+<p>在这一版本的 diumoo 发布之后一段时间，diumoo 的开发就渐渐进入了停滞期。</p>
+<h1 id="u505C_u6EDE"><a href="#u505C_u6EDE" class="headerlink" title="停滞"></a>停滞</h1><p>diumoo 开发的停滞主要是由于我个人的原因，在本科的最后一年，我决定要报考研究生，因此花了将近半年的时间复习考试，
+因此也就不再有什么时间来维护项目了。考研成功后，diumoo 做了一些日常的更新，当时一些其他的电台音乐软件，
+譬如网易云等都开始发力。一些音乐服务如 QQ 音乐和网易云音乐都推出了官方 Mac 版，diumoo 因此也慢慢淡出了 Mac Apple Store
+上的音乐类排行榜。</p>
+<p>在上研之前的一个暑假，我有幸拿到了豆瓣的实习 Offer，因此也进入豆瓣认识了当时负责音乐部分的 Su27 老师和
+另一个豆瓣电台客户端 dRadio 的开发者 lembacon 同学。在豆瓣的两个月我其实主要的工作还是 Python 和 Web 开发，
+但是中间确实有机会接触到了豆瓣电台的官方 API (未公开)。中间更有机会为豆瓣官方的 Mac 电台客户端出一份力，
+但是最终这一计划还是流产了。</p>
+<p>关于豆瓣电台官方 Mac App 也是一个 Sad Story，我本人作为一个半路出家的野生 Mac 程序员，
+确实在这方面技术还是有点 Too young，再加上在开发过程中一些问题上的争执，最后没有成型也是难以避免。
+后来，我就到了上海交通大学去读研，期间还试图挣扎着试图使用官方 API 重构一次，Su27 老师也很大方，
+允许我离开豆瓣之后继续查看 API 文档以及为我提供 API Key。但是由于研究生期间的学业问题以及兴趣爱好还是转移到了
+Web 和膜蛤这边，终于还是没能将这件事情完成。</p>
+<p>就这样，diumoo 的开发陷入了停滞的状态，我自己也将豆瓣电台的红心歌曲通过网易云音乐同步和下载到本地，
+从此成为了本地音乐党，一度将所有能找到无损音质的歌曲都换成无损音质了。而豆瓣电台本身这一段时间也没有太大的变化，
+diumoo 还可以一直使用。</p>
+<p>不得不说，从我结束豆瓣实习到现在，豆瓣本身也出现了很多变化。Su27 老师现在已经不再负责音乐组，豆瓣内部的架构听说也有一些调整。
+这些年，尽管有一些失败的产品尝试，但是豆瓣已经逐渐开始重视移动端开发，在按照自己的步调慢慢发展着。
+从某种角度来说，因为豆瓣 API 的修改而导致 diumoo 无法登录的问题也是豆瓣电台还在不断改进的一个标志。</p>
+<h1 id="u5F00_u6E90_3A__u65B0_u7684_u5F00_u59CB"><a href="#u5F00_u6E90_3A__u65B0_u7684_u5F00_u59CB" class="headerlink" title="开源: 新的开始"></a>开源: 新的开始</h1><p>因为近期出现的登录问题，我不得不又回到 diumoo 的开发上来。在这段时间里，我在微博和主页上发出了征召开发者的请求，
+很多用户表达了参与的意愿。这些用户的支持是我终于下定决心要将 diumoo 开源出来重要原因。</p>
+<p>在开源之前，我还先着手将目前所遇到的不能登录的问题解决了，做了一些的修正和代码处理。
+得到了现在的 1.5.0 版本。下图就是现在的 diumoo 运行截图了，为了更好的显示效果 diumoo 现在也已经支持 OSX 的
+Dark mode。这一版本同时也修正了一些豆瓣电台页面和 API 修改所遇到的问题。</p>
+<p><img src="/img/posts/diumoo-newversion.png" alt="diumoo"></p>
+<p>不得不说，在使用过一段时间离线音乐之后，
+重新拿起 diumoo 来，我又喜欢上了豆瓣电台这种推荐音乐的方式: 电台音乐不会像本地音乐那样反复听容易厌倦，
+而自己写的 App，用起来还是最舒服的感觉。</p>
+<p>总而言之，diumoo 开源了，diumoo 的开发也进入了一个新的阶段。这并不是 diumoo 开发的结束而是一个新的开始——
+集合更多人的力量支持 diumoo 的维护，减轻我本人的压力是我目前比较现实的期望。
+如果其他开发者能为 diumoo 贡献更多功能、让 diumoo 发展的更好那真的是再好不过了。</p>
+<p>如果你喜欢 diumoo、使用过 diumoo 或者是一个感兴趣的开发者，欢迎你在 <a href="https://github.com/shanzi/diumoo" target="_blank" rel="noopener">GitHub</a> 上关注
+diumoo。也欢迎你通过在 GitHub 上添加 Issue 的方式为 diumoo 反馈 Bug，支持 diumoo 的继续发展！</p>
+
+    </div>
+    <footer>
+        
+        
+  
+  <div class="tags">
+    <a href="/tags/cocoa/">cocoa</a>, <a href="/tags/diumoo/">diumoo</a>, <a href="/tags/osx/">osx</a>, <a href="/tags/open-source/">open source</a>, <a href="/tags/douban/">douban</a>, <a href="/tags/music/">music</a>, <a href="/tags/github/">github</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2020/12/12/nvm-store/">Nvm Store: 第二届阿里数据库大赛参赛记录</a>
+      </li>
+    
+      <li>
+        <a href="/2020/02/24/how-to-architect-a-query-compiler/">SIGMOD 16 | How to Architect a Query Compiler</a>
+      </li>
+    
+      <li>
+        <a href="/2020/01/04/olap-distributed/">OLAP 任务的并发执行与调度</a>
+      </li>
+    
+      <li>
+        <a href="/2019/03/16/streaming-incremental-sql-execution/">Stream SQL 的执行原理与 Flink 的实现</a>
+      </li>
+    
+      <li>
+        <a href="/2018/11/01/sql-query-optimization-volcano/">SQL 查询优化原理与 Volcano Optimizer 介绍</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a target="_blank" rel="noopener" href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Functional-Go/">Functional Go</a><small>4</small></li>
+  
+    <li><a href="/categories/Mastering-Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>9</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/AWS/" style="font-size: 10px;">AWS</a> <a href="/tags/Algorithm/" style="font-size: 17.5px;">Algorithm</a> <a href="/tags/Apache-Flink/" style="font-size: 10px;">Apache Flink</a> <a href="/tags/Apple/" style="font-size: 10px;">Apple</a> <a href="/tags/Bezier-Path/" style="font-size: 10px;">Bezier Path</a> <a href="/tags/Big-Data/" style="font-size: 12.5px;">Big Data</a> <a href="/tags/Cascades/" style="font-size: 10px;">Cascades</a> <a href="/tags/Closure/" style="font-size: 10px;">Closure</a> <a href="/tags/Cloud/" style="font-size: 10px;">Cloud</a> <a href="/tags/Cocoa/" style="font-size: 10px;">Cocoa</a> <a href="/tags/Connected-Components/" style="font-size: 10px;">Connected Components</a> <a href="/tags/Data-structure/" style="font-size: 10px;">Data structure</a> <a href="/tags/Designing-Data-Intensive-Applications/" style="font-size: 10px;">Designing Data-Intensive Applications</a> <a href="/tags/Designing-Paradigm/" style="font-size: 10px;">Designing Paradigm</a> <a href="/tags/Distributed-System/" style="font-size: 12.5px;">Distributed System</a> <a href="/tags/Docker/" style="font-size: 10px;">Docker</a> <a href="/tags/Dokku/" style="font-size: 10px;">Dokku</a> <a href="/tags/EMR/" style="font-size: 10px;">EMR</a> <a href="/tags/ES6/" style="font-size: 10px;">ES6</a> <a href="/tags/ETL/" style="font-size: 10px;">ETL</a> <a href="/tags/Flink/" style="font-size: 10px;">Flink</a> <a href="/tags/Functional-Programing/" style="font-size: 10px;">Functional Programing</a> <a href="/tags/Functional-Programming/" style="font-size: 10px;">Functional Programming</a> <a href="/tags/GLSL/" style="font-size: 10px;">GLSL</a> <a href="/tags/GSoC/" style="font-size: 10px;">GSoC</a> <a href="/tags/Git/" style="font-size: 10px;">Git</a> <a href="/tags/Go/" style="font-size: 12.5px;">Go</a> <a href="/tags/Golang/" style="font-size: 17.5px;">Golang</a> <a href="/tags/Google/" style="font-size: 10px;">Google</a> <a href="/tags/Gourmet/" style="font-size: 10px;">Gourmet</a> <a href="/tags/Graph-Computing/" style="font-size: 10px;">Graph Computing</a> <a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Immutable/" style="font-size: 10px;">Immutable</a> <a href="/tags/Incremental-SQL/" style="font-size: 10px;">Incremental SQL</a> <a href="/tags/Intel/" style="font-size: 10px;">Intel</a> <a href="/tags/Interface-Builder/" style="font-size: 10px;">Interface Builder</a> <a href="/tags/IoT/" style="font-size: 10px;">IoT</a> <a href="/tags/Japan/" style="font-size: 10px;">Japan</a> <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Kylin/" style="font-size: 10px;">Kylin</a> <a href="/tags/Kyoto/" style="font-size: 10px;">Kyoto</a> <a href="/tags/Lazy-Evaluation/" style="font-size: 10px;">Lazy Evaluation</a> <a href="/tags/Linux/" style="font-size: 10px;">Linux</a> <a href="/tags/Log-Structured-Merge-Tree/" style="font-size: 10px;">Log-Structured Merge Tree</a> <a href="/tags/Materialized-View/" style="font-size: 10px;">Materialized View</a> <a href="/tags/NSControl/" style="font-size: 12.5px;">NSControl</a> <a href="/tags/NUC/" style="font-size: 10px;">NUC</a> <a href="/tags/NVM/" style="font-size: 10px;">NVM</a> <a href="/tags/OSX/" style="font-size: 15px;">OSX</a> <a href="/tags/Objective-C/" style="font-size: 12.5px;">Objective-C</a> <a href="/tags/Optimization/" style="font-size: 10px;">Optimization</a> <a href="/tags/Osaka/" style="font-size: 10px;">Osaka</a> <a href="/tags/PageRank/" style="font-size: 10px;">PageRank</a> <a href="/tags/Persistent-Memory/" style="font-size: 10px;">Persistent Memory</a> <a href="/tags/Pregel/" style="font-size: 10px;">Pregel</a> <a href="/tags/React/" style="font-size: 10px;">React</a> <a href="/tags/SQL/" style="font-size: 12.5px;">SQL</a> <a href="/tags/SVG/" style="font-size: 10px;">SVG</a> <a href="/tags/Scala/" style="font-size: 10px;">Scala</a> <a href="/tags/Scheduler/" style="font-size: 12.5px;">Scheduler</a> <a href="/tags/Splunk/" style="font-size: 10px;">Splunk</a> <a href="/tags/Stream-SQL/" style="font-size: 10px;">Stream SQL</a> <a href="/tags/Summary/" style="font-size: 10px;">Summary</a> <a href="/tags/Swift/" style="font-size: 10px;">Swift</a> <a href="/tags/Three-js/" style="font-size: 10px;">Three.js</a> <a href="/tags/Tokyo/" style="font-size: 10px;">Tokyo</a> <a href="/tags/Transmission/" style="font-size: 10px;">Transmission</a> <a href="/tags/Travel/" style="font-size: 10px;">Travel</a> <a href="/tags/Ubuntu/" style="font-size: 10px;">Ubuntu</a> <a href="/tags/User-Tracking/" style="font-size: 10px;">User Tracking</a> <a href="/tags/Volcano/" style="font-size: 10px;">Volcano</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/Y-Combinator/" style="font-size: 10px;">Y-Combinator</a> <a href="/tags/accelerate-meter/" style="font-size: 10px;">accelerate meter</a> <a href="/tags/allocator/" style="font-size: 10px;">allocator</a> <a href="/tags/bezier-path/" style="font-size: 12.5px;">bezier path</a> <a href="/tags/blender/" style="font-size: 12.5px;">blender</a> <a href="/tags/borg/" style="font-size: 10px;">borg</a> <a href="/tags/city/" style="font-size: 10px;">city</a> <a href="/tags/cli/" style="font-size: 10px;">cli</a> <a href="/tags/cocoa/" style="font-size: 15px;">cocoa</a> <a href="/tags/compiler/" style="font-size: 10px;">compiler</a> <a href="/tags/completion/" style="font-size: 10px;">completion</a> <a href="/tags/contenteditable/" style="font-size: 10px;">contenteditable</a> <a href="/tags/database/" style="font-size: 12.5px;">database</a> <a href="/tags/design/" style="font-size: 10px;">design</a> <a href="/tags/desktop/" style="font-size: 10px;">desktop</a> <a href="/tags/develop/" style="font-size: 10px;">develop</a> <a href="/tags/device-motion/" style="font-size: 10px;">device motion</a> <a href="/tags/distribute-storage/" style="font-size: 10px;">distribute storage</a> <a href="/tags/distributed-system/" style="font-size: 10px;">distributed system</a> <a href="/tags/diumoo/" style="font-size: 10px;">diumoo</a> <a href="/tags/douban/" style="font-size: 10px;">douban</a> <a href="/tags/drawing/" style="font-size: 17.5px;">drawing</a> <a href="/tags/editor/" style="font-size: 10px;">editor</a> <a href="/tags/essay/" style="font-size: 17.5px;">essay</a> <a href="/tags/export/" style="font-size: 10px;">export</a> <a href="/tags/filesystem/" style="font-size: 10px;">filesystem</a> <a href="/tags/font/" style="font-size: 12.5px;">font</a> <a href="/tags/fontawesome/" style="font-size: 10px;">fontawesome</a> <a href="/tags/fp/" style="font-size: 17.5px;">fp</a> <a href="/tags/functional-programming/" style="font-size: 20px;">functional programming</a> <a href="/tags/github/" style="font-size: 10px;">github</a> <a href="/tags/go/" style="font-size: 20px;">go</a> <a href="/tags/golang/" style="font-size: 12.5px;">golang</a> <a href="/tags/hamt/" style="font-size: 10px;">hamt</a> <a href="/tags/hashmap/" style="font-size: 10px;">hashmap</a> <a href="/tags/html/" style="font-size: 10px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/iOS/" style="font-size: 10px;">iOS</a> <a href="/tags/iOS-8/" style="font-size: 10px;">iOS 8</a> <a href="/tags/iPad/" style="font-size: 15px;">iPad</a> <a href="/tags/icon/" style="font-size: 10px;">icon</a> <a href="/tags/icon-font/" style="font-size: 12.5px;">icon font</a> <a href="/tags/icon-fontr/" style="font-size: 10px;">icon fontr</a> <a href="/tags/iconfontr/" style="font-size: 15px;">iconfontr</a> <a href="/tags/image/" style="font-size: 10px;">image</a> <a href="/tags/immutable/" style="font-size: 17.5px;">immutable</a> <a href="/tags/indexing/" style="font-size: 10px;">indexing</a> <a href="/tags/io-meter/" style="font-size: 10px;">io-meter</a> <a href="/tags/ionicons/" style="font-size: 10px;">ionicons</a> <a href="/tags/kubernetes/" style="font-size: 10px;">kubernetes</a> <a href="/tags/kv/" style="font-size: 10px;">kv</a> <a href="/tags/life/" style="font-size: 17.5px;">life</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/mac/" style="font-size: 10px;">mac</a> <a href="/tags/math/" style="font-size: 10px;">math</a> <a href="/tags/memory/" style="font-size: 10px;">memory</a> <a href="/tags/mobile/" style="font-size: 10px;">mobile</a> <a href="/tags/music/" style="font-size: 10px;">music</a> <a href="/tags/olap/" style="font-size: 10px;">olap</a> <a href="/tags/online-editor/" style="font-size: 10px;">online editor</a> <a href="/tags/open-source/" style="font-size: 10px;">open source</a> <a href="/tags/opensource/" style="font-size: 10px;">opensource</a> <a href="/tags/os/" style="font-size: 10px;">os</a> <a href="/tags/osx/" style="font-size: 15px;">osx</a> <a href="/tags/package/" style="font-size: 10px;">package</a> <a href="/tags/paper/" style="font-size: 12.5px;">paper</a> <a href="/tags/pencil/" style="font-size: 10px;">pencil</a> <a href="/tags/persist-datastructure/" style="font-size: 17.5px;">persist datastructure</a> <a href="/tags/programing/" style="font-size: 10px;">programing</a> <a href="/tags/programming/" style="font-size: 10px;">programming</a> <a href="/tags/rendering/" style="font-size: 10px;">rendering</a> <a href="/tags/review/" style="font-size: 10px;">review</a> <a href="/tags/rpc/" style="font-size: 10px;">rpc</a> <a href="/tags/scala/" style="font-size: 10px;">scala</a> <a href="/tags/schedule/" style="font-size: 10px;">schedule</a> <a href="/tags/selection/" style="font-size: 10px;">selection</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/shader/" style="font-size: 10px;">shader</a> <a href="/tags/sketch/" style="font-size: 10px;">sketch</a> <a href="/tags/sql/" style="font-size: 10px;">sql</a> <a href="/tags/stylus/" style="font-size: 10px;">stylus</a> <a href="/tags/summary/" style="font-size: 12.5px;">summary</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/swift/" style="font-size: 10px;">swift</a> <a href="/tags/taiwan/" style="font-size: 12.5px;">taiwan</a> <a href="/tags/tips/" style="font-size: 10px;">tips</a> <a href="/tags/travel/" style="font-size: 12.5px;">travel</a> <a href="/tags/utility/" style="font-size: 10px;">utility</a> <a href="/tags/vector-trie/" style="font-size: 12.5px;">vector trie</a> <a href="/tags/watch/" style="font-size: 10px;">watch</a> <a href="/tags/web/" style="font-size: 17.5px;">web</a> <a href="/tags/webGL/" style="font-size: 12.5px;">webGL</a> <a href="/tags/webgl/" style="font-size: 10px;">webgl</a> <a href="/tags/wu/" style="font-size: 10px;">wu</a> <a href="/tags/xcode/" style="font-size: 10px;">xcode</a> <a href="/tags/zocial/" style="font-size: 10px;">zocial</a> <a href="/tags/%E5%90%90%E6%A7%BD/" style="font-size: 10px;">吐槽</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2020 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+
+</body>
+
+</html>

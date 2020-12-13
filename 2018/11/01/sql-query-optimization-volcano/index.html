@@ -1,0 +1,544 @@
+<!DOCTYPE HTML>
+<html>
+
+
+
+<head>
+  <meta charset="utf-8">
+
+  <meta name="msapplication-TileColor" content="#000000">
+  <meta name="msapplication-TileImage" content="/favicon/favicon144.png">
+
+  <link rel="apple-touch-icon-precomposed" sizes="152x152" href="/favicon/favicon152.png">
+  <link rel="apple-touch-icon-precomposed" sizes="120x120" href="/favicon/favicon120.png">
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/favicon/favicon144.png">
+  <link rel="apple-touch-icon-precomposed" sizes="72x72" href="/favicon/favicon72.png">
+
+  
+  <title>SQL 查询优化原理与 Volcano Optimizer 介绍 | IO-meter</title>
+  <meta name="author" content="Chase Zhang">
+  
+  <meta name="description" content="随着大数据相关技术的发展，SQL 作为一种成熟的查询语言又逐渐回到人们视野的中心来，被称为
+NewSQL 的新型关系型数据库更是蓬勃发展。 作为一种声明式编程语言，将 SQL 转化为可以高效执行的任务对于
+OLAP 任务来说是至关重要的。 本文将尝试对相关的技术原理进行一次总结。">
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+  <meta property="og:title" content="SQL 查询优化原理与 Volcano Optimizer 介绍"/>
+  <meta property="og:site_name" content="IO-meter"/>
+
+  
+    <meta property="og:image" content=""/>
+  
+
+  <link rel="alternate" href="/atom.xml" title="IO-meter" type="application/atom+xml">
+  <link rel="stylesheet" href="/css/style.css" media="screen" type="text/css">
+  <!--[if lt IE 9]><script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script><![endif]-->
+  <script type="text/javascript" src="/js/retina.min.js"></script>
+  <script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-48012866-2', 'io-meter.com');
+  ga('send', 'pageview');
+</script>
+
+<meta name="generator" content="Hexo 5.2.0"></head>
+
+<body>
+<div id="banner">
+    <div class="wrapper">
+        <header>
+            <div id="header" class="simple" >
+<nav id="main-nav">
+    <ul class="alignright">
+        
+        <li><a href="/">Home</a></li>
+        
+        <li><a href="/archives">Archives</a></li>
+        
+        <li><a target="_blank" rel="noopener" href="http://chasezhang.me">About</a></li>
+        
+    </ul>
+    <div class="clearfix"></div>
+</nav>
+
+  <h1 class="main"><a href="/">
+  <img src="/img/logo.png" alt="IO-meter" id="logo" /></a></h1>
+  <h2 class="main">Programic Creativity</h2>
+  <h1 class="alt">
+      <a href="/">IO METER</a>
+  </h1>
+  <div class="clearfix"></div>
+</div>
+
+        </header>
+    </div>
+</div>
+<div id="content" class="wrapper">
+    <div id="articles"><h2 class="subtitle article-title">Article</h2>
+<article class="post title-article full-article">
+  <div class="post-content">
+    <header>
+      
+    <h1 class="title"><a href="/2018/11/01/sql-query-optimization-volcano/" target="_blank">SQL 查询优化原理与 Volcano Optimizer 介绍</a></h1>
+
+
+      
+        <time datetime="2018-11-01T09:59:47.000Z">2018-11-01</time>
+      
+    </header>
+    <div class="entry">
+      <p>随着大数据相关技术的发展，SQL 作为一种成熟的查询语言又逐渐回到人们视野的中心来，被称为
+NewSQL 的新型关系型数据库更是蓬勃发展。 作为一种声明式编程语言，将 SQL 转化为可以高效执行的任务对于
+OLAP 任务来说是至关重要的。 本文将尝试对相关的技术原理进行一次总结。</p>
+<a id="more"></a>
+<p>本文将重点着眼于对 Volcano(Cascades) Optimizer的详细介绍上，这是因为 Volcano 模型不但十分流行，
+更是被 <a href="https://calcite.apache.org/" target="_blank" rel="noopener">Apache Calcite</a> 这一优秀的开源框架所实现了。
+我们因此可以通过直接阅读 Calcite 的源码来了解算法执行的内部细节。</p>
+<p>尽管 Apache Calcite 这一项目并不是经常出现在人们眼前，但却是 Apache 数据平台技术栈当中及其有价值的组件。
+它提供了一套 SQL 的解析与执行接口，包含了 SQL 查询和执行相关的一系列任务的执行代码。
+使用者只需要将自己的数据模型 Plugin 到 Calcite 当中，就可以得到 SQL 查询的能力。
+包括 Apache Storm, Apache Flink, Apache Kylin 和 Apache Drill 等项目都使用它完成 SQL 解析或执行的操作。</p>
+<p>遗憾的是，除了<a href="https://arxiv.org/pdf/1802.10233.pdf" target="_blank" rel="noopener">相关论文之外</a>，其文档等对于内部细节的介绍都不够充分。
+本文作为对其部分代码细节进行阅读之后的浅显总结，同时也希望能为各位读者使用 Calcite 有所帮助。</p>
+<p>另外值得注意的是，本文使用 Volcano Optimizer 代指 Volcano 和 Cascades 两种算法，
+一个是因为二者是一脉相承的关系，很多基本思想是一样的，另外一点是很多有关 Volcano 优化器的相关信息其实是由
+<a href="https://15721.courses.cs.cmu.edu/spring2018/papers/15-optimizer1/xu-columbia-thesis1998.pdf" target="_blank" rel="noopener">Cascades 相关的 Paper</a>
+ 总结和介绍的。</p>
+<h2 id="SQL__u67E5_u8BE2_u4F18_u5316_u7684_u76EE_u7684"><a href="#SQL__u67E5_u8BE2_u4F18_u5316_u7684_u76EE_u7684" class="headerlink" title="SQL 查询优化的目的"></a>SQL 查询优化的目的</h2><p>SQL 查询优化在 OLAP 应用当中至关重要的主要原因在于 SQL 是一种声明式(Declarative)的编程语言，
+相比一般的编程语言描述的是程序执行的过程，这类编程语言则是描述问题或者需要的结果本身。
+具体的执行步骤则交由程序自己决定。</p>
+<p>从使用的角度，SQL 作为一种可以被非相关技术人员快速入手的编程语言，
+其主要优点就在于即使用户因并不了解数据库内部的实现细节而写出来十分糟糕的查询语句，
+只要表达的意思准确清楚，数据库就可以在一定程度上将其转化为合理的执行方案高效的返回结果，
+极大的降低了使用门槛。因此一个好的查询优化器，也是关系型数据库重要的卖点之一。</p>
+<p>从技术的角度来说，通过对用户输入的查询进行优化，实现更优的执行步骤规划
+数据库可以实现更快的执行和更少的 IO 消耗。从而节约资源提高性能。</p>
+<h2 id="SQL__u67E5_u8BE2_u4F18_u5316_u7684_u57FA_u672C_u539F_u7406"><a href="#SQL__u67E5_u8BE2_u4F18_u5316_u7684_u57FA_u672C_u539F_u7406" class="headerlink" title="SQL 查询优化的基本原理"></a>SQL 查询优化的基本原理</h2><p>SQL 作为一项图灵奖级别的发明，其重要意义不单单是发明了一种可以用作数据查询的语言，
+更重要的一点是发明了<a href="https://en.wikipedia.org/wiki/Relational_algebra" target="_blank" rel="noopener">关系代数(Relation Algebra)</a>这一工具，
+使得计算机理解和处理查询的语义更加方便。SQL 查询语句的优化也是基于关系代数这一模型。</p>
+<p>所谓关系代数，是 SQL 从语句到执行计划的一种中间表示。首先它不是单纯的抽象语法树(AST)，
+而是一种经过进一步处理得到的中间表示(可以类比一般编程语言的 IR)。SQL 优化的本质是对关系代数的优化。</p>
+<p>关于关系代数的具体内容这里不再赘述，我们直接来看一个例子。假设我们有如下的 SQL:</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> pv.siteId, user.nickame</span><br><span class="line"><span class="keyword">FROM</span> pv <span class="keyword">JOIN</span> <span class="keyword">user</span></span><br><span class="line"><span class="keyword">ON</span> pv.siteId = user.siteId <span class="keyword">AND</span> pv.userId = user.id</span><br><span class="line"><span class="keyword">WHERE</span> pv.siteId = <span class="number">123</span>;</span><br></pre></td></tr></table></figure>
+<p>上述 SQL 假定我们有两个数据表<code>pv</code>和<code>user</code>，前者记录了用户的 Pageview 访问，
+后者是用户信息表。这两张表可以使用<code>siteId</code>和<code>userId</code>(<code>user.id</code>)连立合并起来，
+这样我们就既可以查到用户的 PV 信息，又可以将 PV 信息对应到用户资料。</p>
+<p>将上述 SQL 表示成关系代数，可能是如下形式:</p>
+<p><img src="/img/sqlopt/relation-algebra.png" alt="Relation Algebra"></p>
+<p>可以看到，上述关系代数将 SQL 表示成树形的结构，树形结构的叶子结点是 SCAN 算子，
+负责从储存设备将表中的信息读出。之后两个表的数据被输送到 JOIN 算子中实现合并计算。
+JOIN 得到的数据又被输入一个 FILTER 算子中执行 WHERE 语句的条件(即过滤操作)。
+最后的顶层算子是 PROJECT 算子，这个算子可以将输入数据当中的指定列取出，也可以对这些列进行重命名。</p>
+<p>显然，关系代数本身就一定程度上体现了 SQL 查询的计算方案。
+一般来说，实际的数据库实现还存在逻辑代数处理阶段和物理实现处理阶段，
+这两个阶段使用的算子不同。数据流动也存在 Pull 模式和 Push 模式两种。
+在这里我们先略去对这些信息的讨论，单纯研究如何通过关系代数优化执行方案。</p>
+<p>观察上述关系代数的表示，我们发现最终的结果只需要使用到<code>pv.siteId</code>、<code>pv.userId</code>
+<code>user.id</code>和<code>user.nickname</code>四列数据。即使我们的表有几十列其他的数据，也对最终的结果没有影响。
+将这些表的其他列读取出来向上传输和计算是一种浪费。如果我们的表支持高效地只读取需要的列，
+那么从一开始就这么做会大大提高性能。下图描述了这种变换:</p>
+<p><img src="/img/sqlopt/projection-pushdown.png" alt="Projection Pushdown"></p>
+<p>通过只读取特定列来减少 IO 损耗、增加执行性能的技巧正是现今流行的列式储存的优点。</p>
+<p>继续观察我们的关系代数树，可以发现对于<code>pv</code>表有一个条件过滤操作。
+假设我们的<code>pv</code>表在<code>siteId</code>这一列创建了索引，或者这个表在就是按照这一列的值分散储存的。
+在这种情况下，显然我们可以做到在 SCAN 的时候直接找到对应 <code>siteId</code> 所在的区域，
+只读取符合匹配条件的数据出来。避免读取不相关<code>siteId</code>的数据可以极大地减少 IO 和提高性能。</p>
+<p><img src="/img/sqlopt/predicate-pushdown.png" alt="Predicate Pushdown"></p>
+<p>上图描绘了这种变换。实际上，这种变换被称为谓词下推(Predicate Pushdown)，
+是普遍应用在各种文件储存格式(ORC、Parquet)和各种 SQL 数据引擎(Hive、Kylin)
+上的常见的查询优化方式。</p>
+<p>通过上面的几步，我们成功将最初的关系代数模型化简成为一种更为简单高效，
+实际效果却完全一样的关系代数。最后的结果是一种相比之前更优的执行方案，
+因此也就实现了我们进行查询优化的目的。</p>
+<p>总结使用关系代数进行查询优化的要点:</p>
+<ol>
+<li>SQL 查询可以表示成关系代数</li>
+<li>关系代数作为一种树形的结构，实质上也可以表示查询的物理实现方案流程</li>
+<li>关系代数可以进行局部的等价变换，变换前后返回的结果不变但执行的成本不同</li>
+<li>通过寻找执行成本最低的关系代数表示，我们就可以将一个 SQL 查询优化成更为高效的方案</li>
+</ol>
+<p>此外，很重要的一点是:
+实现关系代数的化简和优化，依赖于数据系统的物理性质，如</p>
+<ol>
+<li>储存设备的特性(顺序读性能如何？随机读性能如何？吞吐量如何)</li>
+<li>储存内容的格式和排列(列式储存？行式储存？是否以某列进行分片？)</li>
+<li>包含的元数据和预计算结果(是否存在索引？是否存在物化视图？)</li>
+<li>聚合和计算单元的特性(单线程？并发计算？分布式计算？特殊加速硬件？)</li>
+</ol>
+<p>综上所述，对 SQL 查询进行优化，既要在原先逻辑算子的基础上进行变换，
+又要考虑物理实现的特性，这就是为什么很多查询系统存在逻辑方案和物理方案的区别的原因。
+在优化时，往往存在一个从逻辑方案到物理方案进行转变的阶段。</p>
+<p>事实上，从逻辑方案到物理方案的变换也可以划归为一种关系代数的优化问题。
+本质上仍然是按照一定的规则将原模型当中的局部等价地转换成一种可以物理执行的模型或算子。
+一个最简单的例子就是 JOIN 方案的选择：</p>
+<p><img src="/img/sqlopt/logical-join-to-physical-join.png" alt="Physical Plan"></p>
+<p>如上图所示，JOIN 算子只描述了两个表需要进行 JOIN 的逻辑，但是并没有指定 JOIN 的实现方案。
+右边的 HASH JOIN 和 SORT JOIN 代表着 JOIN 操作的两种不同的实现方案。
+两种方案在不同的场景下各有优劣，需要根据实际输入数据的特点进行选择。
+然而尽管是从逻辑算子到物理算子的变换，其基本原理仍然是根据一定的规则进行代换而已，
+与逻辑算子之间的代换并无本质差别。</p>
+<p>另一种具有代表性的优化方案是 SORT LIMIT 的实现方案。假设一个查询会将数据进行排序，
+然后 LIMIT 取最高的几个值。当取得的值比较少的时候，显然可以采取一定的措施避免对全部数据进行排序
+(使用堆缓冲等)。鉴于排序是一种耗费很多的操作，对其进行优化很有价值。下图展示了一种优化方法:</p>
+<p><img src="/img/sqlopt/sort-limit-to-top-n.png" alt="Top-N"></p>
+<p>上述优化证明了进行关系代数的变换时，往往不一定是一对一的关系。很多情况下可以将多个算子合并成一个算子。
+实际上将一个算子进行拆分形成多个算子的场景也是有的。</p>
+<h2 id="SQL__u67E5_u8BE2_u4F18_u5316_u7684_u57FA_u7840_u7B97_u6CD5"><a href="#SQL__u67E5_u8BE2_u4F18_u5316_u7684_u57FA_u7840_u7B97_u6CD5" class="headerlink" title="SQL 查询优化的基础算法"></a>SQL 查询优化的基础算法</h2><h3 id="u57FA_u4E8E_u89C4_u5219_u7684_u4F18_u5316_u7B97_u6CD5"><a href="#u57FA_u4E8E_u89C4_u5219_u7684_u4F18_u5316_u7B97_u6CD5" class="headerlink" title="基于规则的优化算法"></a>基于规则的优化算法</h3><p>前面的例子探索了 SQL 语句进行优化的过程。
+将这一过程形式化的总结出来就得到了基于规则的优化方法。</p>
+<p>基于规则的优化方法的要点在于结构<strong>匹配</strong>和<strong>替换</strong>。
+应用规则的算法一般需要先在关系代数结构上匹配一部分局部的结构，
+再根据结构的特点进行变换乃至替换操作。</p>
+<p><img src="/img/sqlopt/pattern-match-rule.png" alt="Pattern Match"></p>
+<p>值得注意的是，由于变换规则要保持关系代数语义不变的大前提没有改变，
+因此被匹配的部分即使内部结构完全被替换，其跟外部的接口也要保持一致性：</p>
+<ol>
+<li>向上输出的数据内容和类型不变</li>
+<li>下层接受输入的数量和类型不变</li>
+</ol>
+<h3 id="u57FA_u4E8E_u6210_u672C_u7684_u4F18_u5316_u7B97_u6CD5"><a href="#u57FA_u4E8E_u6210_u672C_u7684_u4F18_u5316_u7B97_u6CD5" class="headerlink" title="基于成本的优化算法"></a>基于成本的优化算法</h3><p>基于规则的优化算法在实际使用中仍然面对很多问题:</p>
+<ol>
+<li>变换规则的选择问题：哪些规则应该被应用？以什么顺序被使用？</li>
+<li>变换效果评价的问题：经过变换的查询性能是否会变好？多种可能的方案哪个更优？</li>
+</ol>
+<p>对于上述问题，不同的算法给出了不同的答案。最朴素的方法是人工定义一些规则的优先级，
+每次按照固定的优先级选择规则进行变换直到最后得到结果。这种方法往往无法得到最优的方法，
+灵活性也比较差。</p>
+<p>现阶段主流的方法都是基于成本(Cost)估算的方法。也就是说，给定某一关系代数代表的执行方案，
+将会对这一方案的执行成本进行估算，最终选择估算成本最低的方案。</p>
+<p>尽管被称为基于成本的方法，这类算法仍然往往要结合规则进行方案的探索。也就是说，
+基于成本的方法其实是通过不断的应用规则进行变换得到新的执行方案，
+然后对比方案的成本优劣进行最终选择。</p>
+<p><img src="/img/sqlopt/plan-exploring-tree.png" alt="Plan Exploring"></p>
+<p>上图展示了这一过程。其中，每一次关系代数的变换都是由于应用了不同的规则，
+应用了某一规则之后还可以接下来应用其他规则，直到所有变化都被穷尽了为止。
+对于每一种方案我们都可以计算得到一个估计的成本，如果可以计算出所有可能的变化，
+我们就可以得到最优的方案。</p>
+<p>显然，要不重复地遍历所有不同的关系代数表示本身就是一项相对棘手的算法问题，
+即使实现了这样枚举的功能，其巨大的搜索空间也消耗很多计算力——查询优化本身是为了提高查询性能，
+如果优化算法本身的性能堪忧，则执行这一步骤的意义就消失了。</p>
+<p>接下来就讨论一种可以较好地解决上述问题的系统: Volcano Optimizer。</p>
+<h2 id="Volcano_Optimizer"><a href="#Volcano_Optimizer" class="headerlink" title="Volcano Optimizer"></a>Volcano Optimizer</h2><p>Volcano Optimizer 是一种基于成本的优化算法，其目的是基于一些假设和工程算法的实现，
+在获得成本较优的执行方案的同时，可以通过剪枝和缓存中间结果(动态规划)的方法降低计算消耗。
+这一章在介绍 Volcano Optimizer 的同时也将会引入很多对 Calcite 当中概念的讨论。</p>
+<h3 id="u6210_u672C_u6700_u4F18_u5047_u8BBE"><a href="#u6210_u672C_u6700_u4F18_u5047_u8BBE" class="headerlink" title="成本最优假设"></a>成本最优假设</h3><p>成本最优假设是理解 Volcano Optimizer 实现的要点之一。这一假设认为，
+在最优的方案当中，取局部的结构来看其方案也是最优的。</p>
+<p>成本最优假设利用了贪心算法的思想，在计算的过程中，
+如果一个方案是由几个局部区域组合而成，那么在计算总成本时，
+我们只考虑每个局部目前已知的最优方案和成本即可。</p>
+<p>换句话说，在 Volcano 优化算法下，下图所表示的关系代数的计算成本，大体上正比于各个部分计算成本的和。
+这一假设不仅应用于单个 Operator 节点之间，也应用于子树之间和被规则匹配的区域内外。</p>
+<p><img src="/img/sqlopt/cumulative-cost-assumption.png" alt="Cumulative Cost"></p>
+<p>对于成本最优假设的另一种更直观的描述是，如果关系代数局部的某个输入的计算成本上升，
+那么这一子树的整体成本趋向于上升，反之则会下降。也即是在上图右侧有</p>
+<p>$$Cost(A) \sim Cost(B) + Cost(C)$$</p>
+<p>上述假设对于大部分关系代数算子都是有效的，但是并非百分之一百准确。
+对于部分反例的处理方法将会在后文进一步介绍。</p>
+<h3 id="u52A8_u6001_u89C4_u5212_u7B97_u6CD5_u4E0E_u7B49_u4EF7_u96C6_u5408"><a href="#u52A8_u6001_u89C4_u5212_u7B97_u6CD5_u4E0E_u7B49_u4EF7_u96C6_u5408" class="headerlink" title="动态规划算法与等价集合"></a>动态规划算法与等价集合</h3><p>由于引入了成本最优假设，在优化过程中我们就可以对任意子树目前已知的最优方案和最优成本进行缓存。
+此后在计算的过程中，如果需要利用这一子树，可以直接使用之前缓存的结果。这里应用了动态规划算法的思想。</p>
+<p>要实现这一算法，只需要建立缓存结果到子树双向映射即可。在 Calcite 的实现当中，一颗子树使用其根结点作为代表。
+某一棵子树所有可能的变换方案组成的集合被称为等价集合(Equivalent Set)，
+等价集合将会维护自身元素当中具有最优成本的方案。</p>
+<p><img src="/img/sqlopt/equivalent-set.png" alt="Equivalent Set"></p>
+<p>等价集合在 Calcite 当中对应的是<code>RelSet</code>类。</p>
+<p>对每一颗子树都枚举其等价集合的内容会十分耗费空间。其实，对于某一棵以 A 为根结点的子树来说，
+我们只关心 A 本身和包含 A 了的匹配内的节点。对于 A 和包含 A 的匹配之外的部分，
+我们可以直接链接到子树对应的等价集合当中。基于成本最优假设，在计算方案成本的时候，
+我们还可以直接从这些部分的等价集合中选取最佳方案。</p>
+<p>假设从 A 起，可以应用两种不同的变换规则，如下图所示:</p>
+<p><img src="/img/sqlopt/equivalent-set-recursive-build.png" alt="Equivalent Set Building"></p>
+<p>则除了 A 本身和规则匹配到的部分，其他部分的计算就可以通过递推的方式实现
+具体来说，对应上述三种情况，会计算等价集合的元素：</p>
+<ol>
+<li>A 节点结合 B、C 节点等价集合的最优元素和成本</li>
+<li>A、C 转化后的节点结合 B、E、F 节点对应等价集合当中的最优元素和成本</li>
+<li>A、B 转换后的节点结合 C、D、E 节点对应等价集合当中的最优元素和成本</li>
+</ol>
+<p>A 所代表的子树对应的最优方案也即是从上述三种方案中选取。</p>
+<p>通过链接到子树优化方案的技巧，我们的算法缩减了状态空间、节省了计算量和储存空间。
+下图展示了链接到子方案的大致思路。</p>
+<p><img src="/img/sqlopt/equivalent-set-pointer-structure.png" alt="Equivalent Set Structure"></p>
+<p>当然，在关系代数表示中不相邻的部分也可能具有重复的结构，Calcite 在实现的过程中考虑了这种情况，
+将会在合适的时候对等价集合进行合并操作，也会出现树中两个不同子树的根指向了同一个等价集合的现象。</p>
+<p>要实现树结构的相等计算和查询计算也比较复杂，Calcite 采用了最简单的递归将子树的内容打印成字符串的方法进行 Hash 和比较。
+因此在使用 Calcite 时要注意正确实现 <code>RelNode</code> 类的 <code>getDigest</code> 方法。保证将节点的各种属性包含在内，
+防止不同的节点被认为等价。</p>
+<p>在计算结束后要得到最后的执行方案，只需从根节点开始将原始关系代数当中的结构替换成最优方案当中的即可。</p>
+<h3 id="u81EA_u5E95_u5411_u4E0A_vs-__u81EA_u9876_u5411_u4E0B"><a href="#u81EA_u5E95_u5411_u4E0A_vs-__u81EA_u9876_u5411_u4E0B" class="headerlink" title="自底向上 vs. 自顶向下"></a>自底向上 vs. 自顶向下</h3><p>在实现上述动态规划算法的时候存在两种遍历方法，一种是自底向上的动态规划算法，
+一种是自顶向下的动态规划算法。</p>
+<p>自底向上的算法最为直观：当我们试图计算节点 A 的最优方案时，
+其子树上每个节点对应的等价集合和最优方案都已经计算完成了，我们只需要在 A
+节点上不断寻找可以应用的规则，并利用已经计算好的子树成本计算出母树的成本，就可以得到最优方案。
+事实上，包括 SQL Server 在内的一些成熟的数据库系统都采用这种方法。</p>
+<p>然而这种方案存在一些难以解决的问题:</p>
+<ol>
+<li>不方便应用剪枝技巧，在查询中可能会遇到在父亲节点的某一种方案成本很高，后续完全无需考虑的情况，
+尽管如此，需要被利用的子计算都已经完成了，这部分计算因此不可避免</li>
+<li>难以实现启发式计算和限制计算层数。由于程序要不断递归到最后才能得到比较好的方案，
+因此即使计算量比较大也无法提前得到一个可行的方案并停止运行</li>
+</ol>
+<p>因此，Volcano Optimizer 采取了自顶向下的计算方法，在计算开始，
+每棵子树先按照原先的样子计算成本并作为初始结果。在不断应用规则的过程中，如果出现一种新的结构被加入到当前的等价集合中，
+且这种等价集合具有更优的成本，这时需要向上冒泡到所有依赖这一子集合的父亲等价集合，
+更新集合里每个元素的成本并得到新的最优成本和方案。</p>
+<p>值得注意的是，在向上冒泡的过程中需要遍历父亲集合内的每一个方案，这是因为不同方案对于 Input
+成本变化的敏感性不同，不能假设之前的最优方案仍然是最优的。</p>
+<p>自顶向下的方法尽管解决了一些问题，但是也带来了对关系代数节点操作十分繁琐、
+要不断维护父子等价集合的关系等问题，实现相对比较复杂。</p>
+<h3 id="u5E7F_u5EA6_u4F18_u5148_u641C_u7D22_u4E0E_u542F_u53D1_u5F0F_u7B97_u6CD5"><a href="#u5E7F_u5EA6_u4F18_u5148_u641C_u7D22_u4E0E_u542F_u53D1_u5F0F_u7B97_u6CD5" class="headerlink" title="广度优先搜索与启发式算法"></a>广度优先搜索与启发式算法</h3><p>如前文所述，采用自顶向下的方法之后就不需要保证子树的等价集合先被计算出来，
+因此可以使用广度优先的顺序自根节点起向下遍历执行搜索任务。
+在 Calcite 的实现之中，对于自某一节点开始激发的匹配规则(<code>RuleMatch</code>)，将会先被压入队列(<code>RuleQueue</code>)之中等待执行。
+这样就比较方便限制搜索的层数从而提前返回结果。</p>
+<p>如同 A* 算法应用在寻路任务当中用来加速执行一样，在引入队列之后的 Volcano Optimizer
+当中也可以使用启发式算法——某一匹配规则及其产生的等价集合可以具备一定的 <code>Importance</code>。
+用优先队列就可以在使这些规则的搜索按照重要性从高到低的顺序执行。</p>
+<p>某一匹配规则也可以将变化后的结果设定为极高优先级，从而直接胜出而不会被其他规则所取代，
+另一种个方向是给结果设定 0.0 值作为优先级，此时这一分支在未来几乎不会在被继续探索。
+这也是实现自顶向下搜索实现剪枝的一种方法。促进算法收敛也是使用<code>Importance</code>的原因之一。</p>
+<p>在这一基础上，Calcite 实现的 Volcano Optimizer 支持如下三种算法终止条件:</p>
+<ol>
+<li>时钟: 使用最大迭代计数或最大物理执行时间作为限制</li>
+<li>成本阈值: 当优化方案的成本低于某个阈值是结束算法(相比原始成本或固定值)</li>
+<li>规则穷尽: 当无法再应用规则获得新的关系代数结构的时候结束算法</li>
+</ol>
+<h3 id="Trait/Physical_properties_vector"><a href="#Trait/Physical_properties_vector" class="headerlink" title="Trait/Physical properties vector"></a>Trait/Physical properties vector</h3><p>前文提到，Volcano Optimizer 大致基于一个“成本最优假设”。
+这一假设是在进行动态规划加速计算的基础之一。然而这一假设在一些情况下并不成立。
+考虑下面的情况</p>
+<p><img src="/img/sqlopt/sort-join-cost-decrease.png" alt="Sort Join with Index"></p>
+<p>如图左边是对两个表进行 SORT JOIN 的关系代数。此时从 B 和 C 读入的数据直接按照储存顺序读取，
+虽然成本很低但是是乱序的。这时就需要在 SORT JOIN 算子之中进行排序操作从而需要不少的计算量。
+而系统如果利用索引进行读取，虽然不是再是顺序读取而有性能损失，
+但是可以获得排序好的记录。这时在 SORT JOIN 算子只需进行合并操作即可，
+整体的成本由于避免了全表排序反而更优。</p>
+<p>也就是说，虽然两个输入的成本都变高了，但是由于引入了新的特性，整体执行反而更快。
+这种问题在 Volcano Optimizer 当中使用 Physical properties vector 来解决。</p>
+<p>在 Calcite 当中，这个东西称为 Trait。一个 <code>RelNode</code> 可以声明自己的 Trait，
+人们也可以编写规则利用输入节点的 Trait 来优化执行。</p>
+<p>在 Calcite 当中，具有不同 Trait 的优化方案虽然都在一个<code>RelSet</code>当中，
+却按照相同 Trait 一类的方法分别组织在<code>RelSubset</code>对象里。
+在进行方案成本估算和匹配规则应用等需要查询等价集合的情况下，不同的<code>RelSubset</code>会分别被处理。
+这样的设计一定程度上解决了成本最优假设失效的问题。</p>
+<p>典型的 Trait 包括记录是否有序、是否包含 NULL 值、字符串是否都短于某一特定值等。
+利用 Trait 进行查询优化的逻辑十分复杂也需要小心处理。下图展示了一个简单却典型的 Trait 的用例:
+如果一个子树的输出已经按照某一列被排序，则取消掉上层重复的排序算子。</p>
+<p><img src="/img/sqlopt/eliminate-sort.png" alt="Eliminate Sort"></p>
+<h3 id="u5176_u4ED6"><a href="#u5176_u4ED6" class="headerlink" title="其他"></a>其他</h3><p>前文分步骤解释了 Volcano Optimizer 的主要算法思想，在这里再结合 Calcite
+的实现列举一些值得了解的事项：</p>
+<ol>
+<li>在最初的 Volcano Optimizer 论文中，算法存在逻辑优化和物理优化两个步骤，
+在前者中会尽量将所有逻辑算子变换和展开。这一做法在后续的 Cascades
+论文以及 Calcite 的实现中并没有体现。后两者当中，逻辑变换的规则和物理变换的规则没有本质的差别，
+两者会在一轮优化当中同时使用，以期待快速从逻辑表示转换为物理执行方案。</li>
+<li>在 Calcite 当中，可以覆写<code>RelNode</code>的<code>getCost</code>方法为自行实现的算子指定成本计算的方法，
+尽管 Calcite 的 <code>Cost</code> 类包括 <code>rows</code>、<code>IO</code>、<code>CPU</code> 等多个字段，但现阶段只会比较 <code>rows</code> 的大小。
+因此需要考虑把其他方面的成本换算为行数。</li>
+<li>在关系代数树上查找匹配的结构是优化过程中最频繁的操作。Calcite 实现的匹配方法十分简单：
+如果一个节点和某一匹配模式的根结点相互匹配，则从该节点进行一次校验。
+从实践来看此方法性能较好。</li>
+<li>Calcite 默认并不进行枚举式的优化方案计算，而是结合启发式算法进行有限的搜索，
+因此也不一定能返回“成本最优假设”下的最优方案。</li>
+</ol>
+<h2 id="u603B_u7ED3"><a href="#u603B_u7ED3" class="headerlink" title="总结"></a>总结</h2><p>本文介绍了基于关系代数对 SQL 查询进行优化的基本原理并结合 Calcite 项目详细介绍了
+Volcano Optimizer 的设计思路。笔者认为，Apache Calcite 提供的 SQL 
+解析、优化和执行层十分有价值，不单是学习数据库相关逻辑的极好教材，
+也足以应用在各种成熟的项目当中。</p>
+<p>除了本文介绍的查询优化算法，在查询执行过程中还有很多其他很重要的优化方式，例如</p>
+<ol>
+<li>Vectorized Execution 通过元素在关系代数节点之间的获取批量化以及利用 SIMD 
+指令集优化提高并行性从而优化执行</li>
+<li>Query Compilation 通过将优化好的执行方案通过 LLVM 等工具编译成机器码极大地加速了解释速度。
+实际上 Calcite 就利用了 Janino 库来将优化后的方案编译成 JVM Bytecode 来执行</li>
+<li>利用索引信息和物化视图来加速结果的返回</li>
+</ol>
+<p>以上每种方式都十分值得研究，希望以后有机会将相关的知识总结出来与大家一起探讨。</p>
+
+    </div>
+    <footer>
+        
+        
+  
+  <div class="tags">
+    <a href="/tags/Algorithm/">Algorithm</a>, <a href="/tags/SQL/">SQL</a>, <a href="/tags/Volcano/">Volcano</a>, <a href="/tags/Cascades/">Cascades</a>, <a href="/tags/Optimization/">Optimization</a>
+  </div>
+
+        
+<div class="recent-posts">
+  <h3 class="title">Recent Posts</h3>
+  <ul>
+    
+      <li>
+        <a href="/2020/12/12/nvm-store/">Nvm Store: 第二届阿里数据库大赛参赛记录</a>
+      </li>
+    
+      <li>
+        <a href="/2020/02/24/how-to-architect-a-query-compiler/">SIGMOD 16 | How to Architect a Query Compiler</a>
+      </li>
+    
+      <li>
+        <a href="/2020/01/04/olap-distributed/">OLAP 任务的并发执行与调度</a>
+      </li>
+    
+      <li>
+        <a href="/2019/03/16/streaming-incremental-sql-execution/">Stream SQL 的执行原理与 Flink 的实现</a>
+      </li>
+    
+      <li>
+        <a href="/2018/11/01/sql-query-optimization-volcano/">SQL 查询优化原理与 Volcano Optimizer 介绍</a>
+      </li>
+    
+  </ul>
+</div>
+
+
+        
+<div class="follow-me">
+  <h3 class="title">Follow Me</h3>
+  <div class="links">
+    
+    <a target="_blank" rel="noopener" href="https://twitter.com/ant_sz">
+        <i class="twitter"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://github.com/shanzi">
+        <i class="github"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://plus.google.com/+ChaseZhang">
+        <i class="gplus"></i>
+    </a>
+    
+    
+    <a target="_blank" rel="noopener" href="https://www.facebook.com/yunerrun">
+        <i class="facebook"></i>
+    </a>
+    
+    </div>
+</div>
+
+
+    </footer>
+  </div>
+</article>
+
+
+<section id="comment">
+  <h1 class="title">Comments</h1>
+
+  
+  <div id="disqus_thread">
+    <noscript>Please enable JavaScript to view the <a target="_blank" rel="noopener" href="//disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+  </div>
+  
+</section>
+
+</div>
+    <div class="clearfix"></div>
+    <aside id="sidebar">
+  <div class="widget search">
+  <form action="//google.com/search" method="get" accept-charset="utf-8">
+    <input type="search" name="q" results="0" placeholder="Search">
+    <input type="hidden" name="q" value="site:io-meter.com">
+  </form>
+</div>
+
+
+  
+<div class="widget tag">
+  <h3 class="title">Categories</h3>
+  <ul class="entry">
+  
+    <li><a href="/categories/Functional-Go/">Functional Go</a><small>4</small></li>
+  
+    <li><a href="/categories/Mastering-Paper/">Mastering Paper</a><small>1</small></li>
+  
+    <li><a href="/categories/Math/">Math</a><small>1</small></li>
+  
+    <li><a href="/categories/essay/">essay</a><small>9</small></li>
+  
+    <li><a href="/categories/iconfontr/">iconfontr</a><small>4</small></li>
+  
+    <li><a href="/categories/osx/">osx</a><small>1</small></li>
+  
+    <li><a href="/categories/review/">review</a><small>1</small></li>
+  
+    <li><a href="/categories/web/">web</a><small>6</small></li>
+  
+  </ul>
+</div>
+
+
+  
+<div class="widget tagcloud">
+  <h3 class="title">Tags</h3>
+  <div class="entry">
+    <a href="/tags/AWS/" style="font-size: 10px;">AWS</a> <a href="/tags/Algorithm/" style="font-size: 17.5px;">Algorithm</a> <a href="/tags/Apache-Flink/" style="font-size: 10px;">Apache Flink</a> <a href="/tags/Apple/" style="font-size: 10px;">Apple</a> <a href="/tags/Bezier-Path/" style="font-size: 10px;">Bezier Path</a> <a href="/tags/Big-Data/" style="font-size: 12.5px;">Big Data</a> <a href="/tags/Cascades/" style="font-size: 10px;">Cascades</a> <a href="/tags/Closure/" style="font-size: 10px;">Closure</a> <a href="/tags/Cloud/" style="font-size: 10px;">Cloud</a> <a href="/tags/Cocoa/" style="font-size: 10px;">Cocoa</a> <a href="/tags/Connected-Components/" style="font-size: 10px;">Connected Components</a> <a href="/tags/Data-structure/" style="font-size: 10px;">Data structure</a> <a href="/tags/Designing-Data-Intensive-Applications/" style="font-size: 10px;">Designing Data-Intensive Applications</a> <a href="/tags/Designing-Paradigm/" style="font-size: 10px;">Designing Paradigm</a> <a href="/tags/Distributed-System/" style="font-size: 12.5px;">Distributed System</a> <a href="/tags/Docker/" style="font-size: 10px;">Docker</a> <a href="/tags/Dokku/" style="font-size: 10px;">Dokku</a> <a href="/tags/EMR/" style="font-size: 10px;">EMR</a> <a href="/tags/ES6/" style="font-size: 10px;">ES6</a> <a href="/tags/ETL/" style="font-size: 10px;">ETL</a> <a href="/tags/Flink/" style="font-size: 10px;">Flink</a> <a href="/tags/Functional-Programing/" style="font-size: 10px;">Functional Programing</a> <a href="/tags/Functional-Programming/" style="font-size: 10px;">Functional Programming</a> <a href="/tags/GLSL/" style="font-size: 10px;">GLSL</a> <a href="/tags/GSoC/" style="font-size: 10px;">GSoC</a> <a href="/tags/Git/" style="font-size: 10px;">Git</a> <a href="/tags/Go/" style="font-size: 12.5px;">Go</a> <a href="/tags/Golang/" style="font-size: 17.5px;">Golang</a> <a href="/tags/Google/" style="font-size: 10px;">Google</a> <a href="/tags/Gourmet/" style="font-size: 10px;">Gourmet</a> <a href="/tags/Graph-Computing/" style="font-size: 10px;">Graph Computing</a> <a href="/tags/Hadoop/" style="font-size: 10px;">Hadoop</a> <a href="/tags/Immutable/" style="font-size: 10px;">Immutable</a> <a href="/tags/Incremental-SQL/" style="font-size: 10px;">Incremental SQL</a> <a href="/tags/Intel/" style="font-size: 10px;">Intel</a> <a href="/tags/Interface-Builder/" style="font-size: 10px;">Interface Builder</a> <a href="/tags/IoT/" style="font-size: 10px;">IoT</a> <a href="/tags/Japan/" style="font-size: 10px;">Japan</a> <a href="/tags/JavaScript/" style="font-size: 10px;">JavaScript</a> <a href="/tags/Kylin/" style="font-size: 10px;">Kylin</a> <a href="/tags/Kyoto/" style="font-size: 10px;">Kyoto</a> <a href="/tags/Lazy-Evaluation/" style="font-size: 10px;">Lazy Evaluation</a> <a href="/tags/Linux/" style="font-size: 10px;">Linux</a> <a href="/tags/Log-Structured-Merge-Tree/" style="font-size: 10px;">Log-Structured Merge Tree</a> <a href="/tags/Materialized-View/" style="font-size: 10px;">Materialized View</a> <a href="/tags/NSControl/" style="font-size: 12.5px;">NSControl</a> <a href="/tags/NUC/" style="font-size: 10px;">NUC</a> <a href="/tags/NVM/" style="font-size: 10px;">NVM</a> <a href="/tags/OSX/" style="font-size: 15px;">OSX</a> <a href="/tags/Objective-C/" style="font-size: 12.5px;">Objective-C</a> <a href="/tags/Optimization/" style="font-size: 10px;">Optimization</a> <a href="/tags/Osaka/" style="font-size: 10px;">Osaka</a> <a href="/tags/PageRank/" style="font-size: 10px;">PageRank</a> <a href="/tags/Persistent-Memory/" style="font-size: 10px;">Persistent Memory</a> <a href="/tags/Pregel/" style="font-size: 10px;">Pregel</a> <a href="/tags/React/" style="font-size: 10px;">React</a> <a href="/tags/SQL/" style="font-size: 12.5px;">SQL</a> <a href="/tags/SVG/" style="font-size: 10px;">SVG</a> <a href="/tags/Scala/" style="font-size: 10px;">Scala</a> <a href="/tags/Scheduler/" style="font-size: 12.5px;">Scheduler</a> <a href="/tags/Splunk/" style="font-size: 10px;">Splunk</a> <a href="/tags/Stream-SQL/" style="font-size: 10px;">Stream SQL</a> <a href="/tags/Summary/" style="font-size: 10px;">Summary</a> <a href="/tags/Swift/" style="font-size: 10px;">Swift</a> <a href="/tags/Three-js/" style="font-size: 10px;">Three.js</a> <a href="/tags/Tokyo/" style="font-size: 10px;">Tokyo</a> <a href="/tags/Transmission/" style="font-size: 10px;">Transmission</a> <a href="/tags/Travel/" style="font-size: 10px;">Travel</a> <a href="/tags/Ubuntu/" style="font-size: 10px;">Ubuntu</a> <a href="/tags/User-Tracking/" style="font-size: 10px;">User Tracking</a> <a href="/tags/Volcano/" style="font-size: 10px;">Volcano</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/Y-Combinator/" style="font-size: 10px;">Y-Combinator</a> <a href="/tags/accelerate-meter/" style="font-size: 10px;">accelerate meter</a> <a href="/tags/allocator/" style="font-size: 10px;">allocator</a> <a href="/tags/bezier-path/" style="font-size: 12.5px;">bezier path</a> <a href="/tags/blender/" style="font-size: 12.5px;">blender</a> <a href="/tags/borg/" style="font-size: 10px;">borg</a> <a href="/tags/city/" style="font-size: 10px;">city</a> <a href="/tags/cli/" style="font-size: 10px;">cli</a> <a href="/tags/cocoa/" style="font-size: 15px;">cocoa</a> <a href="/tags/compiler/" style="font-size: 10px;">compiler</a> <a href="/tags/completion/" style="font-size: 10px;">completion</a> <a href="/tags/contenteditable/" style="font-size: 10px;">contenteditable</a> <a href="/tags/database/" style="font-size: 12.5px;">database</a> <a href="/tags/design/" style="font-size: 10px;">design</a> <a href="/tags/desktop/" style="font-size: 10px;">desktop</a> <a href="/tags/develop/" style="font-size: 10px;">develop</a> <a href="/tags/device-motion/" style="font-size: 10px;">device motion</a> <a href="/tags/distribute-storage/" style="font-size: 10px;">distribute storage</a> <a href="/tags/distributed-system/" style="font-size: 10px;">distributed system</a> <a href="/tags/diumoo/" style="font-size: 10px;">diumoo</a> <a href="/tags/douban/" style="font-size: 10px;">douban</a> <a href="/tags/drawing/" style="font-size: 17.5px;">drawing</a> <a href="/tags/editor/" style="font-size: 10px;">editor</a> <a href="/tags/essay/" style="font-size: 17.5px;">essay</a> <a href="/tags/export/" style="font-size: 10px;">export</a> <a href="/tags/filesystem/" style="font-size: 10px;">filesystem</a> <a href="/tags/font/" style="font-size: 12.5px;">font</a> <a href="/tags/fontawesome/" style="font-size: 10px;">fontawesome</a> <a href="/tags/fp/" style="font-size: 17.5px;">fp</a> <a href="/tags/functional-programming/" style="font-size: 20px;">functional programming</a> <a href="/tags/github/" style="font-size: 10px;">github</a> <a href="/tags/go/" style="font-size: 20px;">go</a> <a href="/tags/golang/" style="font-size: 12.5px;">golang</a> <a href="/tags/hamt/" style="font-size: 10px;">hamt</a> <a href="/tags/hashmap/" style="font-size: 10px;">hashmap</a> <a href="/tags/html/" style="font-size: 10px;">html</a> <a href="/tags/html5/" style="font-size: 10px;">html5</a> <a href="/tags/iOS/" style="font-size: 10px;">iOS</a> <a href="/tags/iOS-8/" style="font-size: 10px;">iOS 8</a> <a href="/tags/iPad/" style="font-size: 15px;">iPad</a> <a href="/tags/icon/" style="font-size: 10px;">icon</a> <a href="/tags/icon-font/" style="font-size: 12.5px;">icon font</a> <a href="/tags/icon-fontr/" style="font-size: 10px;">icon fontr</a> <a href="/tags/iconfontr/" style="font-size: 15px;">iconfontr</a> <a href="/tags/image/" style="font-size: 10px;">image</a> <a href="/tags/immutable/" style="font-size: 17.5px;">immutable</a> <a href="/tags/indexing/" style="font-size: 10px;">indexing</a> <a href="/tags/io-meter/" style="font-size: 10px;">io-meter</a> <a href="/tags/ionicons/" style="font-size: 10px;">ionicons</a> <a href="/tags/kubernetes/" style="font-size: 10px;">kubernetes</a> <a href="/tags/kv/" style="font-size: 10px;">kv</a> <a href="/tags/life/" style="font-size: 17.5px;">life</a> <a href="/tags/linux/" style="font-size: 10px;">linux</a> <a href="/tags/mac/" style="font-size: 10px;">mac</a> <a href="/tags/math/" style="font-size: 10px;">math</a> <a href="/tags/memory/" style="font-size: 10px;">memory</a> <a href="/tags/mobile/" style="font-size: 10px;">mobile</a> <a href="/tags/music/" style="font-size: 10px;">music</a> <a href="/tags/olap/" style="font-size: 10px;">olap</a> <a href="/tags/online-editor/" style="font-size: 10px;">online editor</a> <a href="/tags/open-source/" style="font-size: 10px;">open source</a> <a href="/tags/opensource/" style="font-size: 10px;">opensource</a> <a href="/tags/os/" style="font-size: 10px;">os</a> <a href="/tags/osx/" style="font-size: 15px;">osx</a> <a href="/tags/package/" style="font-size: 10px;">package</a> <a href="/tags/paper/" style="font-size: 12.5px;">paper</a> <a href="/tags/pencil/" style="font-size: 10px;">pencil</a> <a href="/tags/persist-datastructure/" style="font-size: 17.5px;">persist datastructure</a> <a href="/tags/programing/" style="font-size: 10px;">programing</a> <a href="/tags/programming/" style="font-size: 10px;">programming</a> <a href="/tags/rendering/" style="font-size: 10px;">rendering</a> <a href="/tags/review/" style="font-size: 10px;">review</a> <a href="/tags/rpc/" style="font-size: 10px;">rpc</a> <a href="/tags/scala/" style="font-size: 10px;">scala</a> <a href="/tags/schedule/" style="font-size: 10px;">schedule</a> <a href="/tags/selection/" style="font-size: 10px;">selection</a> <a href="/tags/server/" style="font-size: 10px;">server</a> <a href="/tags/shader/" style="font-size: 10px;">shader</a> <a href="/tags/sketch/" style="font-size: 10px;">sketch</a> <a href="/tags/sql/" style="font-size: 10px;">sql</a> <a href="/tags/stylus/" style="font-size: 10px;">stylus</a> <a href="/tags/summary/" style="font-size: 12.5px;">summary</a> <a href="/tags/svg/" style="font-size: 10px;">svg</a> <a href="/tags/swift/" style="font-size: 10px;">swift</a> <a href="/tags/taiwan/" style="font-size: 12.5px;">taiwan</a> <a href="/tags/tips/" style="font-size: 10px;">tips</a> <a href="/tags/travel/" style="font-size: 12.5px;">travel</a> <a href="/tags/utility/" style="font-size: 10px;">utility</a> <a href="/tags/vector-trie/" style="font-size: 12.5px;">vector trie</a> <a href="/tags/watch/" style="font-size: 10px;">watch</a> <a href="/tags/web/" style="font-size: 17.5px;">web</a> <a href="/tags/webGL/" style="font-size: 12.5px;">webGL</a> <a href="/tags/webgl/" style="font-size: 10px;">webgl</a> <a href="/tags/wu/" style="font-size: 10px;">wu</a> <a href="/tags/xcode/" style="font-size: 10px;">xcode</a> <a href="/tags/zocial/" style="font-size: 10px;">zocial</a> <a href="/tags/%E5%90%90%E6%A7%BD/" style="font-size: 10px;">吐槽</a>
+  </div>
+</div>
+
+
+</aside>
+    <div class="clearfix"></div>
+    <footer id="footer"><div>
+  
+  &copy; 2020 Chase Zhang
+  
+</div>
+</footer>
+</div>
+<script src="/js/jquery.min.js"></script>
+<script src="/js/jquery.imagesloaded.min.js"></script>
+<script src="/js/gallery.js"></script>
+
+
+<script type="text/javascript">
+var disqus_shortname = 'iometer';
+
+(function(){
+  var dsq = document.createElement('script');
+  dsq.type = 'text/javascript';
+  dsq.async = true;
+  dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js';
+  (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+}());
+</script>
+
+
+
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css" media="screen" type="text/css">
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+<script type="text/javascript">
+(function($){
+  $('.fancybox').fancybox();
+})(jQuery);
+</script>
+
+
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({"HTML-CSS": { preferredFont: "TeX", availableFonts: ["STIX","TeX"], linebreaks: { automatic:true }, EqnChunk: (MathJax.Hub.Browser.isMobile ? 10 : 50) },
+        tex2jax: { inlineMath: [ ["$", "$"], ["\\(","\\)"] ], processEscapes: true, ignoreClass: "tex2jax_ignore|dno",skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']},
+        TeX: {  noUndefined: { attributes: { mathcolor: "red", mathbackground: "#FFEEEE", mathsize: "90%" } }, Macros: { href: "{}" } },
+        messageStyle: "none"
+    }); 
+</script>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+
+</body>
+
+</html>
