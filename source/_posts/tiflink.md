@@ -55,7 +55,7 @@ ACID是数据库的一个基本的概念。一般来说，作为CDC日志来源�
 
 一个典型的案例如下：
 
-![Table ACID.jpg](/img/posts/Table_ACID.jpg)
+![Change Log与原子性](/img/posts/Table_ACID.jpg)
 
 在上述案例中，我们有一个账户表，账户表之间会有转账操作，由于转账操作涉及多行修改，因此往往会产生多条记录。假设我们有如下一条SQL定义的物化视图，计算所有账户余额的总和：
 
@@ -124,7 +124,7 @@ FROM order_amount, payment_amount;
 
 在TiDB这样支持事务的分布式数据库上实现强一致的物化视图，最简单的思路就是使用一个接一个的事务来更新视图。事务在开始时读取到的是一个一致的快照，而使用分布式事务对物化视图进行更新，本身也是一个强一致的操作，且具有ACID的特性，因此得以保证一致性。
 
-![Transaction To MV.jpg](/img/posts/Transaction_To_MV.jpg)
+![使用连续的事务实现物化视图的更新](/img/posts/Transaction_To_MV.jpg)
 
 为了将Flink和这样的机制结合起来且实现增量维护，我们利用了TiKV本身已经提供的一些特性：
 
@@ -196,7 +196,7 @@ public interface Coordinator extends AutoCloseable, Serializable {
 
 使用上述接口，各个Source和Sink节点可以使用CheckpointID开启事务或获得事务ID，协调器会负责分配主键并维护事务的状态。为了方便起见，事务Commit时对主键的提交操作也放在协调器中执行。协调器的实现有很多方法，目前TiFlink使用最简单的实现：在JobManager所在进程中启动一个GRPC服务。基于TiKV的PD（ETCD）或TiKV本身实现分布式的协调器也是可能的。
 
-![TiFlink transaction management.jpg](/img/posts/TiFlink_transaction_management.jpg)
+![事务与Checkpoint的协调执行](/img/posts/TiFlink_transaction_management.jpg)
 
 上图展示了在Flink中执行分布式事务和Checkpoint之间的协调关系。一次事务的具体过程如下：
 
@@ -212,7 +212,7 @@ public interface Coordinator extends AutoCloseable, Serializable {
 
 下图展示了包含协调器在内的整个TiFlink任务的架构：
 
-![TiFlink System Design.jpg](/img/posts/TiFlink_System_Design.jpg)
+![TiFlink的系统架构](/img/posts/TiFlink_System_Design.jpg)
 
 基于以上的系统设计，我们就得到了一个在TiKV上实现延迟快照隔离的物化视图。
 
